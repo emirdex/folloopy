@@ -57,3 +57,13 @@ Build uses `next build apps/web --webpack` and next.config.mjs so configuration 
 ## Runtime 503 / Passenger entry point
 
 server.cjs now creates the public HTTP server in its own process, rather than spawning next start in a child. This permits process managers that intercept http.Server.listen (such as Passenger) to attach the public socket. Marketing mode does not require tsx at runtime; tsx is a runtime dependency for the full application's private API. If 503 persists, inspect application startup stderr: FOLLOOPY_START_FAILED, missing build files/dependencies, process limits and the configured entry path. A successful build does not prove that the runtime started.
+
+## Restore the full application without payments
+
+Prepare PostgreSQL, verified Resend sender and Google OAuth before switching the live mode. Keep the same `DATA_ENCRYPTION_KEY` and `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` after the first launch. Never replace an existing database with the local development database.
+
+In hPanel, use `.env.production.example` as the variable-name template and provide the real values privately. The temporary launch uses `APP_MODE=application`, `BILLING_MODE=complimentary` and `SEED_BLOG=true`. Complimentary activation gives verified users access without collecting money or creating a paid purchase. Checkout explicitly states that no payment is taken. Set `SEED_BLOG=false` after initialization; seeding inserts missing slugs and does not overwrite existing articles.
+
+Application mode restores the login/register links, account recovery, package selection, Enterprise request form, private user panel, admin, database-backed blog/media and tracking routes. Changing the flag alone does not configure external services. Deploy after all required variables are present; startup validates configuration and migrates the database before opening the public listener.
+
+Acceptance: `/health` succeeds; signup email arrives and verifies the account; login and password reset work; a package can be activated with no paid purchase recorded; an Enterprise request reaches admin; a blog image survives redeployment; Gmail OAuth connects the real sender and a tracked test message can be sent to an address the operator controls. These provider checks must be carried out in the live environment. Signature document/link analytics and reminders remain unfinished and are not enabled by this mode switch.
