@@ -9,6 +9,7 @@ import {EnterpriseContact} from './enterprise-contact';
 import {FlowDemo} from './flow-demo';
 import {MailJourney} from './mail-journey';
 import {EngagementPreview} from './engagement-preview';
+import {commercialPlans,planPricing,formatPrice} from '../../../packages/domain/commercial-plans';
 import {PricingPlans} from './pricing-plans';
 function Brand(){return <FolloopyLogo/>}
 const faq=[
@@ -17,7 +18,8 @@ const faq=[
  {q:'Açılma bilgisi, e-postanın kesin okunduğu anlamına gelir mi?',a:'Tek başına gelmez. Otomatik görsel yüklemeleri açılma kaydı oluşturabilir; görsellerin engellenmesi ise bir açılmanın kaydedilmesini önleyebilir. Bu nedenle açılma bilgisini, yazışmanızın takibine yardımcı bir sinyal olarak değerlendirmelisiniz.'},
  {q:'Bir e-postanın takibini durdurabilir miyim?',a:'Evet. İlgili e-postanın ayrıntı sayfasından takibi durdurabilirsiniz. Bu işlemden sonra o e-posta için yeni gözlem toplanmaz; önceki kayıtlar panelde korunur.'},
  {q:'Gönderdiğim e-postaları nasıl bulabilirim?',a:'Panelde konuya göre arama yapabilir; takip açık, gözlem bulunan veya takibi durdurulmuş e-postaları filtreleyebilirsiniz. Her kaydın ayrıntısında gönderim bilgilerini ve etkinlik geçmişini inceleyebilirsiniz.'},
- {q:'Essential, Signature ve Enterprise arasında nasıl seçim yapmalıyım?',a:'Essential, e-posta açılma takibi, bildirimler ve günlük çalışma alanını kapsar. Signature, bunlara belge görüntüleme, indirme, link takibi ve müşteri etkileşimi analizini ekler. Aylık ücret, bağlı e-posta hesabı başına Essential için 229 TL, Signature için 389 TL’dir. Kurumunuza özel ihtiyaçlar için Enterprise formundan bize ulaşabilirsiniz.'}
+ {q:'Essential, Signature ve Enterprise arasında nasıl seçim yapmalıyım?',a:`Essential, e-posta açılma takibi, bildirimler ve günlük çalışma alanını kapsar. Signature, bunlara belge görüntüleme, indirme, link takibi ve müşteri etkileşimi analizini ekler. Aylık ücret, e-posta hesabı başına Essential için ${commercialPlans[0].monthlyPrice} TL, Signature için ${commercialPlans[1].monthlyPrice} TL’dir. Kurumunuza özel ihtiyaçlar için bize ulaşabilirsiniz.`},
+ {q:'Aylık ve yıllık ödeme arasındaki fark nedir?',a:`Aylık ödemede her ay paket bedeli ödenir. Yıllık ödemede 12 aylık tutar tek seferde ödenir: Essential için ${formatPrice(planPricing(commercialPlans[0],'yearly').total)} TL (aylık ${commercialPlans[0].annualMonthlyPrice} TL karşılığı), Signature için ${formatPrice(planPricing(commercialPlans[1],'yearly').total)} TL (aylık ${commercialPlans[1].annualMonthlyPrice} TL karşılığı). Fiyatlandırma e-posta hesabı başınadır.`}
 ];
 export function Landing({hasPreview,hasAccount,marketing=false}:{hasPreview:boolean;hasAccount:boolean;marketing?:boolean}){
  const root=useRef<HTMLDivElement>(null);const[scrolled,setScrolled]=useState(false),[menuOpen,setMenuOpen]=useState(false);

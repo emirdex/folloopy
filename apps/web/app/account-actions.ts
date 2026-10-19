@@ -1,4 +1,5 @@
 'use server';
+import {billingPeriod} from '../../../packages/domain/commercial-plans';
 import {cookies} from 'next/headers';
 import {redirect} from 'next/navigation';
 import {accountApi,requireAccount} from './account-api';
@@ -16,7 +17,7 @@ async function authenticate(form:FormData,register:boolean):Promise<FormState>{
   const store=await cookies();store.set('mt_session',result.token,{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',path:'/',maxAge:7*24*60*60});store.delete('mail_tracking_preview');
  }catch(e){return {error:errors[e instanceof Error?e.message:'']||'Şu anda işlem tamamlanamadı. Lütfen tekrar deneyin.'}}
  const preferredPlan=String(form.get('preferredPlan')||'');
- const user=await requireAccount();if(process.env.NODE_ENV==='production'&&!user.email_verified_at&&user.role!=='owner')redirect('/hesap/dogrula');redirect(user.role==='owner'?'/admin':['individual','team','business'].includes(preferredPlan)?'/paketler?plan='+preferredPlan:user.plan?'/panel':'/paketler');
+ const user=await requireAccount();if(process.env.NODE_ENV==='production'&&!user.email_verified_at&&user.role!=='owner')redirect('/hesap/dogrula');redirect(user.role==='owner'?'/admin':['individual','team','business'].includes(preferredPlan)?'/paketler?plan='+preferredPlan+'&billing='+billingPeriod(form.get('billing')):user.plan?'/panel':'/paketler');
 }
 export async function registerAccount(_state:FormState,form:FormData){return authenticate(form,true)}
 export async function loginAccount(_state:FormState,form:FormData){return authenticate(form,false)}
