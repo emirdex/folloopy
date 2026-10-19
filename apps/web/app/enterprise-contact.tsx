@@ -1,0 +1,9 @@
+'use client';
+import {useActionState} from 'react';
+import Link from 'next/link';
+import {Building2,ArrowUpRight,Check,Mail} from 'lucide-react';
+import {requestEnterprise} from './enterprise-actions';
+export function EnterpriseContact(){
+ const[state,action,pending]=useActionState(requestEnterprise,null);
+ return <section className="enterprise-contact" aria-labelledby="enterprise-title" data-reveal><div className="enterprise-contact-copy"><span className="enterprise-glyph"><Building2 size={26}/></span><span className="section-overline">KURUMUNUZA ÖZEL</span><h3 id="enterprise-title">Enterprise</h3><p>Daha yüksek hacim, özel entegrasyon ve kurumsal ihtiyaçlarınız için bize ulaşın.</p></div><div className="enterprise-contact-form"><span className="enterprise-form-heading">Bize ulaşın<ArrowUpRight size={16}/></span>{state?.ok?<div className="enterprise-success" role="status"><span><Check size={20}/></span><div><strong>Talebiniz kaydedildi.</strong><p>E-posta adresiniz ve şirket bilginiz başarıyla alındı.</p></div></div>:<form action={action}><div className="enterprise-fields"><label><span>E-posta adresi</span><div><Mail size={15}/><input name="email" type="email" placeholder="siz@sirketiniz.com" autoComplete="email" required maxLength={254}/></div></label><label><span>Şirket adı</span><div><Building2 size={15}/><input name="company" placeholder="Şirketinizin adı" autoComplete="organization" required minLength={2} maxLength={160}/></div></label></div>{state?.error?<p className="enterprise-form-error" role="alert">{state.error}</p>:null}<div className="enterprise-form-bottom"><p>Bilgileriniz yalnızca talebinizi değerlendirmek ve iletişim kurmak için kullanılır. <Link href="/yasal/gizlilik-politikasi">Gizlilik politikası</Link></p><button disabled={pending} className="site-button site-button-dark">{pending?'Kaydediliyor…':'Talep gönder'}<ArrowUpRight size={15}/></button></div></form>}</div></section>
+}

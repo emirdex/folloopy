@@ -1,0 +1,2 @@
+import {internalApiUrl} from '../internal-api';
+export async function GET(){try{const res=await fetch(internalApiUrl()+'/health',{cache:'no-store',signal:AbortSignal.timeout(3000)});return Response.json({status:res.ok?'ok':'unavailable'},{status:res.ok?200:503,headers:{'Cache-Control':'no-store'}})}catch{return Response.json({status:'unavailable'},{status:503,headers:{'Cache-Control':'no-store'}})}}

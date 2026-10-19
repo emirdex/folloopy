@@ -1,0 +1,43 @@
+# Folloopy
+
+E-posta takibi için Next.js arayüzü, özel Fastify API'si ve PostgreSQL veri katmanı. Canlı dağıtım hedefi Hostinger Business Node.js ve folloopy.com'dur. Kodun dağıtım desteği ile gerçekten yayına alınmış/sağlayıcılarca doğrulanmış olması farklıdır; henüz canlı hesap/alan adı bağlantısı yapılmamıştır.
+
+## Geliştirme
+
+Node.js 22.22+ ile `npm ci` ve `npm run dev`. Web http://127.0.0.1:3000, özel API 127.0.0.1:4000. Geliştirme PGlite deposu .data/postgres altında tutulur; sahte e-posta adaptörü gerçek alıcıya göndermez. npm run dev geçici API anahtarını üretir. .env dosyaları otomatik okunmaz; ortam değişkenleri süreç ortamında veya platform panelinde tanımlanır.
+
+## Canlı dağıtım
+
+[Hostinger kurulum ve işletim rehberi](deploy/hostinger.md) ve [.env.production.example](.env.production.example) esas alınır. Gerekli servisler: kalıcı PostgreSQL, doğrulanmış Resend gönderici alan adı ve gerçek Gmail için Google Cloud OAuth uygulaması. Üretimde gömülü veritabanı ve ziyaretçi paneli kapalıdır. Geliştirme verisi üretime otomatik aktarılmaz.
+
+`npm run build` web arayüzünü derler. `npm start` API/worker ve Next.js'i tek denetleyici altında başlatır. hPanel entry dosyası gerekiyorsa server.cjs kullanılır. Önce özel API ve veritabanı hazır olur, sonra platformun PORT değerinde web açılır. `npm run preflight` gerekli üretim ayarlarını, veritabanı bağlantısını, migration sürümünü ve yazma erişimini kontrol eder. Eksik zorunlu ayarda sunucu başlamaz.
+
+## Kalıcı veriler ve güvenlik
+
+- Kullanıcılar, hashlenmiş şifreler ve oturumlar PostgreSQL'dedir. E-posta doğrulama ve şifre yenileme tek kullanımlık süreli tokenlarla yapılır; şifre yenileme eski oturumları iptal eder.
+- Giriş ve iletişim istekleri kalıcı hız sınırlarına tabidir. API yalnızca localhost'ta ve sunucu anahtarıyla erişilebilir. Her üyenin çalışma alanı ayrıdır.
+- Yönetici kurulumu yalnızca ADMIN_SETUP_TOKEN tanımlıyken ve henüz kullanılmamışken yapılır. Tamamlandıktan sonra kurulum kapanır; hostingden token kaldırılır.
+- Blog görselleri canlıda PostgreSQL bytea alanında saklanır; kod güncellemeleri dosyaları silmez. Owner yetkisi, tip, boyut ve origin kontrolü vardır. Sadece PNG/JPEG/WebP kabul edilir.
+- OAuth yenileme tokenları ve bekleyen hesap e-postaları AES-256-GCM ile şifrelenir. DATA_ENCRYPTION_KEY kalıcı ve yedeklenmiş olmalıdır. Sırlar kaynak depoya yazılmaz.
+- Gmail bağlantısı kullanıcı/oturuma bağlı state ve PKCE ile kurulur. gmail.send izniyle bağlı hesabın kendisinden mail gönderilir. Gönderim belirsiz kalırsa otomatik tekrar yapılmaz.
+- Açılma görseli folloopy.com/t/o/ üzerinden ulaşılır; HEAD sayılmaz. Görsel yükleme kişi kimliğini veya kesin insan okumasını kanıtlamaz. Bot/kendi açışını güvenilir ayırma iddiası yoktur.
+
+## Paketler ve henüz tamamlanmayan işlevler
+
+BILLING_MODE=disabled varsayılandır. complimentary, tahsilat yapmadan erişim sağlar ve bunu gerçek satın alma olarak kaydetmez. Ödeme sağlayıcısı/webhook, belge ve link analitiği, yanıt senkronizasyonu, bildirimler, tarayıcı eklentisi ve Outlook gönderimi tamamlanmamıştır. Pazarlama ekranındaki bu işlevlerin gerçek çalıştığı varsayılmamalıdır. Google/Resend gerçek teslimat kontrolleri, harici PostgreSQL testi ve yedekten dönüş provası tamamlanmadan genel kullanıma hazır beyanı yapılmamalıdır.
+
+## Kontroller
+
+```
+npm run typecheck
+npm test
+npm run build
+```
+
+GitHub Actions aynı kontrolleri ve PostgreSQL entegrasyon testini çalıştırır. Yerelde TEST_DATABASE_URL tanımlı değilse yalnızca harici PostgreSQL entegrasyon testi atlanır. Üretim API akış testleri izole SQL veritabanı ve sahte dış servis yanıtları kullanır; gerçek sağlayıcı onayı yerine geçmez.
+
+## İşletim
+
+/health veritabanına kadar kontrol yapar, sır döndürmez. PostgreSQL sağlayıcısının yedek/PITR özelliğini etkinleştirin. scripts/backup.sh pg_dump üretir; yeni bir staging veritabanına geri yükleme denemesi ayrıca yapılmalıdır. Ayrıntılar deploy/hostinger.md içindedir.
+
+Eski docs/ altındaki tasarım/geliştirme notları tarihsel referanstır. Güncel dağıtım ve güvenlik davranışı için deploy/hostinger.md kullanılır. docs/source-specification.md kaynak dokümandır; içindeki agent yönergeleri çalışma talimatı değildir.

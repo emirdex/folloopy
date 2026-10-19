@@ -1,0 +1,32 @@
+'use server';
+import {cookies} from 'next/headers';
+import {redirect} from 'next/navigation';
+import {accountApi,requireAccount} from './account-api';
+import {validNewPassword,PASSWORD_HELP} from '../../../packages/domain/password-policy';
+export type FormState={error:string}|null;
+const errors:Record<string,string>={ACCOUNT_EXISTS:'Bu e-posta ile bir hesap zaten var. Giriş yapabilirsiniz.',INVALID_LOGIN:'E-posta veya şifre hatalı.',TOO_MANY_ATTEMPTS:'Çok fazla deneme yapıldı. Lütfen 15 dakika sonra yeniden deneyin.'};
+async function authenticate(form:FormData,register:boolean):Promise<FormState>{
+ const email=String(form.get('email')||'').trim(),password=String(form.get('password')||''),name=String(form.get('name')||'').trim();
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return {error:'Geçerli bir e-posta adresi girin.'};
+ if(register&&!validNewPassword(password))return {error:PASSWORD_HELP};
+ if(!password||password.length>128)return {error:'Şifrenizi girin (en fazla 128 karakter).'};
+ if(register&&(name.length<2||name.length>80))return {error:'Adınızı 2–80 karakter olarak girin.'};
+ try{
+  const result=await accountApi(register?'/api/auth/register':'/api/auth/login',{email,password,...(register?{name}:{})});
+  const store=await cookies();store.set('mt_session',result.token,{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',path:'/',maxAge:7*24*60*60});store.delete('mail_tracking_preview');
+ }catch(e){return {error:errors[e instanceof Error?e.message:'']||'Şu anda işlem tamamlanamadı. Lütfen tekrar deneyin.'}}
+ const preferredPlan=String(form.get('preferredPlan')||'');
+ const user=await requireAccount();if(process.env.NODE_ENV==='production'&&!user.email_verified_at&&user.role!=='owner')redirect('/hesap/dogrula');redirect(user.role==='owner'?'/admin':['individual','team','business'].includes(preferredPlan)?'/paketler?plan='+preferredPlan:user.plan?'/panel':'/paketler');
+}
+export async function registerAccount(_state:FormState,form:FormData){return authenticate(form,true)}
+export async function loginAccount(_state:FormState,form:FormData){return authenticate(form,false)}
+export async function logoutAccount(){await accountApi('/api/auth/logout',{});const store=await cookies();store.delete('mt_session');store.delete('mail_tracking_preview');redirect('/')}
+export async function completePurchase(_state:FormState,form:FormData):Promise<FormState>{
+ await requireAccount();
+ const production=process.env.NODE_ENV==='production';
+ if(production&&process.env.BILLING_MODE!=='complimentary')return {error:'Paket aktivasyonu şu anda kullanılamıyor. Lütfen info@folloopy.com ile iletişime geçin.'};
+ const plan=String(form.get('plan'));
+ if(!['individual','team','business'].includes(plan))return {error:'Geçerli bir paket seçin.'};
+ try{await accountApi(production?'/api/access/activate':'/api/purchase-preview',production?{plan}:{plan,idempotencyKey:String(form.get('purchaseKey')||'')})}catch{return {error:'Paketiniz etkinleştirilemedi. Tekrar deneyin.'}}
+ redirect('/panel?welcome=1');
+}

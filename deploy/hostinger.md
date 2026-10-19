@@ -1,0 +1,47 @@
+# Folloopy — Hostinger Business Node.js
+
+Target: https://folloopy.com. This is the application setup guide, not evidence of a completed deployment.
+
+## Architecture
+
+One Hostinger Node application runs `server.cjs` / `npm start`. The supervisor starts a private Fastify API on 127.0.0.1:4000, waits for its database-backed health check, then starts the Next.js production server on Hostinger's assigned PORT. Only Next.js is public. If either child exits, the supervisor terminates the other and exits so the platform can restart the entire application. Use one instance of this supervisor; background processing is in the API process.
+
+An external PostgreSQL service (for example Supabase/Neon) is required. Hostinger Business's SQL offering must not be assumed to be PostgreSQL. Choose a region consistent with the privacy documents. Use a direct or session-pool connection and provider-required TLS. No PGlite database is permitted in production. API migrations run transactionally before readiness and take a PostgreSQL advisory lock. The application account needs migration privileges; restrict them separately if your deployment pipeline applies migrations before runtime.
+
+Blog PNG/JPEG/WebP files are stored in PostgreSQL, alongside the accounts and articles, so redeploying the application cannot delete uploads. Files are limited to 5 MiB and restricted to the authenticated owner. Images are public once uploaded; do not upload private documents. Daily database backups include images. Monitor database storage capacity.
+
+## Create the deployment
+
+1. Create a private GitHub repository containing only source, package-lock.json, public brand assets and deployment files. Exclude .data, .env files, work, screenshots, database dumps and node_modules. CI validates typecheck, tests and build. Protect main and require CI to pass before merging: Hostinger auto-deploys main pushes and does not inherently wait for GitHub CI.
+2. hPanel → Node.js Web Application → GitHub repository. Use Node 22.22 or newer supported 22.x. This monorepo starts both API and web: choose **Other** rather than deploying only apps/web as a standalone Next app. Project root is repository root. Build `npm run build`; entry `server.cjs`; start `npm start` if hPanel offers a start command. Next output is `apps/web/.next`. Do not use static export.
+3. Copy the variable names from .env.production.example into hPanel. Generate three independent secrets: `openssl rand -hex 32` for INTERNAL_API_KEY and `openssl rand -base64 32` separately for DATA_ENCRYPTION_KEY and NEXT_SERVER_ACTIONS_ENCRYPTION_KEY. Do not paste secrets into source, a public issue, logs or this guide. Persist the encryption keys across deployments; losing DATA_ENCRYPTION_KEY makes saved OAuth credentials and pending email payloads unreadable.
+4. Provide external DATABASE_URL, Resend key and verified MAIL_FROM. Configure Resend's domain DNS records in the DNS provider. Test deliverability to Gmail and Outlook; verify SPF/DKIM/DMARC results. Outbound account emails are queued, encrypted, sent with idempotency keys and retried up to five times. Failed mail requires operator investigation; monitor mail_outbox counts, not payload contents.
+5. Set ADMIN_OWNER_EMAIL and a one-time random ADMIN_SETUP_TOKEN to enable initial owner setup. Open /admin/kurulum, enter the token directly, choose the owner password. Setup closes after one successful activation. Remove ADMIN_SETUP_TOKEN from hPanel. Without a token there is no public owner creation path. Never reuse a local development setup key in production.
+6. BILLING_MODE defaults to disabled. `complimentary` enables package access without charging and records it separately from purchases. It must not be described as a paid subscription. There is no payment gateway or webhook implementation in this release.
+7. For real Gmail sending, create a Google Cloud OAuth web client, enable Gmail API and register exactly `https://folloopy.com/baglantilar/google/callback`. Configure client ID and secret. The app requests openid, email and gmail.send; it does not read inbox contents. Complete Google's consent-screen/domain/app verification requirements before general availability. Pending Google testing-mode limits apply until Google approves the app.
+8. Attach folloopy.com and www to the application following hPanel DNS instructions, enable SSL and redirect www to the canonical hostname. Do not overwrite existing MX records when attaching the website. Configure the platform to redirect HTTP to HTTPS.
+9. Run `npm run preflight` with the deployed environment after migrations. Confirm /health returns 200, account signup, verification, password reset, logout, protected admin access, blog upload across redeploy and real Gmail delivery/open collector behavior. Do not count mock tests as actual provider acceptance.
+
+## Account/security behavior
+
+Production ignores the old visitor preview cookie and refuses anonymous workspace access. Each member has a separate workspace. Unverified members cannot activate a package, connect Gmail or access the panel. Password reset tokens expire in 30 minutes, verification tokens in 24 hours; tokens are hashed at rest and one-use. Reset invalidates existing sessions. Cookies are Secure/HttpOnly/SameSite=Lax. Server Actions provide origin validation and the custom upload route verifies canonical origin. API credentials and OAuth refresh tokens never go to the browser. Request logs do not contain credentials or callback codes.
+
+Persistent limits protect authentication and public enterprise requests. Hostinger/WAF should also enforce per-IP request and upload limits, especially on login, registration, account emails and /t/o/*.gif; the API only trusts its local Next server. These application limits complement that perimeter.
+
+## Backup / restore
+
+Enable the PostgreSQL provider's automatic backups/PITR, plus a daily off-site backup. `BACKUP_DIR=/secure/off-repo/path DATABASE_URL=... sh scripts/backup.sh` creates a custom pg_dump including media. Supply the secret via the environment, not a command saved into shared logs. Encrypt backups and restrict access. Keep DATA_ENCRYPTION_KEY separately in a password manager.
+
+Restore into a **new empty staging database**, never overwrite production while testing: `pg_restore --no-owner --no-acl --dbname="$RESTORE_DATABASE_URL" /secure/backup.dump`. Run preflight against that restored database, sign in with a staging account and open an uploaded image. Record restore timing. A backup is not verified until restoration succeeds.
+
+## Existing local data
+
+Do not upload .data or import example/test users into production. Use a clean production database and owner setup. For intentionally retained editorial content/images, use scripts/import-blog-media.ts against a stopped development copy or the explicit source media folder; then create/import approved articles through admin. Preserve local snapshots separately. Never open a running PGlite directory from another process.
+
+## Monitoring and rollback
+
+Monitor HTTPS /health, process restarts, PostgreSQL storage/connections, pending/failed mail_outbox, collector failures and unknown send outcomes. Health reports no secrets. Do not automatically resend uncertain Gmail submissions. Roll back code by reverting main; database migrations are additive and data should not be rolled back by deleting volumes. Take a backup before schema changes. Old HTML after a new build can require a page refresh for Server Actions; keep the same action encryption key.
+
+## Explicit limits before a public launch
+
+No claim is made that hosting, DNS, database credentials, email deliverability, Google verification or real payment acceptance has been completed. Document-view/download analytics, reply tracking, the browser extension and Outlook sending are not implemented. Do not promise these as working package features. Legal documents must reflect actual data locations, vendors, billing terms and the applicable transfer arrangements; the current wording is not a legal sign-off. Use an invited pilot until these launch requirements are validated.

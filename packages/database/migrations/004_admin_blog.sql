@@ -1,0 +1,11 @@
+ALTER TABLE users ADD COLUMN role text NOT NULL DEFAULT 'member' CHECK(role IN ('member','owner'));
+ALTER TABLE users ADD COLUMN last_login_at timestamptz;
+CREATE UNIQUE INDEX only_one_site_owner ON users(role) WHERE role='owner';
+CREATE TABLE admin_bootstrap(id integer PRIMARY KEY CHECK(id=1), email text NOT NULL, token_hash text NOT NULL, used_at timestamptz);
+CREATE TABLE purchases(id uuid PRIMARY KEY, user_id uuid NOT NULL REFERENCES users(id), workspace_id uuid NOT NULL REFERENCES workspaces(id), plan text NOT NULL CHECK(plan IN ('individual','team','business')), mode text NOT NULL CHECK(mode IN ('simulation','live')), status text NOT NULL CHECK(status IN ('simulated','pending','paid','failed','refunded')), amount_minor bigint, currency text, provider text, provider_reference text, message_limit integer NOT NULL, idempotency_key text NOT NULL, source text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), completed_at timestamptz, UNIQUE(workspace_id,idempotency_key));
+CREATE INDEX purchases_created ON purchases(created_at DESC,id);
+INSERT INTO purchases(id,user_id,workspace_id,plan,mode,status,amount_minor,message_limit,idempotency_key,source,created_at,completed_at) SELECT md5(p.workspace_id::text || ':legacy-preview')::uuid,u.id,p.workspace_id,p.plan,'simulation','simulated',0,COALESCE(e.message_limit,0),'legacy-preview','legacy_import',p.completed_at,p.completed_at FROM preview_purchases p JOIN users u ON u.workspace_id=p.workspace_id LEFT JOIN entitlements e ON e.workspace_id=p.workspace_id;
+ALTER TABLE enterprise_requests ADD COLUMN status text NOT NULL DEFAULT 'new' CHECK(status IN ('new','contacted','closed'));
+CREATE TABLE blog_posts(id uuid PRIMARY KEY, slug text NOT NULL UNIQUE, title text NOT NULL, excerpt text NOT NULL, body text NOT NULL, category text NOT NULL, status text NOT NULL CHECK(status IN ('draft','published','archived')), author_id uuid REFERENCES users(id), version integer NOT NULL DEFAULT 1, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), published_at timestamptz);
+CREATE INDEX blog_public ON blog_posts(status,published_at DESC);
+CREATE TABLE admin_audit(id uuid PRIMARY KEY, actor_id uuid NOT NULL REFERENCES users(id), action text NOT NULL, target_id text NOT NULL, created_at timestamptz NOT NULL DEFAULT now());

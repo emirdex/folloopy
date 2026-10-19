@@ -1,0 +1,133 @@
+.mail-journey{position:relative!important;min-width:0}.hero-product>.mail-journey{padding:0;background:transparent;border:0;box-shadow:none}.journey-controls{display:flex;align-items:center;gap:6px;position:absolute;right:1px;top:-34px;z-index:3}.journey-controls>span{display:none}.journey-controls button{display:grid;place-items:center;width:24px;height:24px;border-radius:8px;background:transparent;color:#8ba3c5}.journey-controls button:hover{background:#e8effb;color:#5476ac}.journey-screen{position:relative;height:310px;border:1px solid #e4ecf7;border-radius:17px;background:#fff;overflow:hidden;box-shadow:0 5px 15px #7194c007;color:#6c819e;isolation:isolate;animation:journey-enter .5s both}.journey-screen *{box-sizing:border-box}.journey-appbar{height:40px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #eef2f7;padding:0 18px;background:#fbfcff}.journey-appbar>svg{width:21px;height:17px}.journey-appbar>strong{font-family:Gabarito,sans-serif;font-size:15px;color:#596a81;font-weight:500}.journey-appbar>span:not(.journey-brand-icon):not(.journey-person){margin-left:auto;font-size:10px;color:#a1aec0}.journey-appbar>svg:last-child:not(:first-child){margin-left:10px;color:#b1bed1;width:12px}.journey-address{display:flex;align-items:center;gap:9px;height:34px;margin:0 20px;border-bottom:1px solid #edf2f8;font-size:10px;color:#a3b0c2}.journey-address b{font-weight:500;color:#7289a8;background:#edf3fc;border:1px solid #e2ebf8;padding:3px 8px;border-radius:6px}.journey-address small{font-size:9px}.journey-subject{font-size:11px;font-weight:500;color:#617794;padding:11px 20px 0}.journey-message{font-size:10px;line-height:1.7;padding:10px 20px 0}.journey-message p{line-height:1.65;margin-bottom:8px}.journey-typing{max-width:100%;width:0;white-space:nowrap;overflow:hidden;animation:journey-type 2s steps(38,end) .3s forwards}.journey-attachment{display:flex;align-items:center;gap:6px;width:max-content;max-width:100%;padding:6px 8px;border:1px solid #e6edf7;background:#f6f9fe;color:#8599b6;font-size:9px;border-radius:6px}.journey-attachment small{font-size:8px;color:#a8b6ca;margin-left:10px}.journey-compose-foot{position:absolute;bottom:17px;left:20px;right:20px;display:flex;align-items:center;justify-content:space-between}.journey-send{display:flex;align-items:center;gap:13px;padding:9px 16px;border-radius:7px;background:#718fd0;color:#fff;font-size:10px;animation:journey-send-press var(--journey-duration) linear both}.journey-tracking{display:flex;align-items:center;gap:5px;font-size:9px;color:#8aa69b}.journey-cursor{position:absolute;z-index:5;pointer-events:none;color:#4e658c;stroke:white;stroke-width:1.5;filter:drop-shadow(0 2px 3px #385a9430)}.compose-cursor{bottom:80px;left:70%;animation:journey-compose-cursor var(--journey-duration) both}.journey-sent{position:absolute;left:50%;bottom:15px;transform:translate(-50%,12px);display:flex;align-items:center;gap:8px;width:max-content;max-width:95%;padding:10px 13px;border:1px solid #dcece5;border-radius:10px;box-shadow:0 5px 18px #789f8f1c;background:#f2faf6;color:#6e9786;font-size:11px;opacity:0;animation:journey-sent var(--journey-duration) both}.journey-sent>span{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#e0f0e8}.journey-sent small{font-size:9px;color:#9db8ac;margin-left:8px}.journey-person{display:grid;place-items:center;width:23px;height:23px;border-radius:50%;background:#e7edf8;font-size:8px;color:#8196b5}.journey-inbox-label{display:flex;align-items:center;gap:7px;padding:14px 20px;font-size:10px;color:#7c92b2}.journey-inbox-label>span{margin-left:auto;font-size:9px;color:#a4b4cc}.journey-unread{position:relative;display:flex;align-items:center;gap:10px;margin:0 15px;padding:15px 12px;border:1px solid #dce7fa;border-radius:10px;background:#eff5ff;animation:journey-unread var(--journey-duration) both}.journey-avatar{display:grid;place-items:center;width:29px;height:29px;border-radius:10px;flex-shrink:0;background:#e7eefb;color:#8ba4ca;font-size:10px}.journey-unread>div{flex:1;min-width:0}.journey-unread strong{display:flex;justify-content:space-between;gap:10px;font-size:10px;font-weight:500;color:#617ba4}.journey-unread strong>span{font-size:9px;font-weight:400;color:#9aacc7}.journey-unread b{display:block;margin-top:6px;font-size:11px;font-weight:500}.journey-unread p{font-size:9px;color:#a2b0c6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:6px}.journey-unread>svg{color:#a3b7d6}.journey-reading{position:absolute;inset:40px 0 0;background:#fff;padding:17px 20px;opacity:0;transform:translateY(14px);animation:journey-reading var(--journey-duration) both}.journey-read-subject{display:flex;justify-content:space-between;gap:12px;color:#657a9b;font-size:13px;font-family:Gabarito,sans-serif}.journey-read-subject>svg{color:#b0bfd4}.journey-reader{display:flex;gap:9px;align-items:center;margin:15px 0 12px}.journey-reader strong{font-size:10px;font-weight:500;display:block}.journey-reader small{font-size:8px;color:#a2b0c4;display:block;margin-top:4px}.journey-reading>p{font-size:10px;line-height:1.9;margin:0 0 12px}.journey-opened{position:absolute;bottom:15px;right:18px;display:flex;align-items:center;gap:7px;background:#edf7f1;border:1px solid #deede4;border-radius:8px;font-size:10px;color:#7c9d8b;padding:8px 10px;opacity:0;animation:journey-opened var(--journey-duration) both}.journey-opened>span{color:#9cb7aa;margin-left:10px;font-size:9px}.recipient-cursor{left:70%;top:220px;animation:journey-recipient-cursor var(--journey-duration) both}.journey-brand-icon{width:23px;height:23px;display:grid;place-items:center;background:linear-gradient(140deg,#a1b8ed,#6c89cd);color:#fff;border-radius:7px}.journey-appbar>strong>span{color:#7c9bdd}.journey-panel-title{display:flex;align-items:center;gap:9px;padding:16px 17px 12px}.journey-panel-title>div{min-width:0;flex:1}.journey-panel-title strong{font-size:11px;display:block;font-weight:500;color:#60789c;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.journey-panel-title small{display:block;font-size:9px;margin-top:5px;color:#a0b0c7}.journey-open-badge{display:flex;align-items:center;gap:4px;color:#7e9d8f;background:#eef7f2;border:1px solid #e2efe7;padding:5px 8px;border-radius:100px;font-size:9px;animation:journey-badge .6s .4s both}.journey-stats{margin:0 17px;display:grid;grid-template-columns:1fr .8fr 1fr;gap:8px}.journey-stats>div{padding:10px 11px;border:1px solid #e8eef9;background:#f7faff;border-radius:10px;animation:journey-badge .6s .2s both}.journey-stats small{font-size:7px;letter-spacing:.6px;color:#9cafcd}.journey-stats strong{display:flex;align-items:center;gap:8px;justify-content:space-between;font-size:24px;font-family:Gabarito,sans-serif;color:#7893bf;font-weight:500;margin:6px 0 4px}.journey-stats strong>svg{color:#a4b8d8}.journey-stats .journey-delivered{font-size:12px;gap:5px;justify-content:flex-start;min-height:29px;color:#87a499}.journey-stats span{font-size:8px;color:#a8b8d0}.journey-timeline{padding:13px 20px}.journey-timeline>span{font-size:7px;letter-spacing:.7px;color:#9db0cc}.journey-timeline>div{display:flex;align-items:center;gap:9px;padding-top:9px}.journey-timeline i{width:6px;height:6px;border-radius:50%;background:#b7c9e5;box-shadow:0 0 0 3px #f0f4fb;position:relative;flex-shrink:0}.journey-timeline p{flex:1;line-height:1.2}.journey-timeline strong{display:block;font-size:9px;font-weight:500;color:#8198ba}.journey-timeline small{display:block;margin-top:3px;font-size:8px;color:#a9b8ce}.journey-timeline>div>svg{color:#a4b9af}.journey-new-event{animation:journey-badge .6s .65s both}.journey-new-event>span{font-size:8px;color:#8caaa0;background:#eff8f4;padding:3px 6px;border-radius:5px}.journey-new-event i{background:#9cc3b2}.journey-notification{display:flex;align-items:center;gap:9px;position:absolute;right:13px;bottom:12px;padding:11px 13px;border:1px solid #e0e9f6;border-radius:12px;background:#fffffffa;box-shadow:0 8px 28px #6c8db51f;animation:journey-badge .65s 1s both}.journey-notification>span{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;color:#7da997;background:#eaf5ef}.journey-notification strong{display:block;font-size:10px;font-weight:500;color:#7189ac}.journey-notification small{display:block;font-size:8px;color:#a4b3c9;margin-top:4px}.journey-notification>svg{color:#aac4b9;margin-left:12px}.journey-scene-progress{position:absolute;left:0;bottom:0;height:2px;background:#a5bceb;animation:journey-progress var(--journey-duration) linear both;z-index:9}.journey-caption{display:flex;gap:14px;align-items:flex-start;padding:16px 7px 15px;min-height:76px}.journey-caption>span{font-family:Gabarito,sans-serif;font-size:24px;line-height:1;color:#95acd0}.journey-caption>span>small{font-family:Satoshi,sans-serif;font-size:8px;color:#bdc9da;margin-left:3px}.journey-caption h3{font-size:14px;color:#7189ad;letter-spacing:-.1px;font-weight:500;line-height:1.25}.journey-caption p{font-size:10px;color:#9baec9;margin-top:5px;line-height:1.6}.journey-steps{display:flex;border-top:1px solid #e7eef9;padding-top:9px;gap:8px}.journey-steps button{display:flex;align-items:center;justify-content:center;gap:7px;background:transparent;border-radius:8px;color:#a5b5cc;font-size:10px;padding:7px 9px;flex:1;min-width:0}.journey-steps button>span{font-family:Gabarito,sans-serif;font-size:9px;color:#b0c0d7;min-width:14px;display:grid;place-items:center}.journey-steps button>svg{margin-left:auto;color:#c2cfe0}.journey-steps button.selected{color:#7796c9;background:#eaf1fd}.journey-steps button.selected>span{color:#7d9bc9}.journey-steps button:hover{background:#edf3fd}.journey-paused .journey-screen,.journey-paused .journey-screen *{animation-play-state:paused!important}
+@keyframes journey-enter{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}@keyframes journey-type{to{width:37ch}}@keyframes journey-progress{from{width:0}to{width:100%}}@keyframes journey-compose-cursor{0%,20%{opacity:0;transform:translate(0,0)}30%{opacity:1}48%,57%{opacity:1;left:75px;bottom:22px;transform:scale(1)}52%{transform:scale(.85)}67%,100%{opacity:0;left:95px;bottom:15px}}@keyframes journey-send-press{0%,48%,56%,100%{transform:scale(1);background:#718fd0}51%,54%{transform:scale(.95);background:#587abf}}@keyframes journey-sent{0%,57%{opacity:0;transform:translate(-50%,12px)}65%,100%{opacity:1;transform:translate(-50%,0)}}@keyframes journey-unread{0%{opacity:0;transform:translateY(7px)}12%,38%{opacity:1;transform:translateY(0)}48%,100%{opacity:0;transform:translateY(-5px)}}@keyframes journey-reading{0%,42%{opacity:0;transform:translateY(14px)}53%,100%{opacity:1;transform:translateY(0)}}@keyframes journey-recipient-cursor{0%,12%{opacity:0;transform:translate(0,0)}25%{opacity:1}37%,43%{opacity:1;left:55%;top:123px;transform:scale(1)}40%{transform:scale(.83)}52%,100%{opacity:0;left:58%;top:128px}}@keyframes journey-opened{0%,62%{opacity:0;transform:translateY(6px)}72%,100%{opacity:1;transform:translateY(0)}}@keyframes journey-badge{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}@keyframes journey-notification{0%,24%{opacity:0;transform:translateY(13px)}36%,100%{opacity:1;transform:translateY(0)}}
+@media(max-width:650px){.journey-controls{top:-28px;right:0;gap:2px}.journey-controls button{width:21px;height:21px}.journey-screen{height:304px;border-radius:14px}.journey-appbar{padding:0 12px;height:36px}.journey-appbar>strong{font-size:13px}.journey-appbar>span:not(.journey-brand-icon):not(.journey-person){font-size:8px}.journey-address{margin:0 13px;gap:6px}.journey-address small{font-size:8px}.journey-subject{padding:10px 13px 0;font-size:10px}.journey-message{padding:10px 13px 0;font-size:9px}.journey-compose-foot{left:13px;right:13px;bottom:16px}.journey-send{font-size:10px;padding:9px 13px}.journey-tracking{font-size:8px}.journey-sent{font-size:10px;padding:9px 10px}.journey-sent small{font-size:8px;margin-left:2px}.journey-inbox-label{padding:14px 13px}.journey-unread{margin:0 10px;padding:13px 9px;gap:7px}.journey-unread b{font-size:10px}.journey-unread strong{font-size:9px}.journey-unread p{font-size:8px}.journey-reading{inset:36px 0 0;padding:17px 13px}.journey-read-subject{font-size:12px}.journey-reading>p{font-size:9px;line-height:2}.journey-panel-title{padding:14px 11px 12px;gap:6px}.journey-panel-title strong{font-size:10px}.journey-panel-title small{font-size:8px}.journey-panel-title .journey-avatar{width:25px;height:25px;font-size:9px}.journey-open-badge{font-size:8px;padding:4px 6px;gap:3px}.journey-stats{margin:0 11px;gap:5px;grid-template-columns:1fr .8fr 1.05fr}.journey-stats>div{padding:9px 7px}.journey-stats small{font-size:6px;letter-spacing:.3px}.journey-stats strong{font-size:21px;gap:5px}.journey-stats strong>svg{width:11px}.journey-stats .journey-delivered{font-size:10px;gap:3px;min-height:25px}.journey-stats span{font-size:7px}.journey-timeline{padding:13px 14px}.journey-timeline small{font-size:7px}.journey-notification{right:10px;bottom:14px;max-width:calc(100% - 20px);padding:10px}.journey-notification strong{font-size:9px}.journey-notification>svg{margin-left:3px}.journey-caption{gap:10px;padding:14px 3px;min-height:82px}.journey-caption>span{font-size:22px}.journey-caption h3{font-size:13px}.journey-caption p{font-size:9px;line-height:1.65}.journey-steps{gap:3px;padding-top:7px}.journey-steps button{font-size:9px;padding:7px 6px;gap:4px}.journey-steps button>span{font-size:8px}.journey-steps button>svg{width:9px}.hero-product-label{padding-right:39px;font-size:7px!important;letter-spacing:.5px!important}}
+@media(prefers-reduced-motion:reduce){.journey-screen,.journey-screen *{animation:none!important}.journey-typing{width:auto}.journey-cursor,.journey-sent,.journey-unread,.journey-notification{display:none}.journey-reading,.journey-opened{opacity:1;transform:none}.journey-scene-progress{display:none}}
+
+/* Readable scene scale and clear action states. */
+.landing-page .hero-product{width:760px;max-width:calc(100% - 48px)}
+.mail-journey .journey-screen{height:450px;color:#536c8e}
+.mail-journey .journey-appbar{height:48px;padding-inline:22px}
+.mail-journey .journey-appbar>strong{font-size:18px;color:#465b76}
+.mail-journey .journey-appbar>svg:first-child{width:26px;height:21px}
+.mail-journey .journey-appbar>span:not(.journey-brand-icon):not(.journey-person){font-size:12px;color:#7b8fae}
+.mail-journey .journey-address{height:42px;margin-inline:24px;font-size:13px;color:#7f92af}
+.mail-journey .journey-address small{font-size:12px}
+.mail-journey .journey-subject{font-size:15px;padding:15px 24px 0;color:#486386}
+.mail-journey .journey-message{font-size:14px;padding:15px 24px 0}
+.mail-journey .journey-message p{margin-bottom:12px}
+.mail-journey .journey-attachment{font-size:12px;padding:8px 11px;color:#6983a7}
+.mail-journey .journey-attachment small{font-size:10px;color:#8b9fbb}
+.mail-journey .journey-compose-foot{bottom:24px;left:24px;right:24px}
+.mail-journey .journey-send{font-size:14px;padding:12px 21px;gap:18px;background:#5f80c6}
+.mail-journey .journey-send svg{width:16px;height:16px}
+.mail-journey .journey-tracking{font-size:12px;color:#638b78}
+.mail-journey .journey-sent{bottom:82px;font-size:15px;padding:12px 17px;color:#4f8068;background:#ecf8f0;border-color:#cbe5d5;box-shadow:0 6px 24px #6c9f8429}
+.mail-journey .journey-sent small{font-size:12px;color:#739681}
+.mail-journey .journey-cursor{width:29px;height:29px}
+.mail-journey .journey-person{width:29px;height:29px;font-size:10px}
+.mail-journey .journey-inbox-label{font-size:13px;padding:19px 24px}
+.mail-journey .journey-inbox-label>span{font-size:12px;color:#879dbd}
+.mail-journey .journey-unread{margin-inline:19px;padding:19px 15px;gap:13px;border-color:#c8daf7;background:#eaf2ff}
+.mail-journey .journey-avatar{width:35px;height:35px;font-size:12px}
+.mail-journey .journey-unread strong{font-size:13px;color:#49668d}
+.mail-journey .journey-unread strong>span{font-size:12px}
+.mail-journey .journey-unread b{font-size:15px;margin-top:9px;color:#45618a}
+.mail-journey .journey-unread p{font-size:12px;margin-top:8px;color:#8196b3}
+.mail-journey .journey-reading{inset:48px 0 0;padding:23px 24px}
+.mail-journey .journey-read-subject{font-size:18px;color:#4e688c}
+.mail-journey .journey-reader{gap:11px;margin:19px 0 17px}
+.mail-journey .journey-reader strong{font-size:13px}
+.mail-journey .journey-reader small{font-size:11px;color:#869bb7}
+.mail-journey .journey-reading>p{font-size:14px;line-height:1.9;margin-bottom:16px}
+.mail-journey .journey-opened{font-size:15px;bottom:20px;right:24px;padding:12px 15px;background:#e8f6ed;border-color:#c9e6d3;color:#518469;box-shadow:0 5px 16px #83af9518}
+.mail-journey .journey-opened>span{font-size:13px;color:#729882}
+.mail-journey .journey-panel-title{padding:18px 21px 16px;gap:11px}
+.mail-journey .journey-panel-title strong{font-size:15px;color:#4e698f}
+.mail-journey .journey-panel-title small{font-size:12px;color:#8299b9}
+.mail-journey .journey-open-badge{font-size:12px;padding:7px 11px;color:#5b8b72;background:#eaf6ef}
+.mail-journey .journey-stats{margin-inline:21px;gap:11px;grid-template-columns:1fr .85fr 1.15fr}
+.mail-journey .journey-stats>div{padding:13px 15px;background:#f2f7ff;border-color:#dfe9f8}
+.mail-journey .journey-stats small{font-size:10px;letter-spacing:.6px;color:#7f98bb}
+.mail-journey .journey-stats strong{font-size:34px;color:#557bb2;margin:8px 0 6px}
+.mail-journey .journey-stats .journey-delivered{font-size:16px;min-height:40px;color:#65967d}
+.mail-journey .journey-stats span{font-size:11px;color:#8ba0bd}
+.mail-journey .journey-timeline{padding:17px 24px 13px}
+.mail-journey .journey-timeline>span{font-size:10px;color:#829abb}
+.mail-journey .journey-timeline>div{padding-top:12px;gap:11px}
+.mail-journey .journey-timeline strong{font-size:12px;color:#5e7ba3}
+.mail-journey .journey-timeline small{font-size:11px;color:#8da1bd;margin-top:4px}
+.mail-journey .journey-new-event>span{font-size:10px;padding:4px 8px;color:#6e9984}
+.mail-journey .journey-notification{position:relative;right:auto;bottom:auto;width:max-content;max-width:calc(100% - 42px);margin:0 21px 15px auto;padding:10px 13px}
+.mail-journey .journey-notification strong{font-size:13px;color:#5a769f}
+.mail-journey .journey-notification small{font-size:11px;color:#889fbd}
+.mail-journey .journey-caption{padding:19px 8px;min-height:91px;gap:16px}
+.mail-journey .journey-caption>span{font-size:28px;flex-shrink:0;white-space:nowrap}
+.mail-journey .journey-caption>span>small{font-size:10px}
+.mail-journey .journey-caption h3{font-size:18px;color:#56759f}
+.mail-journey .journey-caption p{font-size:13px;color:#8299b8;margin-top:7px}
+.mail-journey .journey-steps button{font-size:13px;padding:10px;color:#7f98bb;min-height:40px}
+.mail-journey .journey-steps button>span{font-size:11px}
+@keyframes journey-compose-cursor{0%,20%{opacity:0;transform:translate(0,0)}30%{opacity:1}48%,57%{opacity:1;left:85px;bottom:28px;transform:scale(1)}52%{transform:scale(.85)}67%,100%{opacity:0;left:100px;bottom:20px}}
+@keyframes journey-recipient-cursor{0%,12%{opacity:0;transform:translate(0,0)}25%{opacity:1}37%,43%{opacity:1;left:55%;top:155px;transform:scale(1)}40%{transform:scale(.83)}52%,100%{opacity:0;left:58%;top:160px}}
+@keyframes journey-opened{0%,51%{opacity:0;transform:translateY(6px)}60%,100%{opacity:1;transform:translateY(0)}}
+@media(max-width:650px){
+ .landing-page .hero-product{width:100%;max-width:none}
+ .mail-journey .journey-screen{height:480px}
+ .mail-journey .journey-appbar{height:44px;padding-inline:13px;gap:7px}
+ .mail-journey .journey-appbar>strong{font-size:16px}
+ .mail-journey .journey-appbar>span:not(.journey-brand-icon):not(.journey-person){font-size:10px}
+ .mail-journey .journey-address{height:40px;margin-inline:14px;gap:6px;font-size:11px}
+ .mail-journey .journey-address small{font-size:10px}
+ .mail-journey .journey-subject{padding:14px 14px 0;font-size:13px}
+ .mail-journey .journey-message{padding:16px 14px 0;font-size:12px}
+ .mail-journey .journey-typing{white-space:normal;animation:none;width:auto}
+ .mail-journey .journey-message p{margin-bottom:14px}
+ .mail-journey .journey-attachment{font-size:11px}
+ .mail-journey .journey-compose-foot{left:14px;right:14px;bottom:23px}
+ .mail-journey .journey-send{font-size:13px;padding:12px 17px}
+ .mail-journey .journey-tracking{font-size:11px}
+ .mail-journey .journey-sent{font-size:13px;bottom:89px;padding:12px}
+ .mail-journey .journey-sent small{font-size:11px}
+ .mail-journey .journey-inbox-label{font-size:12px;padding:18px 14px}
+ .mail-journey .journey-inbox-label>span{font-size:10px}
+ .mail-journey .journey-unread{margin-inline:10px;padding:16px 10px;gap:8px}
+ .mail-journey .journey-unread strong{font-size:11px}
+ .mail-journey .journey-unread strong>span{font-size:10px}
+ .mail-journey .journey-unread b{font-size:13px;line-height:1.5}
+ .mail-journey .journey-unread p{font-size:11px}
+ .mail-journey .journey-reading{inset:44px 0 0;padding:21px 14px}
+ .mail-journey .journey-read-subject{font-size:16px;line-height:1.4}
+ .mail-journey .journey-reader strong{font-size:12px}
+ .mail-journey .journey-reader small{font-size:10px}
+ .mail-journey .journey-reading>p{font-size:12px;line-height:2}
+ .mail-journey .journey-opened{font-size:14px;right:14px;bottom:24px;padding:12px 14px}
+ .mail-journey .journey-opened>span{font-size:12px}
+ .mail-journey .journey-panel-title{padding:17px 12px 15px;gap:7px;flex-wrap:wrap}
+ .mail-journey .journey-panel-title strong{font-size:13px}
+ .mail-journey .journey-panel-title small{font-size:10px;line-height:1.5}
+ .mail-journey .journey-panel-title .journey-avatar{width:30px;height:30px;font-size:10px}
+ .mail-journey .journey-open-badge{font-size:10px;padding:6px 8px}
+ .mail-journey .journey-stats{margin-inline:12px;gap:6px;grid-template-columns:1fr .8fr 1.15fr}
+ .mail-journey .journey-stats>div{padding:12px 8px}
+ .mail-journey .journey-stats small{display:block;font-size:9.5px;letter-spacing:.1px;line-height:1.3;min-height:25px}
+ .mail-journey .journey-stats strong{font-size:28px}
+ .mail-journey .journey-stats .journey-delivered{font-size:12px;min-height:33px;gap:3px}
+ .mail-journey .journey-stats span{font-size:9px;line-height:1.5;display:block}
+ .mail-journey .journey-timeline{padding:20px 15px 17px}
+ .mail-journey .journey-timeline>span{font-size:10px}
+ .mail-journey .journey-timeline>div{padding-top:15px}
+ .mail-journey .journey-timeline strong{font-size:12px}
+ .mail-journey .journey-timeline small{font-size:10px;line-height:1.5}
+ .mail-journey .journey-notification{max-width:calc(100% - 24px);margin:0 12px 14px auto;padding:12px 11px}
+ .mail-journey .journey-notification strong{font-size:12px}
+ .mail-journey .journey-notification small{font-size:10px}
+ .mail-journey .journey-caption{padding:18px 3px;gap:11px;min-height:112px}
+ .mail-journey .journey-caption>span{font-size:26px}
+ .mail-journey .journey-caption>span>small{font-size:9px}
+ .mail-journey .journey-caption h3{font-size:16px;line-height:1.4}
+ .mail-journey .journey-caption p{font-size:12px;line-height:1.7}
+ .mail-journey .journey-steps button{font-size:11px;line-height:1.5;gap:4px;padding:9px 4px}
+ .mail-journey .journey-steps button>span{font-size:10px}
+ .mail-journey .journey-steps button>svg{display:none}
+}
+@media(prefers-reduced-motion:reduce){.mail-journey .journey-typing{width:auto}.mail-journey .journey-notification{display:flex}}

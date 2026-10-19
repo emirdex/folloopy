@@ -1,0 +1,11 @@
+ALTER TABLE users ADD COLUMN email_verified_at timestamptz;
+CREATE TABLE account_tokens(token_hash text PRIMARY KEY, user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE, purpose text NOT NULL CHECK(purpose IN ('verify','reset')), expires_at timestamptz NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX account_tokens_expiry ON account_tokens(expires_at);
+CREATE TABLE mail_outbox(id uuid PRIMARY KEY, user_id uuid REFERENCES users(id) ON DELETE CASCADE, payload text NOT NULL, state text NOT NULL DEFAULT 'pending' CHECK(state IN ('pending','sending','sent','failed')), attempts integer NOT NULL DEFAULT 0, available_at timestamptz NOT NULL DEFAULT now(), created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX mail_outbox_pending ON mail_outbox(state,available_at);
+CREATE TABLE request_limits(key text PRIMARY KEY, count integer NOT NULL, expires_at timestamptz NOT NULL);
+CREATE INDEX request_limits_expiry ON request_limits(expires_at);
+CREATE TABLE blog_media(name text PRIMARY KEY, mime text NOT NULL, bytes bytea NOT NULL, owner_id uuid NOT NULL REFERENCES users(id), created_at timestamptz NOT NULL DEFAULT now(), CHECK(octet_length(bytes)<=5242880));
+CREATE TABLE access_grants(workspace_id uuid PRIMARY KEY REFERENCES workspaces(id), plan text NOT NULL CHECK(plan IN ('individual','team','business')), mode text NOT NULL CHECK(mode='complimentary'), granted_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE oauth_states(token_hash text PRIMARY KEY, user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE, session_hash text NOT NULL, verifier text NOT NULL, expires_at timestamptz NOT NULL);
+CREATE TABLE mail_connections(workspace_id uuid PRIMARY KEY REFERENCES workspaces(id), email text NOT NULL, refresh_token text NOT NULL, scopes text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now());

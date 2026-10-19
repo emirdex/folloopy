@@ -1,0 +1,2 @@
+import {accountApi,requireAccount} from '../../../account-api';
+export async function GET(request:Request){await requireAccount();const url=new URL(request.url),site=process.env.SITE_URL||url.origin;try{if(url.searchParams.has('error'))throw Error('DENIED');await accountApi('/api/gmail/callback',{state:url.searchParams.get('state')||'',code:url.searchParams.get('code')||''});return Response.redirect(site+'/panel?view=setup&mode=connected',303)}catch{return Response.redirect(site+'/panel?view=setup&mode=connection-error',303)}}

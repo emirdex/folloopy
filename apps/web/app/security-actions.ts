@@ -1,0 +1,9 @@
+'use server';
+import {accountApi} from './account-api';
+import {validNewPassword,PASSWORD_HELP} from '../../../packages/domain/password-policy';
+export type SecurityState={ok:boolean;message:string}|null;
+export async function requestReset(_state:SecurityState,form:FormData):Promise<SecurityState>{return request(form,'reset')}
+export async function requestVerification(_state:SecurityState,form:FormData):Promise<SecurityState>{return request(form,'verify')}
+async function request(form:FormData,purpose:'verify'|'reset'):Promise<SecurityState>{const email=String(form.get('email')||'').trim();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return {ok:false,message:'Geçerli bir e-posta adresi girin.'};try{await accountApi('/api/auth/'+purpose+'/request',{email});return {ok:true,message:'Adresiniz kayıtlıysa gerekli bağlantı e-posta adresinize gönderildi.'}}catch{return {ok:false,message:'İstek tamamlanamadı. Biraz sonra yeniden deneyin.'}}}
+export async function confirmVerification(_state:SecurityState,form:FormData):Promise<SecurityState>{try{await accountApi('/api/auth/verify/confirm',{token:String(form.get('token')||'')});return {ok:true,message:'E-posta adresiniz doğrulandı.'}}catch{return {ok:false,message:'Bağlantı geçersiz veya süresi dolmuş. Yeni bir bağlantı isteyin.'}}}
+export async function resetPassword(_state:SecurityState,form:FormData):Promise<SecurityState>{const password=String(form.get('password')||'');if(!validNewPassword(password))return {ok:false,message:PASSWORD_HELP};if(password!==form.get('confirmation'))return {ok:false,message:'Şifreler eşleşmiyor.'};try{await accountApi('/api/auth/reset/confirm',{token:String(form.get('token')||''),password});return {ok:true,message:'Şifreniz yenilendi. Yeni şifrenizle giriş yapabilirsiniz.'}}catch{return {ok:false,message:'Bağlantı geçersiz veya süresi dolmuş. Yeni bir bağlantı isteyin.'}}}
