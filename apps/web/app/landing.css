@@ -44,3 +44,5 @@ html:has(.landing-page){scroll-behavior:smooth;scroll-padding-top:105px}.landing
  .enterprise-contact{padding:24px 20px}.enterprise-contact-copy>p{font-size:15px}.enterprise-fields label>span{font-size:13px}.enterprise-fields input{height:50px}.enterprise-form-bottom>p{font-size:13px}.enterprise-form-bottom>button{font-size:15px;min-height:48px}.enterprise-success p{font-size:13px}
 }
 @media(max-width:360px){.site-header{width:calc(100% - 20px);left:50%;gap:5px}.site-header .nav-cta{font-size:12px;padding-inline:11px}.hero-announcement{font-size:10px}.hero-announcement>span{font-size:8px}.hero-product-label{font-size:7px}.purchase-card-heading>span:last-child{width:100%}}
+
+@media(max-width:650px){.hero-copy h1 svg{left:11%;width:78%}}
