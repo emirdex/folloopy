@@ -10,3 +10,15 @@
  .commerce-footer{padding-inline:20px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}.commerce-footer-top{gap:28px 22px;grid-template-columns:minmax(0,.7fr) minmax(0,1.3fr)}.commerce-footer-top nav{gap:4px;min-width:0}.commerce-footer-top nav>span,.footer-contact>span{font-size:10px;letter-spacing:1px;line-height:1.8}.commerce-footer-top nav>a,.footer-contact>a{font-size:14px;min-height:44px;line-height:1.7}.footer-legal-owner{font-size:11px;letter-spacing:.3px;max-width:300px}.footer-contact{padding-left:0;gap:10px}.footer-contact>p{font-size:12px;max-width:290px;line-height:1.9}.footer-contact>a{font-size:13px;min-height:36px}.footer-payment-row{gap:14px;padding-top:16px;align-items:center;flex-direction:row;flex-wrap:wrap}.payment-marks{gap:6px;flex-wrap:wrap;max-width:100%}.payment-logo{width:56px;height:35px}.payment-logo>img{width:43px;height:26px}.footer-arcbyte-signature{width:44px;height:44px}.footer-arcbyte-signature picture,.footer-arcbyte-signature img{width:42px;height:42px}
 }
 @media(max-width:360px){.commerce-footer-top{grid-template-columns:1fr}.footer-identity,.footer-contact{grid-column:auto}.footer-payment-row{gap:10px}.payment-logo{width:50px;height:33px}.payment-logo>img{width:39px}}
+
+/* A small size increase for footer navigation and contact details. */
+.commerce-footer-top nav>span,.footer-contact>span{font-size:9px}
+.commerce-footer-top nav>a,.footer-contact>a{font-size:12px}
+.footer-contact>p{font-size:11px}
+.footer-contact>.footer-contact-line>svg{width:15px;height:15px}
+@media(max-width:650px){
+ .commerce-footer-top nav>span,.footer-contact>span{font-size:11px}
+ .commerce-footer-top nav>a{font-size:15px}
+ .footer-contact>a{font-size:14px}
+ .footer-contact>p{font-size:13px}
+}
