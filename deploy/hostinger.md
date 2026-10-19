@@ -45,3 +45,7 @@ Monitor HTTPS /health, process restarts, PostgreSQL storage/connections, pending
 ## Explicit limits before a public launch
 
 No claim is made that hosting, DNS, database credentials, email deliverability, Google verification or real payment acceptance has been completed. Document-view/download analytics, reply tracking, the browser extension and Outlook sending are not implemented. Do not promise these as working package features. Legal documents must reflect actual data locations, vendors, billing terms and the applicable transfer arrangements; the current wording is not a legal sign-off. Use an invited pilot until these launch requirements are validated.
+
+## Public website first (no accounts or secrets)
+
+With no APP_MODE configured, production runs in marketing mode. npm start starts only Next.js on the platform PORT; no database/API/worker is launched. Public articles use the repository's editorial seed content; new admin edits are unavailable. Account/checkout routes redirect to contact, admin/panel/OAuth/collector endpoints return 404, enterprise contact is a mailto link rather than a form that claims to save data. Do not paste placeholders into hPanel. Remove auto-detected development env rows if using this mode. To enable the full application later set APP_MODE=application and provide all required production variables first.

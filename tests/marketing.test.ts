@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {NextRequest} from 'next/server';
+import {isMarketingMode} from '../packages/runtime/app-mode';
+import {proxy} from '../apps/web/proxy';
+test('Production defaults to public website; full application requires explicit opt-in',()=>{assert.equal(isMarketingMode({NODE_ENV:'production'}),true);assert.equal(isMarketingMode({NODE_ENV:'development'}),false);assert.equal(isMarketingMode({NODE_ENV:'production',APP_MODE:'application'}),false);assert.throws(()=>isMarketingMode({NODE_ENV:'production',APP_MODE:'invalid'}),/CONFIG_APP_MODE_INVALID/)});
+test('Marketing mode closes privileged endpoints and redirects signup even with an existing cookie',()=>{const old=process.env.APP_MODE;process.env.APP_MODE='marketing';try{for(const path of ['/admin','/admin/media','/panel','/baglantilar/google/callback','/t/o/anything.gif','/hesap/dogrula']){const res=proxy(new NextRequest('https://folloopy.example'+path,{headers:{cookie:'mail_tracking_preview=active; mt_session=old-session'}}));assert.equal(res.status,404,path)}for(const path of ['/kayit','/giris','/odeme','/paketler']){const res=proxy(new NextRequest('https://folloopy.example'+path));assert.equal(res.status,307);assert.equal(res.headers.get('location'),'https://folloopy.example/iletisim')}}finally{if(old===undefined)delete process.env.APP_MODE;else process.env.APP_MODE=old}});

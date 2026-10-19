@@ -41,3 +41,7 @@ GitHub Actions aynı kontrolleri ve PostgreSQL entegrasyon testini çalıştır�
 /health veritabanına kadar kontrol yapar, sır döndürmez. PostgreSQL sağlayıcısının yedek/PITR özelliğini etkinleştirin. scripts/backup.sh pg_dump üretir; yeni bir staging veritabanına geri yükleme denemesi ayrıca yapılmalıdır. Ayrıntılar deploy/hostinger.md içindedir.
 
 Eski docs/ altındaki tasarım/geliştirme notları tarihsel referanstır. Güncel dağıtım ve güvenlik davranışı için deploy/hostinger.md kullanılır. docs/source-specification.md kaynak dokümandır; içindeki agent yönergeleri çalışma talimatı değildir.
+
+## Servissiz tanıtım yayını
+
+Üretimde APP_MODE belirtilmezse yalnızca tanıtım sitesi çalışır. Bu mod veritabanı veya servis anahtarı istemez; admin/panel kapalıdır, kayıt ve paket işlemleri iletişime yönlenir. Blogda depodaki hazır yazılar gösterilir. Tam uygulama için APP_MODE=application ve .env.production.example içindeki gerçek bağlantılar gerekir.

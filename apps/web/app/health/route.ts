@@ -1,2 +1,3 @@
+import {isMarketingMode} from '../../../../packages/runtime/app-mode';
 import {internalApiUrl} from '../internal-api';
-export async function GET(){try{const res=await fetch(internalApiUrl()+'/health',{cache:'no-store',signal:AbortSignal.timeout(3000)});return Response.json({status:res.ok?'ok':'unavailable'},{status:res.ok?200:503,headers:{'Cache-Control':'no-store'}})}catch{return Response.json({status:'unavailable'},{status:503,headers:{'Cache-Control':'no-store'}})}}
+export async function GET(){if(isMarketingMode())return Response.json({status:'ok',mode:'marketing'},{headers:{'Cache-Control':'no-store'}});try{const res=await fetch(internalApiUrl()+'/health',{cache:'no-store',signal:AbortSignal.timeout(3000)});return Response.json({status:res.ok?'ok':'unavailable'},{status:res.ok?200:503,headers:{'Cache-Control':'no-store'}})}catch{return Response.json({status:'unavailable'},{status:503,headers:{'Cache-Control':'no-store'}})}}
