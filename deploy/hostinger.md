@@ -49,3 +49,7 @@ No claim is made that hosting, DNS, database credentials, email deliverability, 
 ## Public website first (no accounts or secrets)
 
 With no APP_MODE configured, production runs in marketing mode. npm start starts only Next.js on the platform PORT; no database/API/worker is launched. Public articles use the repository's editorial seed content; new admin edits are unavailable. Account/checkout routes redirect to contact, admin/panel/OAuth/collector endpoints return 404, enterprise contact is a mailto link rather than a form that claims to save data. Do not paste placeholders into hPanel. Remove auto-detected development env rows if using this mode. To enable the full application later set APP_MODE=application and provide all required production variables first.
+
+## Hostinger GLIBC / SWC compatibility
+
+Build uses `next build apps/web --webpack` and next.config.mjs so configuration loading does not require TypeScript transformation. @next/swc-wasm-nodejs is pinned to the same Next.js version; Next can fall back to WASM when a host's glibc cannot load native SWC. Turbopack does not support this fallback for the production build. The Webpack build was exercised with Next's WASM-first path locally; Hostinger deployment still needs separate acceptance. No host library replacement or certificate/security bypass is required.
