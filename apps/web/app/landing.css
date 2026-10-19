@@ -48,15 +48,7 @@ html:has(.landing-page){scroll-behavior:smooth;scroll-padding-top:105px}.landing
 @media(max-width:650px){.hero-copy h1 svg{left:11%;width:78%}}
 @media(min-width:901px){.hero-copy h1 svg{bottom:-15px}}
 
-/* Real provider logos float on the hero background, outside the mail animation. */
 .hero-demo-scene{position:relative;display:flow-root;z-index:2}
-.hero-provider-logos{pointer-events:none}
-.hero-provider{position:absolute;display:block;object-fit:contain;width:64px;height:auto;z-index:1;filter:drop-shadow(0 8px 14px #274a8b14)}
-.hero-provider-gmail{left:clamp(22px,calc(50% - 560px),20%);top:-10px;transform:rotate(-12deg)}
-.hero-provider-outlook{right:clamp(22px,calc(50% - 560px),20%);top:112px;transform:rotate(11deg)}
-@media(max-width:1100px) and (min-width:1001px){.hero-provider{width:50px}}
-@media(max-width:1000px){.hero-demo-scene{padding-top:42px}.hero-provider{width:48px}.hero-provider-gmail{left:8%;top:9px}.hero-provider-outlook{right:8%;top:14px}}
-@media(max-width:650px){.hero-demo-scene{padding-top:32px}.hero-provider{width:38px}.hero-provider-gmail{left:10%;top:14px}.hero-provider-outlook{right:10%;top:18px}}
 
 @media(max-width:1024px){.hero-disclaimer{display:none;margin:0}.site-hero{min-height:0}}
 
