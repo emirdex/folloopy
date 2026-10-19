@@ -75,3 +75,5 @@ html:has(.landing-page){scroll-behavior:smooth;scroll-padding-top:105px}.landing
  .closing-glass-button::before{content:'';position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;pointer-events:none;background:conic-gradient(from var(--hero-border-angle),transparent 0deg 250deg,#bad4fc40 285deg,#77a9f0e0 320deg,#fff 345deg,transparent 360deg);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;filter:drop-shadow(0 0 3px #91b6ef90);animation:hero-border-travel 5s linear infinite}
 }
 @media(prefers-reduced-motion:reduce){.closing-glass-button::before{animation:none;opacity:.45}}
+
+.hero-product-head .hero-gmail-brand{font-size:18px;line-height:22px;color:#5f6f85;gap:7px}.hero-product-head .hero-gmail-brand>svg{width:25px;height:19px}
