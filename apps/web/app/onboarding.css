@@ -55,3 +55,17 @@
 .flow-header .flow-quiet{transition:color .2s ease}
 .flow-header .flow-quiet:focus-visible{color:#416aac}
 
+
+
+/* Account screens stay focused on the form on small screens. */
+@media(max-width:900px){.auth-layout{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)}.auth-story{padding:40px 28px}.auth-form-area{padding:40px 28px}.flow-header nav{gap:12px}.flow-header nav>span{font-size:11px}}
+@media(max-width:720px){
+ .onboarding-page{padding:0 16px calc(24px + env(safe-area-inset-bottom))}.flow-header{height:auto;min-height:88px;gap:16px;flex-wrap:wrap;padding:18px 0}.flow-header .flow-quiet{font-size:13px;min-height:44px;gap:6px}
+ .flow-header nav{width:100%;order:3;justify-content:space-between;padding-bottom:8px;gap:6px}.flow-header nav>span{font-size:12px;gap:6px}.flow-header nav b{width:25px;height:25px}.flow-header nav svg:last-child{margin-left:0}
+ .auth-layout{display:flex;flex-direction:column;min-height:0;border-radius:24px}.auth-form-area{order:-1;padding:30px 24px}.auth-form-inner{max-width:440px}.auth-form-inner .flow-back{margin-bottom:26px;min-height:36px;font-size:13px}.auth-form-inner h2{font-size:34px}.auth-form-inner>p{font-size:15px}.account-form{gap:22px}.account-form label{font-size:14px;line-height:1.5}.account-form input{height:52px}.account-form label>small{font-size:12px;line-height:1.7}.password-input button{right:4px;top:4px;min-width:44px;min-height:44px;display:grid;place-items:center}.flow-primary{font-size:15px;min-height:50px}.auth-switch{font-size:14px!important;line-height:1.8}.auth-switch>a{min-height:36px}.auth-form-inner .auth-note p{font-size:12px;line-height:1.8}
+ .auth-story{padding:30px 26px;min-height:0}.auth-story h1{font-size:34px;margin-top:18px;line-height:1.1}.auth-story>p{font-size:14px;max-width:none}.auth-story .provider-art{height:145px;margin:8px 0}.auth-story .story-foot{padding-top:12px;font-size:12px;flex-wrap:wrap;gap:12px}
+ .checkout-layout{margin-top:24px}.checkout-story h1{font-size:clamp(33px,9vw,42px)}.checkout-story>p{font-size:15px}.checkout-steps strong{font-size:15px}.checkout-steps p{font-size:13px;line-height:1.8;overflow-wrap:anywhere}.checkout-steps>div>span{flex-shrink:0}.checkout-notice p{font-size:13px}.checkout-notice strong{font-size:14px}.order-summary{padding:26px 22px}.order-summary dl>div{font-size:14px;gap:18px;line-height:1.7}.order-summary dd{text-align:right;overflow-wrap:anywhere}.order-product p,.order-total>span,.order-total small,.order-foot,.order-change{font-size:13px;line-height:1.8}.order-label{font-size:11px}.order-change{min-height:44px}
+}
+@media(max-width:360px){.auth-form-area{padding:26px 20px}.auth-form-inner h2{font-size:30px}.flow-header .flow-quiet{font-size:12px}.flow-header nav>span{font-size:11px}.flow-header nav>span>svg{display:none}.order-summary{padding:24px 18px}}
+
+@media(max-width:720px){.flow-header nav{display:flex}.flow-header{padding-top:max(18px,env(safe-area-inset-top))}}

@@ -19,3 +19,55 @@
 .purchase-preview-bar{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:9px 35px;font-size:10px;line-height:1.7;color:#7e91af;background:#eaf1ff;border-bottom:1px solid #dfe9fb}.purchase-preview-bar>span{display:flex;align-items:center;gap:6px}.purchase-preview-bar button{display:flex;align-items:center;gap:6px;background:none;color:#93a6c4;font-size:9px;padding:2px}.purchase-preview-bar button:hover{color:#496b9e}.public-site-link{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#8a9db9;white-space:nowrap}@media(max-width:650px){.purchase-preview-bar{padding:8px 17px;gap:15px;align-items:flex-start;font-size:8px;line-height:1.8}.purchase-preview-bar>span{align-items:flex-start;gap:5px;flex:1}.purchase-preview-bar>span>svg{width:11px;height:11px;flex-shrink:0;margin-top:2px}.purchase-preview-bar button{font-size:8px;white-space:nowrap;padding:0;gap:4px}.public-site-link{font-size:0;gap:0}.public-site-link>svg{width:15px;height:15px}.product-header .header-actions{gap:7px}}
 
 .panel-account-actions{display:flex;align-items:center;gap:18px}.panel-account-actions>a{font-size:11px;color:#6e82a7}@media(max-width:650px){.panel-account-actions{gap:9px}.panel-account-actions>a{font-size:9px}}
+
+/* Shared responsive foundations: shrink content, preserve readable inputs and touch targets. */
+:where(main, section, article, aside, form, fieldset){min-width:0}
+img,video{max-width:100%;height:auto}
+button,a,input,textarea,select{-webkit-tap-highlight-color:transparent}
+input,textarea,select{scroll-margin-block:100px}
+.table-scroll,.admin-table-scroll{max-width:100%;overscroll-behavior-inline:contain}
+@media(max-width:900px){
+ .product-shell{padding:12px}.app-layout{display:flex;flex-direction:column;gap:14px}
+ .sidebar{position:static;display:block;width:100%;min-height:0;padding:0}
+ .sidebar-label,.sidebar-bottom{display:none}
+ .sidebar nav{display:flex;flex-direction:row;justify-content:flex-start;overflow-x:auto;gap:6px;padding:4px 2px 8px;scrollbar-width:thin}
+ .sidebar .nav-item,.sidebar .nav-item.active{display:flex;flex:0 0 auto;width:auto;height:auto;min-height:44px;gap:8px;padding:10px 14px;border-radius:14px}
+ .sidebar .nav-item>span:not(.nav-current-dot){display:inline;font-size:13px;white-space:nowrap}
+ .sidebar .nav-item>svg{width:18px;height:18px;flex-shrink:0}.nav-current-dot{display:none}
+ .workspace-content{width:100%;min-width:0}.workspace-content>*{min-width:0}
+ .section-tabs{overflow-x:auto;white-space:nowrap}.section-tabs>a{flex-shrink:0;min-height:48px}
+ .product-header{height:auto;min-height:68px;flex-wrap:wrap;padding:14px;gap:12px}.header-actions{margin-left:auto}
+ .header-compose:before{content:none}.header-compose{font-size:13px;min-height:44px;gap:7px;padding:10px 14px}
+ .global-search,.icon-button,.row-action{min-width:44px;min-height:44px}.public-site-link{min-height:44px}
+ .page-heading,.surface-heading,.record-tabs{flex-wrap:wrap}.page-heading>div,.surface-heading>div{min-width:0}
+ .page-heading h1,.record-heading h1{overflow-wrap:anywhere}
+ .mail-cell>div,.feed-event>div,.event-item>div{min-width:0}.subject-link{overflow-wrap:anywhere}
+ .table-scroll{overflow-x:auto}.message-table{min-width:590px}.recent-mails .message-table{min-width:420px}
+ .purchase-preview-bar{flex-wrap:wrap;font-size:12px;padding:12px 18px;gap:8px}.panel-account-actions{margin-left:auto;gap:16px}
+ .panel-account-actions>a,.purchase-preview-bar button{font-size:12px;min-height:36px}
+ .compose-address input{min-width:0;width:100%;flex:1}.composer textarea{width:100%}
+ .button{min-height:44px}.record-heading p,.event-item p,.feed-event>div>a{overflow-wrap:anywhere}
+ .event-item{flex-wrap:wrap}.event-item time{white-space:normal}.search-dialog{width:min(500px,calc(100vw - 28px));max-height:calc(100dvh - 28px);overflow-y:auto}
+}
+@media(max-width:650px){
+ body input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=file]),body textarea,body select{font-size:16px!important}
+ input:not([type=checkbox]):not([type=radio]):not([type=hidden]),select{min-height:48px}
+ .product-shell{padding:8px}.workspace-content{padding:22px 16px}.page-heading h1{font-size:30px}
+ .page-heading p,.surface-heading p,.connection-card>p,.provider-description>p,.help-point p,.compose-help p,.tracking-option>p{font-size:14px;line-height:1.8}
+ .metric-top{font-size:12px}.metric>small{font-size:12px}.metric{padding:18px 14px}
+ .chip{font-size:12px;white-space:normal}.measurement-note p,.workspace-footer,.chart-footer{font-size:12px;line-height:1.8}
+ .message-table th{font-size:12px}.message-table td,.subject-link{font-size:14px}.message-table small{font-size:12px}
+ .connection-card{display:block}.connection-card>.button{width:100%}.provider-row>div{flex:1}
+ .record-info{display:block}.record-info dd{font-size:14px;overflow-wrap:anywhere}.record-info dt{font-size:12px}
+ .event-item strong,.feed-event h3{font-size:15px}.event-item p,.feed-event>div>a{font-size:14px}.event-item time,.event-item small,.feed-event time{font-size:12px}
+ .table-toolbar{flex-wrap:wrap}.inline-search{flex:1;min-width:180px;width:auto}.table-toolbar>span{font-size:12px}
+ .product-header .brand{flex-shrink:0}.product-header .public-site-link{display:none}.product-header .header-actions{gap:4px}
+ .compose-address,.compose-subject{padding:16px;gap:12px}.compose-address>span:first-child,.compose-subject>label{width:34px;flex-shrink:0}
+ .search-dialog form{flex-wrap:wrap}.search-dialog input{flex:1;min-width:100px}.search-dialog form>.button{width:100%;justify-content:center}
+}
+@media(max-width:360px){.product-header .brand .folloopy-logo{width:88px}.product-header{padding:12px 10px}.header-compose{padding:10px;font-size:12px}.metric-strip{grid-template-columns:1fr}.metric>strong{margin-block:10px}.chart-legend{width:100%}}
+
+.recovery-error{width:min(560px,calc(100% - 40px));margin:48px auto;padding:28px;border:1px solid #e3eaf6;border-radius:22px;background:#fff}.recovery-error h1{font:500 30px/1.2 Gabarito,Satoshi,sans-serif;overflow-wrap:anywhere}.recovery-error p{font-size:16px;line-height:1.85;margin:20px 0;color:#62738e}.recovery-error button{min-height:48px;padding:12px 18px;border-radius:100px;background:#172132;color:white;font-size:15px}
+@media(max-width:650px){.workspace-content{color:#334863}.breadcrumb{font-size:12px}.surface-heading p,.page-heading p,.metric>small,.provider-description>p,.settings-help p,.activity-guide>p{color:#667c9d}.admin-info,.alert{overflow-wrap:anywhere}}
+
+@media(min-width:651px) and (max-width:900px){body input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=file]),body textarea,body select{font-size:16px!important}input:not([type=checkbox]):not([type=radio]):not([type=hidden]),select{min-height:48px}}
