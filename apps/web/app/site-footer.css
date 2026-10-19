@@ -33,3 +33,11 @@
  .footer-arcbyte-signature{width:44px;height:44px;align-self:center}
  .footer-arcbyte-signature picture,.footer-arcbyte-signature img{width:36px;height:36px}
 }
+
+/* Give long footer links a full row on narrow screens. */
+@media(max-width:650px){
+ .commerce-footer-top{grid-template-columns:minmax(0,1fr);row-gap:28px}
+ .commerce-footer-top>nav{width:100%;gap:6px;padding-top:22px;border-top:1px solid #edf1f8}
+ .commerce-footer-top>nav>span{margin:0 0 8px;line-height:1.8}
+ .commerce-footer-top>nav>a{max-width:100%;min-height:44px;line-height:1.7;overflow-wrap:anywhere}
+}
