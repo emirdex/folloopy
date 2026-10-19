@@ -64,3 +64,12 @@ html:has(.landing-page){scroll-behavior:smooth;scroll-padding-top:105px}.landing
 .enterprise-email-contact>p{margin:0;max-width:390px;font-size:14px;line-height:1.85;color:#879ab7}
 .enterprise-email-contact>.site-button{font-size:14px;min-height:48px;gap:24px}
 @media(max-width:650px){.enterprise-email-contact{gap:20px}.enterprise-email-contact>p{font-size:15px;line-height:1.85}.enterprise-email-contact>.site-button{width:100%;justify-content:space-between;padding:14px 20px}}
+
+/* A soft light travels around the announcement border. */
+@property --hero-border-angle{syntax:'<angle>';inherits:false;initial-value:0deg}
+.hero-announcement{position:relative;isolation:isolate}
+@supports (mask-composite:exclude) or (-webkit-mask-composite:xor){
+ .hero-announcement::before{content:'';position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;pointer-events:none;background:conic-gradient(from var(--hero-border-angle),transparent 0deg 255deg,#d4edff18 285deg,#e6f5ff88 320deg,#fff 342deg,transparent 360deg);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;filter:drop-shadow(0 0 3px #e2f4ff80);animation:hero-border-travel 5s linear infinite}
+}
+@keyframes hero-border-travel{to{--hero-border-angle:360deg}}
+@media(prefers-reduced-motion:reduce){.hero-announcement::before{animation:none;opacity:.35}}
