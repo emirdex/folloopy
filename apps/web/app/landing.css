@@ -59,3 +59,8 @@ html:has(.landing-page){scroll-behavior:smooth;scroll-padding-top:105px}.landing
 @media(max-width:650px){.hero-demo-scene{padding-top:32px}.hero-provider{width:38px}.hero-provider-gmail{left:10%;top:14px}.hero-provider-outlook{right:10%;top:18px}}
 
 @media(max-width:1024px){.hero-disclaimer{display:none;margin:0}.site-hero{min-height:0}}
+
+.enterprise-email-contact{display:flex;flex-direction:column;align-items:flex-start;gap:18px}
+.enterprise-email-contact>p{margin:0;max-width:390px;font-size:14px;line-height:1.85;color:#879ab7}
+.enterprise-email-contact>.site-button{font-size:14px;min-height:48px;gap:24px}
+@media(max-width:650px){.enterprise-email-contact{gap:20px}.enterprise-email-contact>p{font-size:15px;line-height:1.85}.enterprise-email-contact>.site-button{width:100%;justify-content:space-between;padding:14px 20px}}
