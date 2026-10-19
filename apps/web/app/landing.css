@@ -57,3 +57,5 @@ html:has(.landing-page){scroll-behavior:smooth;scroll-padding-top:105px}.landing
 @media(max-width:1100px) and (min-width:1001px){.hero-provider{width:50px}}
 @media(max-width:1000px){.hero-demo-scene{padding-top:42px}.hero-provider{width:48px}.hero-provider-gmail{left:8%;top:9px}.hero-provider-outlook{right:8%;top:14px}}
 @media(max-width:650px){.hero-demo-scene{padding-top:32px}.hero-provider{width:38px}.hero-provider-gmail{left:10%;top:14px}.hero-provider-outlook{right:10%;top:18px}}
+
+@media(max-width:1024px){.hero-disclaimer{display:none;margin:0}.site-hero{min-height:0}}
