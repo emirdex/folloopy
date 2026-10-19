@@ -4,7 +4,7 @@ Target: https://folloopy.com. This is the application setup guide, not evidence 
 
 ## Architecture
 
-One Hostinger Node application runs `server.cjs` / `npm start`. The supervisor starts a private Fastify API on 127.0.0.1:4000, waits for its database-backed health check, then starts the Next.js production server on Hostinger's assigned PORT. Only Next.js is public. If either child exits, the supervisor terminates the other and exits so the platform can restart the entire application. Use one instance of this supervisor; background processing is in the API process.
+One Hostinger Node application runs `server.cjs` / `npm start`. The supervisor starts a private Fastify API on 127.0.0.1:4000, waits for its database-backed health check, then prepares the Next.js production server in the main process on Hostinger's assigned PORT. Only Next.js is public and its HTTP listener runs directly inside the entry process so Passenger can attach to it. If the private API exits, the entry process closes the public listener and exits so the platform can restart the entire application. Use one instance of this supervisor; background processing is in the API process.
 
 An external PostgreSQL service (for example Supabase/Neon) is required. Hostinger Business's SQL offering must not be assumed to be PostgreSQL. Choose a region consistent with the privacy documents. Use a direct or session-pool connection and provider-required TLS. No PGlite database is permitted in production. API migrations run transactionally before readiness and take a PostgreSQL advisory lock. The application account needs migration privileges; restrict them separately if your deployment pipeline applies migrations before runtime.
 
@@ -53,3 +53,7 @@ With no APP_MODE configured, production runs in marketing mode. npm start starts
 ## Hostinger GLIBC / SWC compatibility
 
 Build uses `next build apps/web --webpack` and next.config.mjs so configuration loading does not require TypeScript transformation. @next/swc-wasm-nodejs is pinned to the same Next.js version; Next can fall back to WASM when a host's glibc cannot load native SWC. Turbopack does not support this fallback for the production build. The Webpack build was exercised with Next's WASM-first path locally; Hostinger deployment still needs separate acceptance. No host library replacement or certificate/security bypass is required.
+
+## Runtime 503 / Passenger entry point
+
+server.cjs now creates the public HTTP server in its own process, rather than spawning next start in a child. This permits process managers that intercept http.Server.listen (such as Passenger) to attach the public socket. Marketing mode does not require tsx at runtime; tsx is a runtime dependency for the full application's private API. If 503 persists, inspect application startup stderr: FOLLOOPY_START_FAILED, missing build files/dependencies, process limits and the configured entry path. A successful build does not prove that the runtime started.

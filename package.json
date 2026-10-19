@@ -16,7 +16,7 @@
     "build": "next build apps/web --webpack",
     "db:migrate": "node --import tsx scripts/migrate.ts",
     "smoke": "node --import tsx scripts/smoke.ts",
-    "start": "node --import tsx scripts/start.ts",
+    "start": "node server.cjs",
     "preflight": "node --import tsx scripts/preflight.ts"
   },
   "dependencies": {
@@ -27,14 +27,14 @@
     "next": "16.4.2",
     "pg": "8.23.1",
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "tsx": "4.23.15"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/pg": "^8.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "tsx": "4.23.15",
     "typescript": "7.0.2"
   }
 }
