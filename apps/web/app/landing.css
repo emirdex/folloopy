@@ -73,3 +73,13 @@ html:has(.landing-page){scroll-behavior:smooth;scroll-padding-top:105px}.landing
 }
 @keyframes hero-border-travel{to{--hero-border-angle:360deg}}
 @media(prefers-reduced-motion:reduce){.hero-announcement::before{animation:none;opacity:.35}}
+
+/* Glass CTA, with the traveling highlight confined to its rounded border. */
+.closing-section>.closing-glass-button{position:relative;isolation:isolate;min-height:48px;padding-inline:24px;color:#46658e;background:linear-gradient(135deg,#ffffffc4,#dce8ff80);border:1px solid #cbdcf2;box-shadow:inset 0 1px 0 #fff,0 7px 22px #6688b51a,inset 0 -1px 0 #b4c9e629;-webkit-backdrop-filter:blur(14px) saturate(150%);backdrop-filter:blur(14px) saturate(150%);text-shadow:0 1px 0 #ffffff80}
+.closing-section>.closing-glass-button:hover{color:#355a89;background:linear-gradient(135deg,#ffffffeb,#dce9ffa6);border-color:#b6ceef;box-shadow:inset 0 1px 0 #fff,0 10px 27px #6688b526}
+.closing-section>.closing-glass-button:active{transform:translateY(0);box-shadow:inset 0 1px 4px #6487b514}
+.closing-section>.closing-glass-button:focus-visible{outline:2px solid #6e98d7;outline-offset:4px}
+@supports (mask-composite:exclude) or (-webkit-mask-composite:xor){
+ .closing-glass-button::before{content:'';position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;pointer-events:none;background:conic-gradient(from var(--hero-border-angle),transparent 0deg 250deg,#bad4fc40 285deg,#77a9f0e0 320deg,#fff 345deg,transparent 360deg);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;filter:drop-shadow(0 0 3px #91b6ef90);animation:hero-border-travel 5s linear infinite}
+}
+@media(prefers-reduced-motion:reduce){.closing-glass-button::before{animation:none;opacity:.45}}
