@@ -46,3 +46,4 @@ html:has(.landing-page){scroll-behavior:smooth;scroll-padding-top:105px}.landing
 @media(max-width:360px){.site-header{width:calc(100% - 20px);left:50%;gap:5px}.site-header .nav-cta{font-size:12px;padding-inline:11px}.hero-announcement{font-size:10px}.hero-announcement>span{font-size:8px}.hero-product-label{font-size:7px}.purchase-card-heading>span:last-child{width:100%}}
 
 @media(max-width:650px){.hero-copy h1 svg{left:11%;width:78%}}
+@media(min-width:901px){.hero-copy h1 svg{bottom:-15px}}
