@@ -24,3 +24,12 @@
 }
 
 .footer-brand-details{margin-top:24px}.footer-brand-details>.footer-contact-email{margin-top:0}
+
+@media(max-width:650px){
+ .footer-payment-row{display:grid;grid-template-columns:44px minmax(0,1fr);align-items:center;gap:10px;padding-block:14px 8px}
+ .footer-payment-row .payment-marks{justify-content:flex-end;flex-wrap:nowrap;gap:6px;min-width:0}
+ .footer-payment-row .payment-logo{flex:0 0 48px;width:48px;height:30px;border-radius:8px}
+ .footer-payment-row .payment-logo>img{width:36px;height:22px}
+ .footer-arcbyte-signature{width:44px;height:44px;align-self:center}
+ .footer-arcbyte-signature picture,.footer-arcbyte-signature img{width:36px;height:36px}
+}
