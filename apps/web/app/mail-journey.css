@@ -134,3 +134,16 @@
 
 @media(max-width:650px){.hero-product-head{min-height:45px;align-items:flex-start}.journey-controls{top:-50px;right:0;gap:3px}.journey-controls button{width:44px;height:44px}.journey-controls button svg{width:16px;height:16px}.hero-product-label{padding-right:94px;font-size:8px!important}.journey-caption{min-height:115px;align-items:flex-start;padding-top:20px}.journey-caption h3{font-size:18px;line-height:1.3}.journey-caption p{font-size:13px;line-height:1.8}.journey-steps{flex-wrap:wrap;gap:5px}.journey-steps button{min-height:44px;font-size:12px;padding:9px 8px;flex:1}.journey-steps button>span{font-size:10px}.journey-steps button>svg{display:none}}
 @media(max-width:360px){.hero-product-label{display:none}.journey-steps button{font-size:11px}.journey-caption h3{font-size:17px}}
+
+/* Persistent button outlines make the journey steps discoverable on touch too. */
+.mail-journey .journey-steps{gap:8px;padding-top:12px}
+.mail-journey .journey-steps button{min-height:44px;border:1px solid #d1dff2;background:#f8fbff;color:#6b86ac;border-radius:10px;cursor:pointer;touch-action:manipulation;box-shadow:0 2px 4px #49699506;transition:background .18s,border-color .18s,box-shadow .18s,transform .18s}
+.mail-journey .journey-steps button>span{min-width:22px;height:22px;border-radius:6px;background:#eaf0fa;color:#8099be}
+.mail-journey .journey-steps button>svg{color:#8fa8ce}
+.mail-journey .journey-steps button.selected{background:#e8f0ff;border-color:#9cb9e6;color:#5074aa;box-shadow:0 2px 7px #678ac316}
+.mail-journey .journey-steps button.selected>span{background:#7799d2;color:#fff}
+.mail-journey .journey-steps button:focus-visible{outline:2px solid #648bd0;outline-offset:3px}
+@media(hover:hover){.mail-journey .journey-steps button:hover{background:#edf4ff;border-color:#a6bfe5;box-shadow:0 4px 10px #567aaa18;transform:translateY(-1px)}}
+.mail-journey .journey-steps button:active{transform:translateY(1px) scale(.98);box-shadow:none}
+@media(max-width:650px){.mail-journey .journey-steps{gap:6px}.mail-journey .journey-steps button>span{min-width:18px;height:20px;border-radius:5px}}
+@media(prefers-reduced-motion:reduce){.mail-journey .journey-steps button{transition:none}.mail-journey .journey-steps button:hover,.mail-journey .journey-steps button:active{transform:none}}
