@@ -45,3 +45,7 @@ Eski docs/ altındaki tasarım/geliştirme notları tarihsel referanstır. Günc
 ## Servissiz tanıtım yayını
 
 Üretimde APP_MODE belirtilmezse yalnızca tanıtım sitesi çalışır. Bu mod veritabanı veya servis anahtarı istemez; admin/panel kapalıdır, kayıt ve paket işlemleri iletişime yönlenir. Blogda depodaki hazır yazılar gösterilir. Tam uygulama için APP_MODE=application ve .env.production.example içindeki gerçek bağlantılar gerekir.
+
+### İletişim formu
+
+`/iletisim` üzerindeki form, her iki yayın modunda da mesajları sabit `info@folloopy.com` adresine gönderir. Hostinger ortam değişkenlerine `RESEND_API_KEY` ve doğrulanmış gönderici olan `MAIL_FROM` eklenmelidir; bu değerler GitHub’a yüklenmez. Gönderim servisi ayarlı değilse form başarılı gönderim bildirmez ve doğrudan e-posta adresini gösterir. Yanıt adresi ziyaretçinin adresidir. Formda sunucu doğrulaması, bot alanı ve her sunucu sürecinde IP başına 15 dakikada 5 deneme sınırı bulunur; bu sınır yeniden başlatmada sıfırlanır. Testler sahte e-posta servisi kullanır; gerçek teslimat ayrıca posta kutusunda doğrulanmalıdır.
