@@ -32,3 +32,10 @@ html:has(.legal-page){scroll-behavior:smooth;scroll-padding-top:30px}.legal-page
 .legal-title>.legal-documents-link:hover{background:#e8f0fd;border-color:#afc7ec;color:#355c95}
 .legal-page #belgeler{scroll-margin-top:30px}
 .legal-page #belgeler:target{outline:2px solid #bed2f2;outline-offset:12px;border-radius:8px;background:#f7faff}
+
+.legal-sidebar>a.legal-contact-glass{display:inline-flex;align-items:center;justify-content:space-between;gap:22px;width:fit-content;min-height:46px;margin-top:28px;padding:12px 18px;border:1px solid #d5e2f5;border-radius:100px;background:linear-gradient(135deg,#ffffffbd,#e5eeff8c);color:#6082b6;font-size:13px;line-height:1.6;box-shadow:inset 0 1px 0 #fff,inset 0 -1px 0 #b9cde62e,0 5px 18px #6688b514;-webkit-backdrop-filter:blur(14px) saturate(145%);backdrop-filter:blur(14px) saturate(145%);transition:background .2s,box-shadow .2s,transform .2s}
+.legal-sidebar>a.legal-contact-glass:hover{background:linear-gradient(135deg,#fff,#e8f0ffb3);color:#416da8;box-shadow:inset 0 1px 0 #fff,0 7px 22px #6688b526;transform:translateY(-1px)}
+.legal-sidebar>a.legal-contact-glass:active{transform:translateY(0)}
+.legal-sidebar>a.legal-contact-glass>svg{flex-shrink:0}
+@media(max-width:650px){.legal-sidebar>a.legal-contact-glass{margin-top:22px;font-size:13px;min-height:46px}}
+@media(prefers-reduced-motion:reduce){.legal-sidebar>a.legal-contact-glass:hover{transform:none}}
