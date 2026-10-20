@@ -27,3 +27,8 @@ html:has(.legal-page){scroll-behavior:smooth;scroll-padding-top:30px}.legal-page
 @keyframes legal-home-light{to{--legal-home-angle:360deg}}
 @media(max-width:650px){.legal-header{gap:12px}.legal-header>.legal-home{font-size:12px;padding:11px 12px;gap:7px;min-height:44px}}
 @media(prefers-reduced-motion:reduce){.legal-home::before{animation:none;opacity:.45}.legal-header>.legal-home:hover{transform:none}}
+
+.legal-title>.legal-documents-link{display:inline-flex;align-items:center;gap:9px;min-height:44px;padding:10px 16px;border:1px solid #d8e4f6;border-radius:12px;background:#f3f7fe;color:#5475a4;font-size:14px;font-weight:500;transition:background .2s,border-color .2s}
+.legal-title>.legal-documents-link:hover{background:#e8f0fd;border-color:#afc7ec;color:#355c95}
+.legal-page #belgeler{scroll-margin-top:30px}
+.legal-page #belgeler:target{outline:2px solid #bed2f2;outline-offset:12px;border-radius:8px;background:#f7faff}
