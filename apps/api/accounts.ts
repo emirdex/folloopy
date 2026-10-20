@@ -29,6 +29,13 @@ export class Accounts{
   if(!timingSafeEqual(computed,Buffer.from(encoded,'hex'))||!user)throw new Error('INVALID_LOGIN');
   return this.createSession(user.id);
  }
+ async verifyPassword(userId:string,password:string){
+  const row=(await this.db.query<{password_hash:string}>('SELECT password_hash FROM users WHERE id=$1',[userId])).rows[0];
+  if(!row||!password||password.length>128)throw Error('INVALID_LOGIN');
+  const [salt,encoded]=row.password_hash.split(':');
+  const computed=await scrypt(password,salt,64) as Buffer;
+  if(!timingSafeEqual(computed,Buffer.from(encoded,'hex')))throw Error('INVALID_LOGIN');
+ }
  private async createSession(id:string){
   const token=randomBytes(32).toString('base64url');
   await this.db.query("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '7 days')",[digest(token),id]);

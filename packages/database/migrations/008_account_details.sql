@@ -1,0 +1,2 @@
+CREATE TABLE account_email_changes(user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, old_email text NOT NULL, new_email text NOT NULL, old_token_hash text UNIQUE, new_token_hash text UNIQUE, old_confirmed boolean NOT NULL DEFAULT false, new_confirmed boolean NOT NULL DEFAULT false, expires_at timestamptz NOT NULL, created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX account_email_changes_expiry ON account_email_changes(expires_at);

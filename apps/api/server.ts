@@ -1,3 +1,4 @@
+import {AccountDetails} from './account-details';
 import {AccountSecurity} from './account-security';
 import {GmailConnections} from './gmail';
 import {allowRequest} from './rate-limit';
@@ -23,6 +24,7 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  const service=new TrackingService(db,provider,origin);
  const accounts=new Accounts(db,production);
  const admin=new AdminService(db,accounts),blog=new BlogService(db);
+ const accountDetails=new AccountDetails(db,options.site||origin,options.encryptionKey);
  if(adminConfig)app.addHook('onReady',async()=>{await admin.init(adminConfig)});
  const owner=(req:{headers:Record<string,unknown>})=>admin.owner(String(req.headers['x-user-session']||''));
  app.addHook('preValidation',async(req,reply)=>{if(req.url.startsWith('/api/admin/')){reply.header('Cache-Control','no-store');if(!['/api/admin/setup','/api/admin/setup-status'].includes(req.url.split('?')[0]))await owner(req)}});
@@ -46,7 +48,7 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  });
  app.setErrorHandler((error,req,reply)=>{
   const code=error instanceof Error?error.message:'INTERNAL_ERROR';
-  const status=({UNAUTHORIZED:401,INVALID_LOGIN:401,ACCOUNT_EXISTS:409,PLAN_REQUIRED:402,INVALID_PLAN:400,INVALID_PASSWORD:400,INVALID_ACCOUNT:400,INVALID_POST:400,SETUP_CLOSED:409,INVALID_SETUP_TOKEN:403,EXISTING_ACCOUNT_PASSWORD_REQUIRED:401,SLUG_EXISTS:409,STALE_POST:409,NOT_FOUND:404,FORBIDDEN:403,EMAIL_NOT_VERIFIED:403,INVALID_ACCOUNT_TOKEN:400,GMAIL_NOT_CONNECTED:409,GMAIL_UNAVAILABLE:503,INVALID_OAUTH_STATE:400,GMAIL_AUTH_FAILED:400,GMAIL_SCOPE_REQUIRED:400,LIMIT_REACHED:402,IDEMPOTENCY_CONFLICT:409} as Record<string,number>)[code]|| (typeof error==='object' && error!==null && 'validation' in error?400:500);
+  const status=({UNAUTHORIZED:401,INVALID_LOGIN:401,ACCOUNT_EXISTS:409,PLAN_REQUIRED:402,INVALID_PLAN:400,INVALID_PASSWORD:400,INVALID_ACCOUNT:400,INVALID_POST:400,SETUP_CLOSED:409,INVALID_SETUP_TOKEN:403,EXISTING_ACCOUNT_PASSWORD_REQUIRED:401,SLUG_EXISTS:409,STALE_POST:409,NOT_FOUND:404,FORBIDDEN:403,EMAIL_NOT_VERIFIED:403,INVALID_ACCOUNT_TOKEN:400,EMAIL_UNAVAILABLE:503,EMAIL_IN_USE:409,EMAIL_UNCHANGED:400,GMAIL_NOT_CONNECTED:409,GMAIL_UNAVAILABLE:503,INVALID_OAUTH_STATE:400,GMAIL_AUTH_FAILED:400,GMAIL_SCOPE_REQUIRED:400,LIMIT_REACHED:402,IDEMPOTENCY_CONFLICT:409} as Record<string,number>)[code]|| (typeof error==='object' && error!==null && 'validation' in error?400:500);
   reply.code(status).send({code:status===500?'INTERNAL_ERROR':code,message:status===500?'İşlem tamamlanamadı.':status===400?'Girdi geçersiz.':'İşlem için hak veya geçerli istek gerekli.'});
  });
  const newPassword={type:'string',minLength:8,maxLength:128,pattern:PASSWORD_PATTERN};
@@ -55,6 +57,12 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  app.post('/api/auth/register',{schema:{body:{...credentials,properties:{...credentials.properties,password:newPassword},required:['name','email','password']}},preHandler:authRate},async req=>{const b=req.body as {name:string;email:string;password:string};const result=await accounts.register(b.name.trim(),b.email,b.password);if(production&&security){const user=await accounts.current(result.token);if(user)await security.issue(user.id,'verify');}return result});
  app.post('/api/auth/login',{schema:{body:credentials},preHandler:authRate},async req=>{const b=req.body as {email:string;password:string};return accounts.login(b.email,b.password)});
  app.get('/api/auth/me',async req=>({user:await account(req)}));
+ app.get('/api/account/details',async req=>accountDetails.details(await account(req)));
+ const accountChangeRate=async(req:any,reply:any)=>{const user=await account(req);if(!await allowRequest(db,'account-change',user.id,10))return reply.code(429).send({code:'TOO_MANY_ATTEMPTS'})};
+ app.post('/api/account/profile',{schema:{body:{type:'object',additionalProperties:false,required:['name'],properties:{name:{type:'string',minLength:2,maxLength:80}}}},preHandler:accountChangeRate},async req=>{await accountDetails.updateName(await account(req),(req.body as {name:string}).name);return {ok:true}});
+ app.post('/api/account/email/request',{schema:{body:credentials},preHandler:accountChangeRate},async req=>{const user=await account(req),body=req.body as {email:string;password:string};await accounts.verifyPassword(user.id,body.password);await accountDetails.requestEmail(user,body.email);return {ok:true}});
+ app.post('/api/account/email/cancel',{preHandler:accountChangeRate},async req=>{await accountDetails.cancelEmail((await account(req)).id);return {ok:true}});
+ app.post('/api/account/email/confirm',{schema:{body:{type:'object',additionalProperties:false,required:['token'],properties:{token:{type:'string',minLength:43,maxLength:43}}}},preHandler:async(_req,reply)=>{if(!await allowRequest(db,'email-change-confirm','all',200))return reply.code(429).send({code:'TOO_MANY_ATTEMPTS'})}},async req=>accountDetails.confirmEmail((req.body as {token:string}).token));
  app.post('/api/auth/logout',async req=>{await accounts.logout(String(req.headers['x-user-session']||''));return {ok:true}});
  app.post('/api/purchase-preview',{schema:{body:{type:'object',additionalProperties:false,required:['plan'],properties:{plan:{type:'string',enum:['individual','team','business']},idempotencyKey:uuid}}}},async(req,reply)=>{
   if(production)return reply.code(403).send({code:'PREVIEW_DISABLED'});

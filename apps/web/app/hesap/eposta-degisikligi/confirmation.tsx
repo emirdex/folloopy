@@ -1,0 +1,7 @@
+'use client';
+import {useActionState,useEffect,useState} from 'react';
+import Link from 'next/link';
+import {ShieldCheck} from 'lucide-react';
+import {FlowHeader} from '../../onboarding';
+import {confirmEmailChange} from './actions';
+export function EmailChangeConfirmation(){const[token,setToken]=useState('');const[state,action,pending]=useActionState(confirmEmailChange,null);useEffect(()=>{setToken(new URLSearchParams(window.location.hash.slice(1)).get('token')||'');if(window.location.hash)history.replaceState(null,'',window.location.pathname)},[]);return <div className="onboarding-page"><FlowHeader step={0}/><main className="security-page"><span className="flow-kicker"><ShieldCheck size={17}/> HESAP GÜVENLİĞİ</span><h1>E-Posta Değişikliğini Onaylayın.</h1><p>Bu değişikliği siz başlattıysanız aşağıdaki düğmeyle onaylayın. Hesap adresiniz, mevcut ve yeni adresinizden gelen iki onay tamamlandığında değişir.</p>{state?.ok?<div className="security-result" role="status"><p>{state.message}</p><Link className="flow-primary" href={state.completed?'/giris':'/panel?view=account'}>{state.completed?'Giriş Yap':'Hesap Detaylarına Dön'}</Link></div>:<form className="account-form" action={action}><input type="hidden" name="token" value={token}/>{state?<p role="alert">{state.message}</p>:null}<button className="flow-primary" disabled={pending||!token}>{pending?'Onaylanıyor…':'Değişikliği Onayla'}</button></form>}<Link className="flow-back" href="/panel?view=account">Hesap Detaylarına Dön</Link></main></div>}
