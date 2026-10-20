@@ -74,3 +74,5 @@ input,textarea,select{scroll-margin-block:100px}
 
 /* Keep the member workspace compact beneath its footer. */
 @media(min-width:651px){.workspace-content{padding-bottom:18px}}
+
+.workspace-badge>span{flex-shrink:0}.workspace-badge>div{min-width:0}.workspace-badge strong,.workspace-badge small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
