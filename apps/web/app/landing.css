@@ -72,8 +72,11 @@ html:has(.landing-page){scroll-behavior:smooth;scroll-padding-top:105px}.landing
 .closing-section>.closing-glass-button:active{transform:translateY(0);box-shadow:inset 0 1px 4px #6487b514}
 .closing-section>.closing-glass-button:focus-visible{outline:2px solid #6e98d7;outline-offset:4px}
 @supports (mask-composite:exclude) or (-webkit-mask-composite:xor){
- .closing-glass-button::before{content:'';position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;pointer-events:none;background:conic-gradient(from var(--hero-border-angle),transparent 0deg 250deg,#bad4fc40 285deg,#77a9f0e0 320deg,#fff 345deg,transparent 360deg);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;filter:drop-shadow(0 0 3px #91b6ef90);animation:hero-border-travel 5s linear infinite}
+ .closing-glass-button::before,.discovery-light-button::before{content:'';position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;pointer-events:none;background:conic-gradient(from var(--hero-border-angle),transparent 0deg 250deg,#bad4fc40 285deg,#77a9f0e0 320deg,#fff 345deg,transparent 360deg);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;filter:drop-shadow(0 0 3px #91b6ef90);animation:hero-border-travel 5s linear infinite}
 }
-@media(prefers-reduced-motion:reduce){.closing-glass-button::before{animation:none;opacity:.45}}
+@media(prefers-reduced-motion:reduce){.closing-glass-button::before,.discovery-light-button::before{animation:none;opacity:.45}}
 
 .hero-product-head .hero-gmail-brand{font-size:18px;line-height:22px;color:#5f6f85;gap:7px}.hero-product-head .hero-gmail-brand>svg{width:25px;height:19px}
+
+.honesty-section>.discovery-light-button{position:relative;isolation:isolate;box-shadow:inset 0 0 0 1px #dce7f5}
+.honesty-section>.discovery-light-button:focus-visible{outline:2px solid #6e98d7;outline-offset:4px}
