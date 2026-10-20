@@ -1,0 +1,7 @@
+@property --signature-outline-angle{syntax:'<angle>';inherits:false;initial-value:0deg}
+.membership-tiers>.membership-tier.tier-signature,.commercial-pricing>.commercial-plan.commercial-signature{position:relative;isolation:isolate;border-color:#b4c7ef;box-shadow:0 12px 38px #6c8bcc1c,0 0 0 3px #9ab6ed0c}
+@supports (mask-composite:exclude) or (-webkit-mask-composite:xor){
+ .membership-tier.tier-signature::after,.commercial-plan.commercial-signature::after{content:'';position:absolute;inset:-1px;z-index:1;border-radius:inherit;padding:2px;pointer-events:none;background:conic-gradient(from var(--signature-outline-angle),transparent 0deg 220deg,#aec8ff24 260deg,#9baff7c9 300deg,#fff 325deg,#7197ec 340deg,transparent 360deg);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;filter:drop-shadow(0 0 4px #92adf2a6);animation:signature-outline-travel 7s linear infinite}
+}
+@keyframes signature-outline-travel{to{--signature-outline-angle:360deg}}
+@media(prefers-reduced-motion:reduce){.membership-tier.tier-signature::after,.commercial-plan.commercial-signature::after{animation:none;opacity:.6}}

@@ -6,6 +6,7 @@ import type {Account} from './account-api';
 import {BillingToggle} from './billing-toggle';
 import {commercialPlans,planPricing,formatPrice,billingPeriod} from '../../../packages/domain/commercial-plans';
 import './plan-selection.css';
+import './signature-highlight.css';
 export function PlanSelection({user,initialPlan,initialBilling}:{user:Account;initialPlan?:string;initialBilling?:string}){
  const[selected,setSelected]=useState(initialPlan==='team'||(!initialPlan&&user.plan==='team')?'team':'individual');
  const[period,setPeriod]=useState(billingPeriod(initialBilling));
