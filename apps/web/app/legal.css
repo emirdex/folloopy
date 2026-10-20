@@ -14,6 +14,7 @@ html:has(.legal-page){scroll-behavior:smooth;scroll-padding-top:30px}.legal-page
 
 .contact-page .corporate-form-panel{min-width:0}
 .contact-page .corporate-form-panel>.contact-form{margin-top:0}
+@media(min-width:851px){.contact-page .corporate-form-panel{align-self:center}}
 
 @property --legal-home-angle{syntax:'<angle>';inherits:false;initial-value:0deg}
 .legal-header>.legal-home{position:relative;isolation:isolate;display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:46px;padding:12px 20px;border:1px solid #cbdcf2;border-radius:100px;background:linear-gradient(135deg,#f8fbff,#eaf2ff);color:#496a99;font-size:13px;font-weight:500;white-space:nowrap;box-shadow:inset 0 1px 0 #fff,0 5px 18px #6688b514;transition:background .2s,box-shadow .2s,transform .2s}
