@@ -78,3 +78,10 @@
 .checkout-story>.flow-back.checkout-back-glass:active{transform:translateY(0)}
 .checkout-story>.flow-back.checkout-back-glass:focus-visible{outline:2px solid #7e9ed4;outline-offset:4px}
 @media(prefers-reduced-motion:reduce){.checkout-story>.flow-back.checkout-back-glass:hover{transform:none}}
+
+.order-summary .flow-primary.flow-activate-glass{background:linear-gradient(135deg,#e5f7ecde,#c8eadbba);color:#39795b;border:1px solid #9dcfb58c;box-shadow:inset 0 1px 0 #fffffff2,inset 0 -1px 0 #8cbea33b,0 5px 18px #5797741c;-webkit-backdrop-filter:blur(14px) saturate(140%);backdrop-filter:blur(14px) saturate(140%);transition:background .2s,box-shadow .2s,transform .2s}
+.order-summary .flow-primary.flow-activate-glass:hover:not(:disabled){background:linear-gradient(135deg,#eafbf0,#bee4cfd9);color:#2d6b4b;box-shadow:inset 0 1px 0 #fff,0 7px 22px #57977429;transform:translateY(-1px)}
+.order-summary .flow-primary.flow-activate-glass:active:not(:disabled){transform:translateY(0)}
+.order-summary .flow-primary.flow-activate-glass:focus-visible{outline:2px solid #6ba989;outline-offset:4px}
+.order-summary .flow-primary.flow-activate-glass:disabled{opacity:.6;cursor:wait}
+@media(prefers-reduced-motion:reduce){.order-summary .flow-primary.flow-activate-glass:hover:not(:disabled){transform:none}}
