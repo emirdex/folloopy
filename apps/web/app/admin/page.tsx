@@ -1,3 +1,4 @@
+import {ActivationBadge} from './activation-badge';
 import {PlanBadge} from './plan-badge';
 import {FolloopyLogo} from '../folloopy-brand';
 import Link from 'next/link';
@@ -9,9 +10,9 @@ import {updateLead} from './actions';
 import {BlogEditor,type EditablePost} from './forms';
 import type {ReactNode} from 'react';
 type Row=Record<string,any>;
-const statuses:Record<string,string>={simulated:'Paket etkinleştirildi',paid:'Ödendi',pending:'Bekliyor',failed:'Başarısız',refunded:'İade edildi',local_test:'Paket erişimi',active:'Etkin',suspended:'Askıda',draft:'Taslak',published:'Yayında',archived:'Arşiv',new:'Yeni talep',contacted:'İletişime geçildi',closed:'Kapandı',owner:'Site sahibi',member:'Üye'};
+const statuses:Record<string,string>={simulated:'Etkinleştirildi',paid:'Ödendi',pending:'Bekliyor',failed:'Başarısız',refunded:'İade edildi',local_test:'Paket erişimi',active:'Etkin',suspended:'Askıda',draft:'Taslak',published:'Yayında',archived:'Arşiv',new:'Yeni talep',contacted:'İletişime geçildi',closed:'Kapandı',owner:'Site sahibi',member:'Üye'};
 function date(value?:string|null){return value?new Intl.DateTimeFormat('tr-TR',{dateStyle:'medium',timeStyle:'short',timeZone:'Europe/Istanbul'}).format(new Date(value)):'Kayıt yok'}
-function Badge({value}:{value?:string|null}){return <span className={'admin-badge badge-'+value}>{value?statuses[value]||value:'Paket seçilmedi'}</span>}
+function Badge({value}:{value?:string|null}){if(value==='simulated')return <ActivationBadge/>;return <span className={'admin-badge badge-'+value}>{value?statuses[value]||value:'Paket seçilmedi'}</span>}
 function Heading({title,description,children}:{title:string;description:string;children?:ReactNode}){return <div className="admin-heading"><div><span className="admin-kicker">SİTE YÖNETİMİ</span><h1>{title}</h1><p>{description}</p></div>{children}</div>}
 function Details({items}:{items:[string,ReactNode][]}){return <dl className="admin-details">{items.map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value??'Kayıt yok'}</dd></div>)}</dl>}
 function Pages({view,q,offset,total,size=50}:{view:string;q:string;offset:number;total:number;size?:number}){const href=(next:number)=>'/admin?'+new URLSearchParams({view,q,offset:String(next)});return <div className="admin-pagination"><span>{total?`${offset+1}–${Math.min(offset+size,total)} / ${total}`:'0 kayıt'}</span>{offset>0?<Link href={href(Math.max(0,offset-size))}>← Önceki</Link>:null}{offset+size<total?<Link href={href(offset+size)}>Sonraki →</Link>:null}</div>}
