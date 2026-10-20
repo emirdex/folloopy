@@ -14,3 +14,5 @@
 .journal-author-details{display:block;line-height:1.6}
 
 .journal-author-avatar{flex-shrink:0;background:transparent}.journal-author-avatar>img{display:block;width:100%;height:100%;object-fit:contain}
+
+.journal-intro-mark>img{display:block;width:82%;height:82%;object-fit:contain;transform:rotate(-8deg)}
