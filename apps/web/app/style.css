@@ -76,3 +76,22 @@ input,textarea,select{scroll-margin-block:100px}
 @media(min-width:651px){.workspace-content{padding-bottom:18px}}
 
 .workspace-badge>span{flex-shrink:0}.workspace-badge>div{min-width:0}.workspace-badge strong,.workspace-badge small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* The workspace scrolls above a footer aligned with the member identity. */
+.member-panel-page{height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+.member-panel-page>.purchase-preview-bar{flex-shrink:0}
+.member-panel-page>.product-shell{display:flex;flex-direction:column;flex:1;min-height:0;width:100%}
+.member-panel-page .product-header{flex-shrink:0}
+.member-panel-page .app-layout{flex:1;min-height:0;align-items:stretch}
+.member-panel-page .sidebar{position:static;min-height:0;max-height:100%;padding-bottom:1px;overflow:hidden}
+.member-panel-page .sidebar>nav{min-height:0;overflow-y:auto}
+.member-panel-page .sidebar-bottom{display:flex;flex-direction:column;flex-shrink:0}
+.member-panel-page .sidebar-bottom .service-state{order:-1;margin:0 0 16px}
+.member-panel-page .workspace-badge{min-height:68px;padding-block:14px}
+.member-panel-page .workspace-content{display:flex;flex-direction:column;height:100%;min-height:0;padding-top:0;padding-bottom:0;overflow:hidden}
+.member-panel-page .workspace-body{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-gutter:stable;padding-top:26px;padding-bottom:22px}
+.member-panel-page .workspace-footer{flex-shrink:0;min-height:68px;margin-top:0;padding:14px 4px;align-items:center}
+@media(min-width:1550px){.member-panel-page .workspace-body{padding-top:34px}}
+@media(max-width:1200px){.member-panel-page .workspace-body{padding-top:24px}}
+@media(max-width:900px){.member-panel-page .sidebar{flex-shrink:0}.member-panel-page .sidebar-bottom{display:none}.member-panel-page .workspace-content{flex:1;height:auto}.member-panel-page .workspace-footer{min-height:58px;padding:12px 4px}}
+@media(max-width:650px){.member-panel-page .workspace-body{padding-top:22px}.member-panel-page .workspace-footer>span:first-child{align-items:center}.member-panel-page .workspace-footer>span>svg{margin-top:0}}
