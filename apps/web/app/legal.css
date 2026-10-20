@@ -14,3 +14,15 @@ html:has(.legal-page){scroll-behavior:smooth;scroll-padding-top:30px}.legal-page
 
 .contact-page .corporate-form-panel{min-width:0}
 .contact-page .corporate-form-panel>.contact-form{margin-top:0}
+
+@property --legal-home-angle{syntax:'<angle>';inherits:false;initial-value:0deg}
+.legal-header>.legal-home{position:relative;isolation:isolate;display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:46px;padding:12px 20px;border:1px solid #cbdcf2;border-radius:100px;background:linear-gradient(135deg,#f8fbff,#eaf2ff);color:#496a99;font-size:13px;font-weight:500;white-space:nowrap;box-shadow:inset 0 1px 0 #fff,0 5px 18px #6688b514;transition:background .2s,box-shadow .2s,transform .2s}
+.legal-header>.legal-home:hover{color:#355a89;background:#e7f0ff;box-shadow:0 7px 22px #6688b526;transform:translateY(-1px)}
+.legal-header>.legal-home:active{transform:translateY(0)}
+.legal-header>.legal-home>svg{flex-shrink:0}
+@supports (mask-composite:exclude) or (-webkit-mask-composite:xor){
+ .legal-home::before{content:'';position:absolute;inset:-1px;border-radius:inherit;padding:1.5px;pointer-events:none;background:conic-gradient(from var(--legal-home-angle),transparent 0deg 250deg,#bad4fc40 285deg,#77a9f0e0 320deg,#fff 345deg,transparent 360deg);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;filter:drop-shadow(0 0 3px #91b6ef90);animation:legal-home-light 5s linear infinite}
+}
+@keyframes legal-home-light{to{--legal-home-angle:360deg}}
+@media(max-width:650px){.legal-header{gap:12px}.legal-header>.legal-home{font-size:12px;padding:11px 12px;gap:7px;min-height:44px}}
+@media(prefers-reduced-motion:reduce){.legal-home::before{animation:none;opacity:.45}.legal-header>.legal-home:hover{transform:none}}
