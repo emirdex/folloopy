@@ -9,7 +9,7 @@ if(!['marketing','application'].includes(mode))throw new Error('CONFIG_APP_MODE_
 process.env.APP_MODE=mode;
 const port=Number(process.env.PORT||3000);
 if(!Number.isInteger(port)||port<1||port>65535)throw new Error('CONFIG_PORT_INVALID');
-let api,app,server,stopping=false;
+let api,app,server,handle,stopping=false;
 async function stop(code=0){
  if(stopping)return;stopping=true;
  const force=setTimeout(()=>{api?.kill('SIGKILL');process.exit(code)},25000);force.unref();
@@ -20,6 +20,14 @@ async function stop(code=0){
 }
 for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>stop(0).catch(()=>process.exit(1)));
 async function start(){
+ // Hostinger requires listen() before asynchronous database/API initialization.
+ // Keep requests unavailable until both the private API and Next are ready.
+ server=createServer((req,res)=>{
+  if(!handle||stopping){res.writeHead(503,{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store','Retry-After':'2'});res.end('Uygulama hazırlanıyor. Lütfen kısa süre sonra yeniden deneyin.');return;}
+  Promise.resolve().then(()=>handle(req,res)).catch(()=>{if(!res.headersSent)res.writeHead(500,{'Content-Type':'text/plain; charset=utf-8'});res.end('İşlem tamamlanamadı.')});
+ });
+ server.on('error',error=>{console.error('FOLLOOPY_HTTP_START_FAILED',error.code||'UNKNOWN');stop(1)});
+ server.listen(port,'0.0.0.0');
  if(mode==='application'){
   // TypeScript is only required for the private API, never for a public-only launch.
   require('tsx/cjs');
@@ -36,9 +44,8 @@ async function start(){
  if(stopping)return;
  app=next({dev:false,dir:path.join(__dirname,'apps','web'),hostname:'0.0.0.0',port,webpack:true});
  await app.prepare();
- const handle=app.getRequestHandler();
- server=createServer((req,res)=>{Promise.resolve(handle(req,res)).catch(()=>{if(!res.headersSent)res.writeHead(500,{'Content-Type':'text/plain; charset=utf-8'});res.end('İşlem tamamlanamadı.')})});
- server.on('error',error=>{console.error('FOLLOOPY_HTTP_START_FAILED',error.code||'UNKNOWN');stop(1)});
- server.listen(port,'0.0.0.0',()=>console.log('Folloopy public server ready ('+mode+')'));
+ if(stopping)return;
+ handle=app.getRequestHandler();
+ console.log('Folloopy public server ready ('+mode+')');
 }
 start().catch(error=>{console.error('FOLLOOPY_START_FAILED',error.code||error.message);stop(1).catch(()=>process.exit(1))});
