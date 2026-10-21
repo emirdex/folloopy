@@ -1,0 +1,2 @@
+CREATE TABLE mail_drafts(id uuid PRIMARY KEY,workspace_id uuid NOT NULL REFERENCES workspaces(id),user_id uuid NOT NULL REFERENCES users(id),payload text NOT NULL,version integer NOT NULL DEFAULT 1 CHECK(version>0),created_at timestamptz NOT NULL DEFAULT now(),updated_at timestamptz NOT NULL DEFAULT now(),deleted_at timestamptz);
+CREATE INDEX mail_drafts_active ON mail_drafts(workspace_id,user_id,created_at,id) WHERE deleted_at IS NULL;
