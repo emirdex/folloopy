@@ -19,6 +19,7 @@ function startup(){
   'node:path':path,
   next:()=>app,
   'tsx/cjs':{},
+  './packages/runtime/private-api.cjs':{installPrivateApi:()=>()=>health},
   './packages/runtime/config.ts':{productionConfig:()=>({apiPort:4000,apiUrl:'http://127.0.0.1:4000'})},
  };
  runInNewContext(source,{require:(name:string)=>{assert.ok(name in deps,name);return deps[name]},__dirname:process.cwd(),process:{env:{APP_MODE:'application',PORT:'3000'},on(){},exit:(code:number)=>exits.push(code)},console:{log(){},error(){}},fetch:()=>health,AbortSignal,setTimeout,clearTimeout});

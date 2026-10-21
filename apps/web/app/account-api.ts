@@ -1,12 +1,12 @@
 import {isMarketingMode} from '../../../packages/runtime/app-mode';
-import {internalApiUrl,internalApiKey} from './internal-api';
+import {internalApiFetch,internalApiUrl,internalApiKey} from './internal-api';
 import {cookies} from 'next/headers';
 import {redirect} from 'next/navigation';
 export type Account={id:string;workspace_id:string;name:string;email:string;plan:'individual'|'team'|'business'|null;role:'member'|'owner';email_verified_at?:string|null};
 export async function accountApi(path:string,body?:unknown){
  const token=(await cookies()).get('mt_session')?.value;
  if(isMarketingMode())throw new Error('APPLICATION_UNAVAILABLE');
- const response=await fetch(internalApiUrl()+path,{method:body===undefined?'GET':'POST',headers:{Authorization:'Bearer '+internalApiKey(),...(token?{'x-user-session':token}:{}),...(body===undefined?{}:{'Content-Type':'application/json'})},...(body===undefined?{}:{body:JSON.stringify(body)}),cache:'no-store',signal:AbortSignal.timeout(20000)});
+ const response=await internalApiFetch(internalApiUrl()+path,{method:body===undefined?'GET':'POST',headers:{Authorization:'Bearer '+internalApiKey(),...(token?{'x-user-session':token}:{}),...(body===undefined?{}:{'Content-Type':'application/json'})},...(body===undefined?{}:{body:JSON.stringify(body)}),cache:'no-store',signal:AbortSignal.timeout(20000)});
  const data=await response.json();
  if(!response.ok)throw new Error(data.code||'SERVICE_ERROR');
  return data;

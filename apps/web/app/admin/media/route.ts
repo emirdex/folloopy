@@ -1,5 +1,5 @@
 import {cookies} from 'next/headers';
-import {internalApiUrl,internalApiKey} from '../../internal-api';
+import {internalApiFetch,internalApiUrl,internalApiKey} from '../../internal-api';
 import {randomUUID} from 'node:crypto';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
@@ -15,7 +15,7 @@ export async function POST(request:Request){
  const chunks:Uint8Array[]=[];let size=0;
  while(true){const{done,value}=await reader.read();if(done)break;size+=value.length;if(size>BLOG_IMAGE_LIMIT){await reader.cancel();return Response.json({error:'Görsel en fazla 5 MB olabilir.'},{status:413})}chunks.push(value)}
  const bytes=Buffer.concat(chunks),type=blogImageType(bytes);if(!type)return Response.json({error:'PNG, JPEG veya WebP görsel yükleyin. SVG ve diğer dosyalar kabul edilmez.'},{status:415});
- if(process.env.NODE_ENV==='production'){const token=(await cookies()).get('mt_session')?.value||'';try{const res=await fetch(internalApiUrl()+'/api/admin/media',{method:'POST',headers:{Authorization:'Bearer '+internalApiKey(),'x-user-session':token,'Content-Type':'application/octet-stream'},body:bytes,signal:AbortSignal.timeout(20000),cache:'no-store'});return Response.json(await res.json(),{status:res.status,headers:{'Cache-Control':'no-store'}})}catch{return Response.json({error:'Görsel kaydedilemedi. Yeniden deneyin.'},{status:503})}}
+ if(process.env.NODE_ENV==='production'){const token=(await cookies()).get('mt_session')?.value||'';try{const res=await internalApiFetch(internalApiUrl()+'/api/admin/media',{method:'POST',headers:{Authorization:'Bearer '+internalApiKey(),'x-user-session':token,'Content-Type':'application/octet-stream'},body:bytes,signal:AbortSignal.timeout(20000),cache:'no-store'});return Response.json(await res.json(),{status:res.status,headers:{'Cache-Control':'no-store'}})}catch{return Response.json({error:'Görsel kaydedilemedi. Yeniden deneyin.'},{status:503})}}
  const name=randomUUID()+'.'+type.ext;await mkdir(blogMediaDirectory,{recursive:true});await writeFile(join(/* turbopackIgnore: true */ blogMediaDirectory,name),bytes,{flag:'wx'});
  return Response.json({url:'/blog/media/'+name},{status:201,headers:{'Cache-Control':'no-store'}});
 }

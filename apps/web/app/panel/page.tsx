@@ -1,6 +1,6 @@
 import {AccountDetails} from './account-details';
 import {GmailConnection} from './gmail-connection';
-import {internalApiUrl,internalApiKey} from '../internal-api';
+import {internalApiFetch,internalApiUrl,internalApiKey} from '../internal-api';
 import {FolloopyLogo,FolloopyMark} from '../folloopy-brand';
 import {randomUUID} from 'node:crypto';
 import {cookies} from 'next/headers';
@@ -23,7 +23,7 @@ const sources:Record<string,string>={unknown:'Kaynak belirsiz',own_activity:'Ken
 async function api(path:string,init?:RequestInit){
  await requirePanel();
  const session=(await cookies()).get('mt_session')?.value;
- const res=await fetch(`${internalApiUrl()}${path}`,{...init,headers:{Authorization:`Bearer ${internalApiKey()}`,...(session?{'x-user-session':session}:{}),...(init?.body?{'Content-Type':'application/json'}:{}),...init?.headers},cache:'no-store',signal:AbortSignal.timeout(25000)});
+ const res=await internalApiFetch(`${internalApiUrl()}${path}`,{...init,headers:{Authorization:`Bearer ${internalApiKey()}`,...(session?{'x-user-session':session}:{}),...(init?.body?{'Content-Type':'application/json'}:{}),...init?.headers},cache:'no-store',signal:AbortSignal.timeout(25000)});
  if(!res.ok)throw new Error(res.status===402?'Kullanım limitinize ulaştınız.':res.status===400?'Konu ve mesaj alanlarını kontrol edin.':'Servise ulaşılamadı. Yeniden deneyin.');
  return res.json();
 }
