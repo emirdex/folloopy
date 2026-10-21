@@ -1,6 +1,7 @@
 import {AccountDetails} from './account-details';
 import {GmailConnection} from './gmail-connection';
 import {ExtensionHub} from './extension-hub';
+import {ActivityStream} from './activity-stream';
 import {internalApiFetch,internalApiUrl,internalApiKey} from '../internal-api';
 import {FolloopyLogo,FolloopyMark} from '../folloopy-brand';
 import {randomUUID} from 'node:crypto';
@@ -97,8 +98,7 @@ export default async function Page({searchParams}:{searchParams:Promise<Params>}
   const selected=messages.slice(0,12);
   const results=await Promise.allSettled(selected.map(m=>api(`/api/messages/${m.id}`) as Promise<Detail>));
   const events=selected.flatMap((m,i)=>{const result=results[i];const openings=result.status==='fulfilled'?result.value.openings:[];return [...(m.sent_at?[{id:`send-${m.id}`,message:m,at:m.sent_at,type:'send',label:'Mail Gönderildi',description:'E-postanız başarıyla gönderildi.'}]:[]),...openings.map((opening,index)=>({id:`open-${m.id}-${opening.first_at}`,message:m,at:opening.first_at,type:'load',label:index===0?'Açılma Algılandı':'Tekrar Açılma Algılandı',description:index===0?'E-postanız için ilk açılma bilgisi alındı.':'E-postanız için yeni bir açılma bilgisi alındı.'}))]}).sort((a,b)=>new Date(b.at).getTime()-new Date(a.at).getTime());
-  const filtered=events.filter(e=>!p.filter||p.filter==='all'||e.type===p.filter);
-  return <Shell active={active} online={online}><PageHeading title="Etkinlik Akışı" description="Maillerinizin gönderim ve açılma durumu, tek yerde." action={<Refresh/>}/><div className="activity-layout"><section className="surface feed-surface"><div className="section-tabs">{[{id:'all',label:'Tüm etkinlikler'},{id:'send',label:'Gönderimler'},{id:'load',label:'Açılmalar'}].map(f=><Link href={url({view:'activity',filter:f.id})} key={f.id} className={!p.filter&&f.id==='all'||p.filter===f.id?'active':''} aria-current={!p.filter&&f.id==='all'||p.filter===f.id?'page':undefined}>{f.label}</Link>)}</div><div className="feed-scope">Son 12 mesaj · {filtered.length} etkinlik{results.some(r=>r.status==='rejected')?' · Bazı kayıtlar yüklenemedi':''}</div>{filtered.length?<div className="activity-feed">{filtered.map(e=><article className="feed-event" key={e.id}><span className={`event-icon ${e.type==='send'?'tint-mint':'tint-blue'}`}><Icon name={e.type==='send'?'send':'pulse'} size={19}/></span><div><div className="feed-event-title"><h3>{e.label}</h3><time>{date(e.at,true)}</time></div><Link href={`/panel?id=${e.message.id}`}>{e.message.subject}<Icon name="external" size={13}/></Link><details><summary>Etkinlik ayrıntısı</summary><p>{e.description}</p></details></div></article>)}</div>:<div className="empty-state"><span className="empty-icon"><Icon name="pulse" size={27}/></span><h3>Bu Türde Etkinlik Yok</h3><p>Mail gönderdiğinizde veya açılma algılandığında burada göreceksiniz.</p></div>}</section><aside className="activity-guide"><span className="feature-icon"><Icon name="info" size={23}/></span><h2>Etkinlik Türleri</h2><ul><li>Gönderilen mailler</li><li>Açılma algılanan mailler</li><li>İlk açılma ve son hareket zamanı</li></ul></aside></div></Shell>;
+  return <Shell active={active} online={online}><PageHeading title="Etkinlik Akışı" description="İletişiminizin her adımı, tek bir zaman çizelgesinde." action={<Refresh/>}/><ActivityStream events={events} filter={p.filter} messageCount={selected.length} incomplete={results.some(r=>r.status==='rejected')}/></Shell>;
  }
  if(view==='messages'){
   const filter=['active','stopped','observed'].includes(p.filter||'')?p.filter:'all';
