@@ -39,31 +39,35 @@ export class AccountSecurity{
    }
    await tx.query('UPDATE users SET email_verified_at=now() WHERE id=$1',[userId]);
    await tx.query('DELETE FROM verification_codes WHERE user_id=$1',[userId]);
-   await tx.query("DELETE FROM account_tokens WHERE user_id=$1 AND purpose='verify'",[userId]);
    return 'ok';
   });
   // Fail outside the transaction so wrong-attempt counters remain committed.
   if(result!=='ok')throw Error(result);
  }
  async issue(userId:string,purpose:'verify'|'reset'){
-  const user=(await this.db.query<{email:string}>('SELECT email FROM users WHERE id=$1',[userId])).rows[0];if(!user)return;
+  await this.db.transaction(async tx=>{
+  const user=(await tx.query<{email:string}>('SELECT email FROM users WHERE id=$1 FOR UPDATE',[userId])).rows[0];if(!user)return;
   const token=randomBytes(32).toString('base64url'),id=randomUUID(),minutes=purpose==='verify'?1440:30;
   const url=this.site+(purpose==='verify'?'/hesap/dogrula':'/sifre-yenile')+'#token='+token;
   const payload=seal(JSON.stringify({to:user.email,subject:purpose==='verify'?'Folloopy e-posta adresinizi doğrulayın':'Folloopy şifrenizi yenileyin',text:(purpose==='verify'?'E-posta adresinizi doğrulamak':'Şifrenizi yenilemek')+' için bağlantıyı açın:\n'+url+'\n\nBu işlemi siz başlatmadıysanız bu e-postayı yok sayabilirsiniz.'}),this.key);
-  await this.db.transaction(async tx=>{await tx.query('DELETE FROM account_tokens WHERE user_id=$1 AND purpose=$2',[userId,purpose]);await tx.query("INSERT INTO account_tokens(token_hash,user_id,purpose,expires_at) VALUES($1,$2,$3,now()+($4::text||' minutes')::interval)",[digest(token),userId,purpose,minutes]);await tx.query('INSERT INTO mail_outbox(id,user_id,payload) VALUES($1,$2,$3)',[id,userId,payload])});
+  await tx.query('DELETE FROM account_tokens WHERE user_id=$1 AND purpose=$2',[userId,purpose]);await tx.query("INSERT INTO account_tokens(token_hash,user_id,purpose,expires_at) VALUES($1,$2,$3,now()+($4::text||' minutes')::interval)",[digest(token),userId,purpose,minutes]);await tx.query('INSERT INTO mail_outbox(id,user_id,payload) VALUES($1,$2,$3)',[id,userId,payload]);
+  });
  }
  async request(email:string,purpose:'verify'|'reset'){
   const u=(await this.db.query<{id:string;email_verified_at:string|null}>('SELECT id,email_verified_at FROM users WHERE email=$1',[email.trim().toLowerCase()])).rows[0];
   if(u&&(purpose==='reset'||!u.email_verified_at))await this.issue(u.id,purpose);
  }
- async consume(token:string,purpose:'verify'|'reset',password?:string){
+ async consume(token:string,purpose:'verify'|'reset',password?:string,expectedUserId?:string){
   if(!/^[\w-]{43}$/.test(token))throw new Error('INVALID_ACCOUNT_TOKEN');
   if(purpose==='reset'&&!validNewPassword(password||''))throw new Error('INVALID_PASSWORD');
   let passwordHash='';if(password){const salt=randomBytes(16).toString('hex');passwordHash=salt+':'+(await scrypt(password,salt,64) as Buffer).toString('hex')}
   await this.db.transaction(async tx=>{
+   const candidate=(await tx.query<{user_id:string}>('SELECT user_id FROM account_tokens WHERE token_hash=$1 AND purpose=$2 AND expires_at>now()',[digest(token),purpose])).rows[0];
+   if(!candidate||(expectedUserId&&candidate.user_id!==expectedUserId))throw Error('INVALID_ACCOUNT_TOKEN');
+   await tx.query('SELECT id FROM users WHERE id=$1 FOR UPDATE',[candidate.user_id]);
    const row=(await tx.query<{user_id:string}>('DELETE FROM account_tokens WHERE token_hash=$1 AND purpose=$2 AND expires_at>now() RETURNING user_id',[digest(token),purpose])).rows[0];if(!row)throw new Error('INVALID_ACCOUNT_TOKEN');
    if(purpose==='verify'){await tx.query('UPDATE users SET email_verified_at=now() WHERE id=$1',[row.user_id]);await tx.query('DELETE FROM verification_codes WHERE user_id=$1',[row.user_id]);}
-   else{await tx.query('UPDATE users SET password_hash=$1 WHERE id=$2',[passwordHash,row.user_id]);await tx.query('DELETE FROM sessions WHERE user_id=$1',[row.user_id]);await tx.query('DELETE FROM account_tokens WHERE user_id=$1',[row.user_id]);await tx.query('DELETE FROM account_email_changes WHERE user_id=$1',[row.user_id]);await tx.query('DELETE FROM verification_codes WHERE user_id=$1',[row.user_id])}
+   else{await tx.query('UPDATE users SET password_hash=$1 WHERE id=$2',[passwordHash,row.user_id]);await tx.query('DELETE FROM sessions WHERE user_id=$1',[row.user_id]);await tx.query('DELETE FROM oauth_states WHERE user_id=$1',[row.user_id]);await tx.query('DELETE FROM account_tokens WHERE user_id=$1',[row.user_id]);await tx.query('DELETE FROM account_email_changes WHERE user_id=$1',[row.user_id]);await tx.query('DELETE FROM verification_codes WHERE user_id=$1',[row.user_id])}
   });
  }
  async deliver(){

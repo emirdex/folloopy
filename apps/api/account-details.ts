@@ -20,13 +20,14 @@ export class AccountDetails{
   await this.db.query('UPDATE users SET name=$1 WHERE id=$2',[name,user.id]);
  }
  private payload(to:string,subject:string,text:string){return seal(JSON.stringify({to,subject,text}),this.encryptionKey!)}
- async requestEmail(user:Account,email:string){
+ async requestEmail(user:Account,email:string,authorize?:(tx:DB)=>Promise<void>){
   if(!this.encryptionKey)throw Error('EMAIL_UNAVAILABLE');
   email=email.trim().toLowerCase();
   if(email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||/[\r\n]/.test(email))throw Error('INVALID_ACCOUNT');
   const oldToken=randomBytes(32).toString('base64url'),newToken=randomBytes(32).toString('base64url');
   await this.db.transaction(async tx=>{
    const current=(await tx.query<{email:string}>('SELECT email FROM users WHERE id=$1 FOR UPDATE',[user.id])).rows[0];
+   if(authorize)await authorize(tx);
    if(!current||current.email===email)throw Error('EMAIL_UNCHANGED');
    if((await tx.query('SELECT id FROM users WHERE email=$1',[email])).rows.length)throw Error('EMAIL_IN_USE');
    await tx.query('DELETE FROM account_email_changes WHERE user_id=$1',[user.id]);
@@ -54,6 +55,7 @@ export class AccountDetails{
    await tx.query('UPDATE users SET email=$1,email_verified_at=now() WHERE id=$2',[row.new_email,row.user_id]);
    await tx.query('DELETE FROM sessions WHERE user_id=$1',[row.user_id]);
    await tx.query('DELETE FROM account_tokens WHERE user_id=$1',[row.user_id]);
+   await tx.query('DELETE FROM verification_codes WHERE user_id=$1',[row.user_id]);
    await tx.query('DELETE FROM oauth_states WHERE user_id=$1',[row.user_id]);
    await tx.query('DELETE FROM account_email_changes WHERE user_id=$1',[row.user_id]);
    return {completed:true};

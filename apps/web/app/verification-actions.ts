@@ -4,7 +4,7 @@ import {accountApi,requireAccount} from './account-api';
 import {randomUUID} from 'node:crypto';
 export type VerificationResult={ok:boolean;message:string;next?:string};
 export async function verifyRegistrationCode(form:FormData):Promise<VerificationResult>{
- const user=await requireAccount();
+ let user=await requireAccount();
  if(!user.email_verified_at){
   try{
    const token=String(form.get('legacyToken')||'');
@@ -12,6 +12,9 @@ export async function verifyRegistrationCode(form:FormData):Promise<Verification
    else await accountApi('/api/auth/verify/code/confirm',{code:String(form.get('code')||'')});
   }catch(error){const code=error instanceof Error?error.message:'';return {ok:false,message:code==='VERIFICATION_LOCKED'?'Çok fazla hatalı kod girildi. Yeni bir kod isteyin.':code==='TOO_MANY_ATTEMPTS'?'Çok fazla deneme yapıldı. Biraz sonra yeniden deneyin.':'Kod geçersiz veya süresi dolmuş. E-postanızdaki son kodu kontrol edin.'}}
  }
+ user=await requireAccount();
+ if(!user.email_verified_at)return {ok:false,message:'E-posta doğrulaması tamamlanamadı. Yeniden deneyin.'};
+ if(user.role==='owner')return {ok:true,message:'Hesabınız başarıyla onaylanmıştır.',next:'/admin'};
  let next='/panel';
  if(!user.plan){
   const preferred=String(form.get('preferredPlan')||''),plan=['individual','team'].includes(preferred)?preferred:'individual';

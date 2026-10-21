@@ -34,11 +34,24 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
   if(!token){if(production)throw new Error('UNAUTHORIZED');return LOCAL_WORKSPACE;}
   const user=await accounts.current(String(token));
   if(!user)throw new Error('UNAUTHORIZED');
-  if(production&&!user.email_verified_at&&user.role!=='owner')throw new Error('EMAIL_NOT_VERIFIED');
+  if(production&&!user.email_verified_at)throw new Error('EMAIL_NOT_VERIFIED');
   if(!user.plan)throw new Error('PLAN_REQUIRED');
+  if(production){const entitlement=(await db.query<{status:string}>('SELECT status FROM entitlements WHERE workspace_id=$1',[user.workspace_id])).rows[0];if(entitlement?.status!=='active')throw Error('FORBIDDEN');}
   return user.workspace_id;
  };
  const account=async(req:{headers:Record<string,unknown>})=>{const user=await accounts.current(String(req.headers['x-user-session']||''));if(!user)throw new Error('UNAUTHORIZED');return user};
+ // Deny unverified accounts centrally, including owners and direct API requests.
+ // Only login, recovery and verification are available before email ownership is proven.
+ const onboardingRoutes=new Set(['/api/auth/register','/api/auth/login','/api/auth/me','/api/auth/logout','/api/auth/verify/request','/api/auth/verify/confirm','/api/auth/reset/request','/api/auth/reset/confirm','/api/auth/verify/code/status','/api/auth/verify/code/request','/api/auth/verify/code/confirm','/api/admin/setup','/api/admin/setup-status','/api/account/email/confirm','/api/enterprise-requests']);
+ app.addHook('preValidation',async req=>{
+  if(!production||!req.url.startsWith('/api/')||onboardingRoutes.has(req.url.split('?')[0]))return;
+  const user=await account(req);if(!user.email_verified_at)throw Error('EMAIL_NOT_VERIFIED');
+  if(req.url.startsWith('/api/gmail/'))await workspace(req);
+  const path=req.url.split('?')[0];
+  if(path==='/api/gmail/start'||path==='/api/gmail/disconnect'||path==='/api/access/activate'){
+   if(!await allowRequest(db,'private-mutation:'+path,user.id,30))throw Error('TOO_MANY_ATTEMPTS');
+  }
+ });
  const attempts=new Map<string,{count:number;until:number}>();
  const metrics={collectorErrors:0,collectorTimeouts:0};
  app.addHook('onRequest',async(req,reply)=>{
@@ -49,7 +62,7 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  });
  app.setErrorHandler((error,req,reply)=>{
   const code=error instanceof Error?error.message:'INTERNAL_ERROR';
-  const status=({UNAUTHORIZED:401,INVALID_LOGIN:401,ACCOUNT_EXISTS:409,PLAN_REQUIRED:402,INVALID_PLAN:400,INVALID_PASSWORD:400,INVALID_ACCOUNT:400,INVALID_BILLING_PROFILE:400,INVALID_POST:400,SETUP_CLOSED:409,INVALID_SETUP_TOKEN:403,EXISTING_ACCOUNT_PASSWORD_REQUIRED:401,SLUG_EXISTS:409,STALE_POST:409,NOT_FOUND:404,FORBIDDEN:403,EMAIL_NOT_VERIFIED:403,INVALID_ACCOUNT_TOKEN:400,INVALID_VERIFICATION_CODE:400,VERIFICATION_LOCKED:429,VERIFICATION_COOLDOWN:429,EMAIL_UNAVAILABLE:503,EMAIL_IN_USE:409,EMAIL_UNCHANGED:400,GMAIL_NOT_CONNECTED:409,GMAIL_UNAVAILABLE:503,INVALID_OAUTH_STATE:400,GMAIL_AUTH_FAILED:400,GMAIL_CLIENT_INVALID:400,GMAIL_CODE_INVALID:400,GMAIL_IDENTITY_FAILED:400,GMAIL_REFRESH_REQUIRED:400,GMAIL_SCOPE_REQUIRED:400,LIMIT_REACHED:402,IDEMPOTENCY_CONFLICT:409} as Record<string,number>)[code]|| (typeof error==='object' && error!==null && 'validation' in error?400:500);
+  const status=({UNAUTHORIZED:401,INVALID_LOGIN:401,ACCOUNT_EXISTS:409,PLAN_REQUIRED:402,INVALID_PLAN:400,INVALID_PASSWORD:400,INVALID_ACCOUNT:400,INVALID_BILLING_PROFILE:400,INVALID_POST:400,SETUP_CLOSED:409,INVALID_SETUP_TOKEN:403,EXISTING_ACCOUNT_PASSWORD_REQUIRED:401,SLUG_EXISTS:409,STALE_POST:409,NOT_FOUND:404,FORBIDDEN:403,EMAIL_NOT_VERIFIED:403,INVALID_ACCOUNT_TOKEN:400,INVALID_VERIFICATION_CODE:400,TOO_MANY_ATTEMPTS:429,VERIFICATION_LOCKED:429,VERIFICATION_COOLDOWN:429,EMAIL_UNAVAILABLE:503,EMAIL_IN_USE:409,EMAIL_UNCHANGED:400,GMAIL_NOT_CONNECTED:409,GMAIL_UNAVAILABLE:503,INVALID_OAUTH_STATE:400,GMAIL_AUTH_FAILED:400,GMAIL_CLIENT_INVALID:400,GMAIL_CODE_INVALID:400,GMAIL_IDENTITY_FAILED:400,GMAIL_REFRESH_REQUIRED:400,GMAIL_SCOPE_REQUIRED:400,LIMIT_REACHED:402,IDEMPOTENCY_CONFLICT:409} as Record<string,number>)[code]|| (typeof error==='object' && error!==null && 'validation' in error?400:500);
   reply.code(status).send({code:status===500?'INTERNAL_ERROR':code,message:status===500?'İşlem tamamlanamadı.':status===400?'Girdi geçersiz.':'İşlem için hak veya geçerli istek gerekli.'});
  });
  const newPassword={type:'string',minLength:8,maxLength:128,pattern:PASSWORD_PATTERN};
@@ -62,12 +75,12 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  const accountChangeRate=async(req:any,reply:any)=>{const user=await account(req);if(!await allowRequest(db,'account-change',user.id,10))return reply.code(429).send({code:'TOO_MANY_ATTEMPTS'})};
  app.get('/api/account/billing',async req=>{const user=await account(req);const row=(await db.query<{profile:unknown}>('SELECT profile FROM billing_profiles WHERE user_id=$1 AND workspace_id=$2',[user.id,user.workspace_id])).rows[0];return {profile:row?.profile||null}});
  app.post('/api/account/billing',{schema:{body:{type:'object',additionalProperties:false,properties:Object.fromEntries(['kind','name','email','city','district','address','postalCode','companyName','taxOffice','taxNumber'].map(key=>[key,{type:'string',maxLength:500}]))}},preHandler:accountChangeRate},async req=>{
-  const user=await account(req);if(production&&!user.email_verified_at&&user.role!=='owner')throw Error('EMAIL_NOT_VERIFIED');
+  const user=await account(req);if(production&&!user.email_verified_at)throw Error('EMAIL_NOT_VERIFIED');
   const profile=billingProfile(req.body);
   await db.query('INSERT INTO billing_profiles(user_id,workspace_id,profile) VALUES($1,$2,$3) ON CONFLICT(user_id) DO UPDATE SET profile=excluded.profile,updated_at=now()',[user.id,user.workspace_id,JSON.stringify(profile)]);return {ok:true};
  });
  app.post('/api/account/profile',{schema:{body:{type:'object',additionalProperties:false,required:['name'],properties:{name:{type:'string',minLength:2,maxLength:80}}}},preHandler:accountChangeRate},async req=>{await accountDetails.updateName(await account(req),(req.body as {name:string}).name);return {ok:true}});
- app.post('/api/account/email/request',{schema:{body:credentials},preHandler:accountChangeRate},async req=>{const user=await account(req),body=req.body as {email:string;password:string};await accounts.verifyPassword(user.id,body.password);await accountDetails.requestEmail(user,body.email);return {ok:true}});
+ app.post('/api/account/email/request',{schema:{body:credentials},preHandler:accountChangeRate},async req=>{const user=await account(req),body=req.body as {email:string;password:string};await accountDetails.requestEmail(user,body.email,tx=>accounts.verifyPassword(user.id,body.password,tx));return {ok:true}});
  app.post('/api/account/email/cancel',{preHandler:accountChangeRate},async req=>{await accountDetails.cancelEmail((await account(req)).id);return {ok:true}});
  app.post('/api/account/email/confirm',{schema:{body:{type:'object',additionalProperties:false,required:['token'],properties:{token:{type:'string',minLength:43,maxLength:43}}}},preHandler:async(_req,reply)=>{if(!await allowRequest(db,'email-change-confirm','all',200))return reply.code(429).send({code:'TOO_MANY_ATTEMPTS'})}},async req=>accountDetails.confirmEmail((req.body as {token:string}).token));
  app.post('/api/auth/logout',async req=>{await accounts.logout(String(req.headers['x-user-session']||''));return {ok:true}});
@@ -106,8 +119,8 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
   return service.send(await workspace(req),req.headers['idempotency-key'] as string,req.body as any);
  });
 
- app.post('/api/access/activate',{schema:{body:{type:'object',additionalProperties:false,required:['plan'],properties:{plan:{type:'string',enum:['individual','team','business']}}}}},async(req,reply)=>{
-  const user=await account(req);if(production&&!user.email_verified_at&&user.role!=='owner')throw Error('EMAIL_NOT_VERIFIED');
+ app.post('/api/access/activate',{schema:{body:{type:'object',additionalProperties:false,required:['plan'],properties:{plan:{type:'string',enum:['individual','team']}}}}},async(req,reply)=>{
+  const user=await account(req);if(production&&!user.email_verified_at)throw Error('EMAIL_NOT_VERIFIED');
   if(options.billing!=='complimentary')return reply.code(403).send({code:'BILLING_UNAVAILABLE'});
   await accounts.grant(user,(req.body as {plan:Plan}).plan);return {ok:true,mode:'complimentary'};
  });
@@ -117,9 +130,9 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  const tokenBody={type:'object',additionalProperties:false,required:['token'],properties:{token:{type:'string',pattern:'^[A-Za-z0-9_-]{43}$'},password:newPassword}};
  for(const purpose of ['verify','reset'] as const){
   app.post('/api/auth/'+purpose+'/request',{schema:{body:{type:'object',additionalProperties:false,required:['email'],properties:{email:credentials.properties.email}}},preHandler:authRate},async(req,reply)=>{if(!security)return reply.code(503).send({code:'EMAIL_UNAVAILABLE'});await security.request((req.body as {email:string}).email,purpose);return {ok:true}});
-  app.post('/api/auth/'+purpose+'/confirm',{schema:{body:{...tokenBody,required:purpose==='reset'?['token','password']:['token']}},preHandler:async(_req,reply)=>{if(!await allowRequest(db,'token-confirm','all',200))return reply.code(429).send({code:'TOO_MANY_ATTEMPTS'})}},async(req,reply)=>{if(!security)return reply.code(503).send({code:'EMAIL_UNAVAILABLE'});const b=req.body as {token:string;password?:string};await security.consume(b.token,purpose,b.password);return {ok:true}});
+  app.post('/api/auth/'+purpose+'/confirm',{schema:{body:{...tokenBody,required:purpose==='reset'?['token','password']:['token']}},preHandler:async(_req,reply)=>{if(!await allowRequest(db,'token-confirm','all',200))return reply.code(429).send({code:'TOO_MANY_ATTEMPTS'})}},async(req,reply)=>{if(!security)return reply.code(503).send({code:'EMAIL_UNAVAILABLE'});const b=req.body as {token:string;password?:string};await security.consume(b.token,purpose,b.password,purpose==='verify'?(await account(req)).id:undefined);return {ok:true}});
  }
- app.post('/api/gmail/start',async req=>{const user=await account(req);if(production&&!user.email_verified_at&&user.role!=='owner')throw Error('EMAIL_NOT_VERIFIED');return {url:await gmail.begin(user,String(req.headers['x-user-session']||''))}});
+ app.post('/api/gmail/start',async req=>{const user=await account(req);if(production&&!user.email_verified_at)throw Error('EMAIL_NOT_VERIFIED');return {url:await gmail.begin(user,String(req.headers['x-user-session']||''))}});
  app.post('/api/gmail/callback',{schema:{body:{type:'object',additionalProperties:false,required:['state','code'],properties:{state:{type:'string',maxLength:128},code:{type:'string',maxLength:4096}}}}},async req=>{const b=req.body as {state:string;code:string};await gmail.finish(await account(req),String(req.headers['x-user-session']||''),b.state,b.code);return {ok:true}});
  app.post('/api/gmail/disconnect',async req=>{await gmail.disconnect((await account(req)).workspace_id);return {ok:true}});
  app.post('/api/messages/send',{schema:{body:{type:'object',additionalProperties:false,required:['subject','to','text','tracking'],properties:{subject:{type:'string',minLength:1,maxLength:200,pattern:'^[^\\r\\n]+$'},to:{type:'string',maxLength:254,pattern:'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$'},text:{type:'string',minLength:1,maxLength:10000},tracking:{type:'boolean'}}},headers:{type:'object',required:['idempotency-key'],properties:{'idempotency-key':{type:'string',minLength:16,maxLength:128,pattern:'^[A-Za-z0-9_-]+$'}}}}},async req=>{

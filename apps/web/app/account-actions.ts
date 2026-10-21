@@ -3,7 +3,7 @@ import {billingProfile} from '../../../packages/domain/billing-profile';
 import {billingPeriod} from '../../../packages/domain/commercial-plans';
 import {cookies} from 'next/headers';
 import {redirect} from 'next/navigation';
-import {accountApi,requireAccount} from './account-api';
+import {accountApi,requireAccount,requireVerifiedAccount} from './account-api';
 import {validNewPassword,PASSWORD_HELP} from '../../../packages/domain/password-policy';
 export type FormState={error:string}|null;
 const errors:Record<string,string>={ACCOUNT_EXISTS:'Bu e-posta ile bir hesap zaten var. Giriş yapabilirsiniz.',INVALID_LOGIN:'E-posta veya şifre hatalı.',TOO_MANY_ATTEMPTS:'Çok fazla deneme yapıldı. Lütfen 15 dakika sonra yeniden deneyin.'};
@@ -18,17 +18,17 @@ async function authenticate(form:FormData,register:boolean):Promise<FormState>{
   const store=await cookies();store.set('mt_session',result.token,{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',path:'/',maxAge:7*24*60*60});store.delete('mail_tracking_preview');
  }catch(e){return {error:errors[e instanceof Error?e.message:'']||'Şu anda işlem tamamlanamadı. Lütfen tekrar deneyin.'}}
  const preferredPlan=String(form.get('preferredPlan')||'');
- const user=await requireAccount();if(process.env.NODE_ENV==='production'&&!user.email_verified_at&&user.role!=='owner')redirect('/hesap/dogrula'+(['individual','team'].includes(preferredPlan)?'?plan='+preferredPlan:''));redirect(user.role==='owner'?'/admin':['individual','team','business'].includes(preferredPlan)?'/paketler?plan='+preferredPlan+'&billing='+billingPeriod(form.get('billing')):user.plan?'/panel':'/paketler');
+ const user=await requireAccount();if(process.env.NODE_ENV==='production'&&!user.email_verified_at)redirect('/hesap/dogrula'+(['individual','team'].includes(preferredPlan)?'?plan='+preferredPlan:''));redirect(user.role==='owner'?'/admin':['individual','team','business'].includes(preferredPlan)?'/paketler?plan='+preferredPlan+'&billing='+billingPeriod(form.get('billing')):user.plan?'/panel':'/paketler');
 }
 export async function registerAccount(_state:FormState,form:FormData){return authenticate(form,true)}
 export async function loginAccount(_state:FormState,form:FormData){return authenticate(form,false)}
 export async function logoutAccount(){await accountApi('/api/auth/logout',{});const store=await cookies();store.delete('mt_session');store.delete('mail_tracking_preview');redirect('/')}
 export async function completePurchase(_state:FormState,form:FormData):Promise<FormState>{
- await requireAccount();
+ await requireVerifiedAccount();
  const production=process.env.NODE_ENV==='production';
  if(production&&process.env.BILLING_MODE!=='complimentary')return {error:'Paket aktivasyonu şu anda kullanılamıyor. Lütfen info@folloopy.com ile iletişime geçin.'};
  const plan=String(form.get('plan'));
- if(!['individual','team','business'].includes(plan))return {error:'Geçerli bir paket seçin.'};
+ if(!['individual','team'].includes(plan))return {error:'Geçerli bir paket seçin.'};
  if(form.get('deferInvoice')!=='on'){
   try{const profile=billingProfile(Object.fromEntries(['kind','name','email','city','district','address','postalCode','companyName','taxOffice','taxNumber'].map(key=>[key,String(form.get(key)||'')])));await accountApi('/api/account/billing',profile)}catch{return {error:'Fatura bilgilerinizi kontrol edin. Şirket için 10 haneli vergi numarası, adres ve iletişim bilgileri gereklidir.'}}
  }

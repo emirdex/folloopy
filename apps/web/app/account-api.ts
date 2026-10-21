@@ -18,12 +18,13 @@ export async function currentAccount():Promise<Account|null>{
  try{return (await accountApi('/api/auth/me')).user}catch(e){if(e instanceof Error&&e.message==='UNAUTHORIZED')return null;throw e}
 }
 export async function requireAccount(){const user=await currentAccount();if(!user)redirect('/giris');return user}
+export async function requireVerifiedAccount(){const user=await requireAccount();if(process.env.NODE_ENV==='production'&&!user.email_verified_at)redirect('/hesap/dogrula');return user}
 export async function requirePanel(){
  const user=await currentAccount();
- if(user){if(process.env.NODE_ENV==='production'&&!user.email_verified_at&&user.role!=='owner')redirect('/hesap/dogrula');if(!user.plan)redirect('/paketler');return user}
+ if(user){if(process.env.NODE_ENV==='production'&&!user.email_verified_at)redirect('/hesap/dogrula');if(!user.plan)redirect('/paketler');return user}
  if(process.env.NODE_ENV!=='production'&&(await cookies()).get('mail_tracking_preview')?.value==='active')return null;
  redirect('/giris');
 }
 
-export async function requireAdmin(){const user=await requireAccount();if(user.role!=='owner')redirect('/admin/erisim');return user}
+export async function requireAdmin(){const user=await requireVerifiedAccount();if(user.role!=='owner')redirect('/admin/erisim');return user}
 export async function adminApi(path:string,body?:unknown){await requireAdmin();return accountApi('/api/admin'+path,body)}

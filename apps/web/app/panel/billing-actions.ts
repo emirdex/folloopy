@@ -1,9 +1,9 @@
 'use server';
 import {revalidatePath} from 'next/cache';
-import {accountApi,requireAccount} from '../account-api';
+import {accountApi,requireVerifiedAccount} from '../account-api';
 import {billingProfile} from '../../../../packages/domain/billing-profile';
 export async function saveBilling(_previous:{ok:boolean;message:string}|null,form:FormData){
- await requireAccount();
+ await requireVerifiedAccount();
  try{
   const profile=billingProfile(Object.fromEntries(['kind','name','email','city','district','address','postalCode','companyName','taxOffice','taxNumber'].map(key=>[key,String(form.get(key)||'')])));
   await accountApi('/api/account/billing',profile);

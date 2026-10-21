@@ -22,24 +22,26 @@ export class Accounts{
   return this.createSession(id);
  }
  async login(email:string,password:string){
-  const user=(await this.db.query<{id:string;password_hash:string}>('SELECT id,password_hash FROM users WHERE email=$1',[email.trim().toLowerCase()])).rows[0];
+  return this.db.transaction(async tx=>{
+  const user=(await tx.query<{id:string;password_hash:string}>('SELECT id,password_hash FROM users WHERE email=$1 FOR UPDATE',[email.trim().toLowerCase()])).rows[0];
   // Equal work for unknown emails; never return or log password hashes.
   const [salt,encoded]=(user?.password_hash||'00000000000000000000000000000000:'+ '0'.repeat(128)).split(':');
   const computed=await scrypt(password,salt,64) as Buffer;
   if(!timingSafeEqual(computed,Buffer.from(encoded,'hex'))||!user)throw new Error('INVALID_LOGIN');
-  return this.createSession(user.id);
+  return this.createSession(user.id,tx);
+  });
  }
- async verifyPassword(userId:string,password:string){
-  const row=(await this.db.query<{password_hash:string}>('SELECT password_hash FROM users WHERE id=$1',[userId])).rows[0];
+ async verifyPassword(userId:string,password:string,db:DB=this.db){
+  const row=(await db.query<{password_hash:string}>('SELECT password_hash FROM users WHERE id=$1',[userId])).rows[0];
   if(!row||!password||password.length>128)throw Error('INVALID_LOGIN');
   const [salt,encoded]=row.password_hash.split(':');
   const computed=await scrypt(password,salt,64) as Buffer;
   if(!timingSafeEqual(computed,Buffer.from(encoded,'hex')))throw Error('INVALID_LOGIN');
  }
- private async createSession(id:string){
+ private async createSession(id:string,db:DB=this.db){
   const token=randomBytes(32).toString('base64url');
-  await this.db.query("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '7 days')",[digest(token),id]);
-  await this.db.query('UPDATE users SET last_login_at=now() WHERE id=$1',[id]);
+  await db.query("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '7 days')",[digest(token),id]);
+  await db.query('UPDATE users SET last_login_at=now() WHERE id=$1',[id]);
   return {token};
  }
  async current(token:string):Promise<Account|null>{
@@ -50,7 +52,12 @@ export class Accounts{
  async grant(account:Account,plan:Plan){
   if(!Object.hasOwn(plans,plan))throw new Error('INVALID_PLAN');
   await this.db.transaction(async tx=>{
-   await tx.query('SELECT id FROM users WHERE id=$1 FOR UPDATE',[account.id]);
+   const user=(await tx.query<{email_verified_at:string|null}>('SELECT email_verified_at FROM users WHERE id=$1 AND workspace_id=$2 FOR UPDATE',[account.id,account.workspace_id])).rows[0];
+   if(!user)throw Error('UNAUTHORIZED');
+   if(this.production&&!user.email_verified_at)throw Error('EMAIL_NOT_VERIFIED');
+   if(this.production&&plan==='business')throw Error('INVALID_PLAN');
+   const entitlement=(await tx.query<{status:string}>('SELECT status FROM entitlements WHERE workspace_id=$1 FOR UPDATE',[account.workspace_id])).rows[0];
+   if(entitlement&&(entitlement.status==='suspended'||(this.production&&entitlement.status!=='active')))throw Error('FORBIDDEN');
    await tx.query("INSERT INTO access_grants(workspace_id,plan,mode) VALUES($1,$2,'complimentary') ON CONFLICT(workspace_id) DO UPDATE SET plan=excluded.plan",[account.workspace_id,plan]);
    await tx.query("INSERT INTO entitlements(workspace_id,status,message_limit) VALUES($1,'active',$2) ON CONFLICT(workspace_id) DO UPDATE SET status='active',message_limit=excluded.message_limit",[account.workspace_id,plans[plan].limit]);
   });
@@ -58,6 +65,7 @@ export class Accounts{
 
  async purchase(account:Account,plan:Plan,idempotencyKey:string=randomUUID()){
   if(!Object.hasOwn(plans,plan))throw new Error('INVALID_PLAN');
+  if(this.production)throw Error('FORBIDDEN');
   // Local preview only. This must never confirm a real paid subscription.
   await this.db.transaction(async tx=>{
    await tx.query('SELECT id FROM users WHERE id=$1 FOR UPDATE',[account.id]);

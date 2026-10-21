@@ -12,7 +12,7 @@ export class AdminService{
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.email)||config.token.length<32)throw new Error('INVALID_ADMIN_CONFIG');
   await this.db.query('INSERT INTO admin_bootstrap(id,email,token_hash) VALUES(1,$1,$2) ON CONFLICT(id) DO NOTHING',[config.email.toLowerCase(),hash(config.token)]);
  }
- async status(){const row=(await this.db.query<{email:string;used_at:string|null}>('SELECT email,used_at FROM admin_bootstrap WHERE id=1')).rows[0];return {available:!!row&&!row.used_at,email:row?.email||null}}
+ async status(){const row=(await this.db.query<{email:string;used_at:string|null}>('SELECT email,used_at FROM admin_bootstrap WHERE id=1')).rows[0];return {available:!!row&&!row.used_at,email:row&&!row.used_at?row.email:null}}
  async setup(token:string,name:string,password:string){
   if(!validNewPassword(password))throw new Error('INVALID_PASSWORD');
   const salt=randomBytes(16).toString('hex'),encoded=(await scrypt(password,salt,64) as Buffer).toString('hex');
