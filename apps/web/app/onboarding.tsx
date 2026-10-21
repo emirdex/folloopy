@@ -2,7 +2,7 @@
 import {FolloopyLogo,FolloopyMark} from './folloopy-brand';
 
 import {useActionState,useState} from 'react';
-import Link from 'next/link';
+import Link from './destination-link';
 import {CircleHelp,Eye,EyeOff,ArrowLeft,ArrowUpRight,Check,Activity,ShieldCheck,Layers,Users,Building2,ArrowRight,LockKeyhole} from 'lucide-react';
 import {registerAccount,loginAccount,logoutAccount} from './account-actions';
 import type {Account} from './account-api';

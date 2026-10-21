@@ -1,7 +1,7 @@
 'use client';
 import {useState} from 'react';
 import {SignatureBadge} from './signature-badge';
-import Link from 'next/link';
+import Link from './destination-link';
 import {ArrowUpRight,ArrowRight,Mail,Eye,FileText,MousePointer2,Building2,Activity,ChevronRight} from 'lucide-react';
 import type {Account} from './account-api';
 import {BillingToggle} from './billing-toggle';

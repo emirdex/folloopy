@@ -4,7 +4,9 @@ import {cookies} from 'next/headers';
 import {redirect} from 'next/navigation';
 export type Account={id:string;workspace_id:string;name:string;email:string;plan:'individual'|'team'|'business'|null;role:'member'|'owner';email_verified_at?:string|null};
 export async function accountApi(path:string,body?:unknown){
- const token=(await cookies()).get('mt_session')?.value;
+ const publicDeployment=process.env.DEPLOYMENT_ROLE==='public';
+ if(publicDeployment&&path!=='/api/enterprise-requests')throw Error('ACCOUNT_HOST_REQUIRED');
+ const token=publicDeployment?undefined:(await cookies()).get('mt_session')?.value;
  if(isMarketingMode())throw new Error('APPLICATION_UNAVAILABLE');
  const response=await internalApiFetch(internalApiUrl()+path,{method:body===undefined?'GET':'POST',headers:{Authorization:'Bearer '+internalApiKey(),...(token?{'x-user-session':token}:{}),...(body===undefined?{}:{'Content-Type':'application/json'})},...(body===undefined?{}:{body:JSON.stringify(body)}),cache:'no-store',signal:AbortSignal.timeout(20000)});
  const data=await response.json();
@@ -13,7 +15,7 @@ export async function accountApi(path:string,body?:unknown){
 }
 export async function currentAccount():Promise<Account|null>{
  const store=await cookies();
- if(isMarketingMode())return null;
+ if(isMarketingMode()||process.env.DEPLOYMENT_ROLE==='public')return null;
  if(!store.has('mt_session'))return null;
  try{return (await accountApi('/api/auth/me')).user}catch(e){if(e instanceof Error&&e.message==='UNAUTHORIZED')return null;throw e}
 }

@@ -1,5 +1,5 @@
 import {notFound} from 'next/navigation';
-import Link from 'next/link';
+import Link from '../../destination-link';
 import {ArrowLeft} from 'lucide-react';
 import {ArticleBody} from '../../blog-content';
 import {JournalShell} from '../journal-shell';

@@ -9,7 +9,7 @@ import {BLOG_IMAGE_LIMIT,blogImageType} from '../../../../../packages/domain/blo
 export const runtime='nodejs';
 export async function POST(request:Request){
  const user=await currentAccount();if(!user||user.role!=='owner'||(process.env.NODE_ENV==='production'&&!user.email_verified_at))return Response.json({error:'Yönetici girişi gerekli.'},{status:403});
- if(request.headers.get('origin')!==(process.env.SITE_URL||new URL(request.url).origin))return Response.json({error:'Geçersiz istek.'},{status:403});
+ if(request.headers.get('origin')!==(process.env.APP_URL||process.env.SITE_URL||new URL(request.url).origin))return Response.json({error:'Geçersiz istek.'},{status:403});
  const length=Number(request.headers.get('content-length'));if(length>BLOG_IMAGE_LIMIT)return Response.json({error:'Görsel en fazla 5 MB olabilir.'},{status:413});
  const reader=request.body?.getReader();if(!reader)return Response.json({error:'Bir görsel seçin.'},{status:400});
  const chunks:Uint8Array[]=[];let size=0;

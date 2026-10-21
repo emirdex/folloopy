@@ -28,6 +28,11 @@ test('Production startup fails closed for missing secrets, non-HTTPS site and em
  assert.throws(()=>productionConfig({NODE_ENV:'production'}),/CONFIG_/);
  const env:NodeJS.ProcessEnv={NODE_ENV:'production',SITE_URL:'https://folloopy.example',DATABASE_URL:'postgresql://localhost/folloopy',INTERNAL_API_KEY:apiKey,DATA_ENCRYPTION_KEY:secret,ADMIN_OWNER_EMAIL:'owner@example.invalid',RESEND_API_KEY:'synthetic',MAIL_FROM:'Folloopy <noreply@example.invalid>',NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:secret};
  assert.equal(productionConfig(env).production,true);
+ const panel=productionConfig({...env,APP_URL:'https://panel.folloopy.example',PUBLIC_TRACKING_ORIGIN:'https://folloopy.example'});
+ assert.equal(panel.appSite,'https://panel.folloopy.example');assert.equal(panel.trackingSite,'https://folloopy.example');
+ assert.throws(()=>productionConfig({...env,DEPLOYMENT_ROLE:'public'}),/WORKERS/);
+ assert.equal(productionConfig({...env,DEPLOYMENT_ROLE:'public',RUN_BACKGROUND_WORKERS:'false'}).backgroundWorkers,false);
+ assert.throws(()=>productionConfig({...env,APP_URL:'http://panel.folloopy.example'}),/URL_INVALID/);
  assert.throws(()=>productionConfig({...env,SITE_URL:'http://folloopy.example'}),/HTTPS/);
  assert.throws(()=>productionConfig({...env,DATABASE_URL:'file:local.db'}),/DATABASE/);
  assert.throws(()=>productionConfig({...env,INTERNAL_API_KEY:''}),/INTERNAL_API_KEY/);

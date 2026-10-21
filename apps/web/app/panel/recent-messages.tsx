@@ -1,5 +1,5 @@
 import {LiveClock} from '../live-clock';
-import Link from 'next/link';
+import Link from '../destination-link';
 import {Mail,ArrowUpRight,ArrowRight,Eye,Clock3,Pause,Check} from 'lucide-react';
 import './recent-messages.css';
 

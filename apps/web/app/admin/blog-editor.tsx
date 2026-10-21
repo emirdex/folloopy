@@ -1,6 +1,6 @@
 'use client';
 import {useActionState,useRef,useState} from 'react';
-import Link from 'next/link';
+import Link from '../destination-link';
 import {ArrowUpRight,Check,Eye,EyeOff,ImagePlus,Upload,Heading2,Bold,List,Link2,Quote,X,Search} from 'lucide-react';
 import {savePost} from './actions';
 import {ArticleBody} from '../blog-content';

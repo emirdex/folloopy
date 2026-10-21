@@ -1,7 +1,7 @@
 import {isMarketingMode} from '../../../packages/runtime/app-mode';
 import {ContactForm} from './iletisim/contact-form';
 import {FolloopyLogo} from './folloopy-brand';
-import Link from 'next/link';
+import Link from './destination-link';
 import {Activity,ArrowLeft,ArrowUpRight,FileText,Phone,MapPin,Mail,Building2} from 'lucide-react';
 import {legalDocuments,merchant,type LegalDocument} from './legal-content';
 import {SiteFooter} from './site-footer';

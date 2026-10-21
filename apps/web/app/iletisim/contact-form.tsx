@@ -1,6 +1,6 @@
 'use client';
 import {useActionState,useState} from 'react';
-import Link from 'next/link';
+import Link from '../destination-link';
 import {ArrowUpRight,CheckCircle2} from 'lucide-react';
 import {sendContact} from './actions';
 export function ContactForm(){

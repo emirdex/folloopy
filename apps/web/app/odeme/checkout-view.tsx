@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '../destination-link';
 import {ArrowLeft,ArrowUpRight,Check,UserRound,Building2,ReceiptText,ShieldCheck,LockKeyhole,Mail} from 'lucide-react';
 import {commercialPlans,billingPeriod,planPricing,formatPrice} from '../../../../packages/domain/commercial-plans';
 import type {BillingProfile} from '../../../../packages/domain/billing-profile';

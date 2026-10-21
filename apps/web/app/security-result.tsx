@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from './destination-link';
 import {ArrowUpRight,MailCheck,ShieldCheck} from 'lucide-react';
 export function SecurityResult({mode,message}:{mode:'verify'|'request'|'reset';message:string}){
  const isReset=mode==='reset',isRequest=mode==='request';

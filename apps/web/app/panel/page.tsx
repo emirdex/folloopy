@@ -15,7 +15,7 @@ import {revalidatePath} from 'next/cache';
 import {redirect} from 'next/navigation';
 import {Icon} from '../icons';
 import {Refresh,Search,MailForm,StopButton,Counter} from '../controls';
-import Link from 'next/link';
+import Link from '../destination-link';
 import type {ReactNode} from 'react';
 
 export const dynamic='force-dynamic';

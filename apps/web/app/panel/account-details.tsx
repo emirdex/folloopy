@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '../destination-link';
 import {BillingEditor} from './billing-editor';
 import type {BillingProfile} from '../../../../packages/domain/billing-profile';
 import {Wallet,ShieldCheck,ArrowUpRight,Mail,CalendarDays,Check} from 'lucide-react';

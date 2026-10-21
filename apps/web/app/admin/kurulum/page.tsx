@@ -1,6 +1,6 @@
 import {FolloopyLogo} from '../../folloopy-brand';
 import {redirect} from 'next/navigation';
-import Link from 'next/link';
+import Link from '../../destination-link';
 import {ShieldCheck,Activity} from 'lucide-react';
 import {accountApi} from '../../account-api';
 import {OwnerSetupForm} from '../forms';

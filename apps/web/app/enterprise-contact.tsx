@@ -1,6 +1,6 @@
 'use client';
 import {useActionState} from 'react';
-import Link from 'next/link';
+import Link from './destination-link';
 import {Building2,ArrowUpRight,Check,Mail} from 'lucide-react';
 import {requestEnterprise} from './enterprise-actions';
 export function EnterpriseContact({marketing=false}:{marketing?:boolean}){

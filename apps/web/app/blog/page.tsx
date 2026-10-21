@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '../destination-link';
 import {ArrowUpRight,Activity,Search,BookOpen,Send,ShieldCheck} from 'lucide-react';
 import {JournalShell} from './journal-shell';
 import {publicBlog,blogDate,type BlogPost} from './data';

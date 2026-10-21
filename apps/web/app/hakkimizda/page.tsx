@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '../destination-link';
 import {ArrowUpRight,Mail,Eye,ChartNoAxesCombined,Check,ShieldCheck,Focus,Layers} from 'lucide-react';
 import {LegalHeader} from '../legal-view';
 import {SiteFooter} from '../site-footer';

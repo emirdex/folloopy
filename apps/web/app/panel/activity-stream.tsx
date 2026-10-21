@@ -1,5 +1,5 @@
 import {LiveClock} from '../live-clock';
-import Link from 'next/link';
+import Link from '../destination-link';
 import {ActivityRhythm} from './activity-rhythm';
 import {Activity,Send,Eye,ArrowUpRight,Clock3,Mail,ArrowRight} from 'lucide-react';
 import './activity-stream.css';

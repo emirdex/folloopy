@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '../../destination-link';
 import {redirect} from 'next/navigation';
 import {Check,ArrowUpRight} from 'lucide-react';
 import {requireVerifiedAccount,accountApi} from '../../account-api';

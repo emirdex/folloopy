@@ -2,7 +2,7 @@
 import {useState} from 'react';
 import {SignatureBadge} from './signature-badge';
 import {BillingToggle} from './billing-toggle';
-import Link from 'next/link';
+import Link from './destination-link';
 import {ArrowUpRight,Mail,Eye,FileText,Download,MousePointer2,Activity} from 'lucide-react';
 import {commercialPlans,planPricing,formatPrice,type BillingPeriod,type CommercialPlan} from '../../../packages/domain/commercial-plans';
 import './pricing-plans.css';

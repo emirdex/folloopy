@@ -2,7 +2,7 @@
 import {FolloopyLogo,FolloopyMark} from './folloopy-brand';
 
 import {useEffect,useRef,useState} from 'react';
-import Link from 'next/link';
+import Link from './destination-link';
 import {Icon} from './icons';
 import {SiteFooter} from './site-footer';
 import {EnterpriseContact} from './enterprise-contact';

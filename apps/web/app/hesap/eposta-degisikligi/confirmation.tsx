@@ -1,6 +1,6 @@
 'use client';
 import {useActionState,useEffect,useState} from 'react';
-import Link from 'next/link';
+import Link from '../../destination-link';
 import {ShieldCheck} from 'lucide-react';
 import {FlowHeader} from '../../onboarding';
 import {confirmEmailChange} from './actions';

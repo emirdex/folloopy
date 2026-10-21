@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '../destination-link';
 import {ArrowUpRight,Check,Download,Mail,Monitor,Package,ShieldCheck,Sparkles} from 'lucide-react';
 import './extension-hub.css';
 

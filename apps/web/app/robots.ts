@@ -1,2 +1,2 @@
 import type {MetadataRoute} from 'next';
-export default function robots():MetadataRoute.Robots{return {rules:{userAgent:'*',allow:'/',disallow:['/admin','/panel','/odeme','/paketler','/hesap','/sifre-yenile','/sifremi-unuttum','/baglantilar','/t/']},sitemap:(process.env.SITE_URL||'https://folloopy.com')+'/sitemap.xml'}}
+export default function robots():MetadataRoute.Robots{if(process.env.DEPLOYMENT_ROLE==='panel')return {rules:{userAgent:'*',disallow:'/'}};return {rules:{userAgent:'*',allow:'/',disallow:['/admin','/panel','/odeme','/paketler','/hesap','/sifre-yenile','/sifremi-unuttum','/baglantilar','/t/']},sitemap:(process.env.SITE_URL||'https://folloopy.com')+'/sitemap.xml'}}

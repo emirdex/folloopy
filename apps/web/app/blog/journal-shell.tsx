@@ -1,6 +1,6 @@
 import {isMarketingMode} from '../../../../packages/runtime/app-mode';
 import {FolloopyLogo} from '../folloopy-brand';
-import Link from 'next/link';
+import Link from '../destination-link';
 import {Activity,ArrowUpRight} from 'lucide-react';
 import {SiteFooter} from '../site-footer';
 import type {ReactNode} from 'react';

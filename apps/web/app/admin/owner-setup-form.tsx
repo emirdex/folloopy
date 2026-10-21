@@ -1,7 +1,7 @@
 'use client';
 import {useActionState,useEffect,useRef,useState} from 'react';
 import {ArrowUpRight,Eye,EyeOff,LoaderCircle,AlertCircle} from 'lucide-react';
-import Link from 'next/link';
+import Link from '../destination-link';
 import {setupOwner} from './actions';
 import {PASSWORD_HELP} from '../../../../packages/domain/password-policy';
 import {ownerSetupIssue,type OwnerSetupIssue} from '../../../../packages/domain/owner-setup';
