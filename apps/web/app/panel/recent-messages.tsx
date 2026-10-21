@@ -1,3 +1,4 @@
+import {LiveClock} from '../live-clock';
 import Link from 'next/link';
 import {Mail,ArrowUpRight,ArrowRight,Eye,Clock3,Pause,Check} from 'lucide-react';
 import './recent-messages.css';
@@ -14,6 +15,6 @@ export function RecentMessages({messages}:{messages:RecentMessage[]}){
    const StatusIcon=message.state==='failed'?Mail:opened?Eye:pending?Clock3:message.tracking_enabled?Clock3:Pause;
    return <li key={message.id}><Link className={'recent-message-row '+(opened?'has-opening':message.state==='failed'?'has-error':'')} href={'/panel?id='+message.id} aria-label={message.subject+' · '+label+' · Ayrıntıyı aç'}><span className="recent-message-icon"><Mail size={21}/></span><div className="recent-message-main"><strong>{message.subject}</strong><span><time dateTime={message.sent_at||message.created_at}>{date(message.sent_at||message.created_at)}</time><i/>{message.state==='sent'?<><Check size={11}/>Gönderildi</>:message.state==='failed'?'Gönderim Başarısız':'İşlem Devam Ediyor'}</span></div><div className="recent-message-status"><span className="recent-message-status-pill"><StatusIcon size={13}/>{label}</span><small>{opened&&message.last_activity_at?<>Son hareket <time dateTime={message.last_activity_at}>{date(message.last_activity_at)}</time></>:message.state==='failed'?'Ayrıntıları kontrol edin':pending?'Sonuç kontrol ediliyor':message.tracking_enabled?'Yeni hareketler burada görünecek':'Yeni hareketler kaydedilmiyor'}{opened&&!message.tracking_enabled?' · Takip kapalı':''}</small></div><span className="recent-message-open" aria-hidden="true"><ArrowUpRight size={16}/></span></Link></li>
   })}</ol>:<div className="recent-message-empty"><span className="recent-message-icon"><Mail size={25}/></span><h3>İlk Mailinizle Başlayın</h3><p>Gönderdiğiniz mailler ve güncel durumları burada görünecek.</p><Link href="/panel?view=compose">Mail Oluştur<ArrowRight size={15}/></Link></div>}
-  {recent.length?<footer><span className="recent-message-footer-dot"/><span>{messages.length>10?'En yeni 10 mail gösteriliyor. Diğer mailleriniz için tüm listeyi açın.':`${recent.length} mail gösteriliyor.`}</span><span className="recent-message-timezone">İstanbul Saati</span></footer>:null}
+  {recent.length?<footer><span className="recent-message-footer-dot"/><span>{messages.length>10?'En yeni 10 mail gösteriliyor. Diğer mailleriniz için tüm listeyi açın.':`${recent.length} mail gösteriliyor.`}</span><span className="recent-message-timezone"><LiveClock initialAt={new Date().toISOString()}/></span></footer>:null}
  </section>
 }
