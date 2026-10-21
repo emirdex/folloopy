@@ -16,14 +16,19 @@ export class GmailConnections{
   const params=new URLSearchParams({client_id:process.env.GOOGLE_CLIENT_ID!,redirect_uri:this.redirect,response_type:'code',scope:'openid email '+sendScope,access_type:'offline',prompt:'consent',state,code_challenge:digestBase64(verifier),code_challenge_method:'S256'});
   return 'https://accounts.google.com/o/oauth2/v2/auth?'+params;
  }
- private async token(body:Record<string,string>){const res=await fetch('https://oauth2.googleapis.com/token',{method:'POST',signal:AbortSignal.timeout(15000),headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({...body,client_id:process.env.GOOGLE_CLIENT_ID!,client_secret:process.env.GOOGLE_CLIENT_SECRET!})});if(!res.ok)throw Error('GMAIL_AUTH_FAILED');return await res.json() as {access_token:string;refresh_token?:string;scope?:string}}
+ private async token(body:Record<string,string>){
+  const res=await fetch('https://oauth2.googleapis.com/token',{method:'POST',signal:AbortSignal.timeout(15000),headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({...body,client_id:process.env.GOOGLE_CLIENT_ID!,client_secret:process.env.GOOGLE_CLIENT_SECRET!})});
+  if(!res.ok){const failure=await res.json().catch(()=>({})) as {error?:string};throw Error(failure.error==='invalid_client'?'GMAIL_CLIENT_INVALID':failure.error==='invalid_grant'?'GMAIL_CODE_INVALID':'GMAIL_AUTH_FAILED');}
+  const result=await res.json() as {access_token:string;refresh_token?:string;scope?:string};if(!result.access_token)throw Error('GMAIL_AUTH_FAILED');return result;
+ }
  async finish(user:Account,session:string,state:string,code:string){
   if(!this.configured)throw Error('GMAIL_UNAVAILABLE');
   const row=(await this.db.query<{verifier:string}>('DELETE FROM oauth_states WHERE token_hash=$1 AND user_id=$2 AND session_hash=$3 AND expires_at>now() RETURNING verifier',[digest(state),user.id,digest(session)])).rows[0];if(!row)throw Error('INVALID_OAUTH_STATE');
   const tokens=await this.token({grant_type:'authorization_code',code,redirect_uri:this.redirect,code_verifier:unseal(row.verifier,this.key)});
-  if(!tokens.refresh_token||!tokens.scope?.split(' ').includes(sendScope))throw Error('GMAIL_SCOPE_REQUIRED');
-  const res=await fetch('https://openidconnect.googleapis.com/v1/userinfo',{headers:{Authorization:'Bearer '+tokens.access_token},signal:AbortSignal.timeout(10000)});if(!res.ok)throw Error('GMAIL_AUTH_FAILED');const identity=await res.json() as {email?:string;email_verified?:boolean};
-  if(!identity.email_verified||!identity.email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identity.email))throw Error('GMAIL_AUTH_FAILED');
+  if(!tokens.scope?.split(' ').includes(sendScope))throw Error('GMAIL_SCOPE_REQUIRED');
+  if(!tokens.refresh_token)throw Error('GMAIL_REFRESH_REQUIRED');
+  const res=await fetch('https://openidconnect.googleapis.com/v1/userinfo',{headers:{Authorization:'Bearer '+tokens.access_token},signal:AbortSignal.timeout(10000)});if(!res.ok)throw Error('GMAIL_IDENTITY_FAILED');const identity=await res.json() as {email?:string;email_verified?:boolean};
+  if(!identity.email_verified||!identity.email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identity.email))throw Error('GMAIL_IDENTITY_FAILED');
   await this.db.query('INSERT INTO mail_connections(workspace_id,email,refresh_token,scopes) VALUES($1,$2,$3,$4) ON CONFLICT(workspace_id) DO UPDATE SET email=excluded.email,refresh_token=excluded.refresh_token,scopes=excluded.scopes,updated_at=now()',[user.workspace_id,identity.email,seal(tokens.refresh_token,this.key),tokens.scope]);
  }
  async status(workspace:string){const row=(await this.db.query<{email:string}>('SELECT email FROM mail_connections WHERE workspace_id=$1',[workspace])).rows[0];return {configured:this.configured,connected:!!row,email:row?.email||null}}

@@ -9,7 +9,14 @@ import {seal,unseal} from '../packages/runtime/vault';
 import {Accounts} from '../apps/api/accounts';
 import {AccountSecurity} from '../apps/api/account-security';
 import {allowRequest} from '../apps/api/rate-limit';
+import {gmailConnectionReason} from '../packages/domain/gmail-errors';
 const secret=randomBytes(32).toString('base64'),apiKey='production-unit-test-only-key-32-characters',password='Only-test-Password-2026!';
+test('OAuth redirect only exposes allowlisted failure reasons',()=>{
+ assert.equal(gmailConnectionReason(Error('invalid_client: confidential response')),'GMAIL_CONNECTION_FAILED');
+ assert.equal(gmailConnectionReason(Error('GMAIL_SCOPE_REQUIRED')),'GMAIL_SCOPE_REQUIRED');
+ assert.equal(gmailConnectionReason(new DOMException('sensitive URL','TimeoutError')),'GMAIL_CONNECTION_TIMEOUT');
+ assert.equal(gmailConnectionReason(Error('toString')),'GMAIL_CONNECTION_FAILED');
+});
 async function setup(billing='complimentary'){
  const db=await openDatabase();await migrate(db);
  const {app}=buildServer(db,new UnavailableProvider(),apiKey,'https://folloopy.example',undefined,{production:true,site:'https://folloopy.example',encryptionKey:secret,billing});
@@ -58,4 +65,29 @@ test('Gmail OAuth binds state to user/session; encrypted refresh token sends onc
  const row=(await db.query<{refresh_token:string}>('SELECT refresh_token FROM mail_connections')).rows[0];assert.ok(!row.refresh_token.includes('synthetic-refresh-token'));
  const send=()=>app.inject({method:'POST',url:'/api/messages/send',headers:{authorization:'Bearer '+apiKey,'x-user-session':u.token,'idempotency-key':'production-send-once-0001'},payload:{subject:'Tracked message',to:'recipient@example.invalid',text:'Hello',tracking:true}});const a=await send(),b=await send();assert.equal(a.statusCode,200,a.body);assert.equal(a.json().id,b.json().id);assert.equal(sends,1);
  }finally{globalThis.fetch=originalFetch;if(oldId===undefined)delete process.env.GOOGLE_CLIENT_ID;else process.env.GOOGLE_CLIENT_ID=oldId;if(oldSecret===undefined)delete process.env.GOOGLE_CLIENT_SECRET;else process.env.GOOGLE_CLIENT_SECRET=oldSecret;await app.close();await db.close()}
+});
+
+test('OAuth failures identify the failed stage without storing incomplete connections or leaking provider responses',async()=>{
+ const oldId=process.env.GOOGLE_CLIENT_ID,oldSecret=process.env.GOOGLE_CLIENT_SECRET,originalFetch=globalThis.fetch;
+ process.env.GOOGLE_CLIENT_ID='synthetic-client';process.env.GOOGLE_CLIENT_SECRET='synthetic-secret';
+ let mode='invalid_client';
+ globalThis.fetch=async input=>{
+  if(String(input).includes('/token')){
+   if(['invalid_client','invalid_grant','unknown_error'].includes(mode))return Response.json({error:mode,error_description:'PRIVATE_PROVIDER_RESPONSE'},{status:400});
+   return Response.json({access_token:'synthetic-access',...(mode==='refresh'?{}:{refresh_token:'synthetic-refresh'}),scope:mode==='scope'?'openid email':'openid email https://www.googleapis.com/auth/gmail.send'});
+  }
+  return Response.json({email:'sender@example.invalid',email_verified:false});
+ };
+ const{db,app,call,user}=await setup();
+ try{
+  const u=await user();await db.query('UPDATE users SET email_verified_at=now()');
+  for(const [scenario,expected] of [['invalid_client','GMAIL_CLIENT_INVALID'],['invalid_grant','GMAIL_CODE_INVALID'],['unknown_error','GMAIL_AUTH_FAILED'],['scope','GMAIL_SCOPE_REQUIRED'],['refresh','GMAIL_REFRESH_REQUIRED'],['identity','GMAIL_IDENTITY_FAILED']]){
+   mode=scenario;const start=await call('/api/gmail/start',{},u.token);const state=new URL(start.json().url).searchParams.get('state');
+   const result=await call('/api/gmail/callback',{state,code:'synthetic-code'},u.token);
+   assert.equal(result.statusCode,400,result.body);assert.equal(result.json().code,expected);assert.ok(!result.body.includes('PRIVATE_PROVIDER_RESPONSE'));
+   assert.equal((await db.query('SELECT * FROM mail_connections')).rows.length,0);
+  }
+ }finally{
+  globalThis.fetch=originalFetch;if(oldId===undefined)delete process.env.GOOGLE_CLIENT_ID;else process.env.GOOGLE_CLIENT_ID=oldId;if(oldSecret===undefined)delete process.env.GOOGLE_CLIENT_SECRET;else process.env.GOOGLE_CLIENT_SECRET=oldSecret;await app.close();await db.close();
+ }
 });
