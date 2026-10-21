@@ -1,0 +1,1 @@
+CREATE TABLE billing_profiles(user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE, profile jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now());

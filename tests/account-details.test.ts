@@ -14,3 +14,25 @@ test('Email change requires password and both addresses; tokens are single use, 
 test('Cancelled, replaced, expired and password-reset email change requests cannot change address',async()=>{const s=await setup();try{const a=await s.create('old@example.invalid');await s.call('/api/account/email/request',{email:'new@example.invalid',password},a.token);const first=await s.tokens();await s.call('/api/account/email/cancel',{},a.token);for(const t of first)assert.equal((await s.call('/api/account/email/confirm',{token:t.token})).statusCode,400);await s.db.query('DELETE FROM mail_outbox');await s.call('/api/account/email/request',{email:'new@example.invalid',password},a.token);const expired=await s.tokens();await s.db.query("UPDATE account_email_changes SET expires_at=now()-interval '1 minute'");for(const t of expired)assert.equal((await s.call('/api/account/email/confirm',{token:t.token})).statusCode,400);await s.db.query('DELETE FROM mail_outbox');await s.call('/api/account/email/request',{email:'new@example.invalid',password},a.token);const replaced=await s.tokens();await s.call('/api/account/email/request',{email:'other@example.invalid',password},a.token);for(const t of replaced)assert.equal((await s.call('/api/account/email/confirm',{token:t.token})).statusCode,400);const security=new AccountSecurity(s.db,'https://folloopy.example',key);await security.issue(a.user.id,'reset');const resetPayload=(await s.db.query<{payload:string}>("SELECT payload FROM mail_outbox ORDER BY created_at DESC LIMIT 1")).rows[0].payload;const reset=JSON.parse(unseal(resetPayload,key)).text.match(/#token=([\w-]{43})/)[1];await security.consume(reset,'reset','Replacement-password-2026!');assert.equal((await s.db.query('SELECT * FROM account_email_changes')).rows.length,0);assert.equal((await s.db.query<{email:string}>('SELECT email FROM users WHERE id=$1',[a.user.id])).rows[0].email,'old@example.invalid');}finally{await s.app.close();await s.db.close()}});
 
 test('Address collision at confirmation cannot overwrite another account',async()=>{const s=await setup();try{const a=await s.create('old@example.invalid');await s.call('/api/account/email/request',{email:'new@example.invalid',password},a.token);const tokens=await s.tokens();await s.create('new@example.invalid');assert.equal((await s.call('/api/account/email/confirm',{token:tokens[0].token})).json().completed,false);assert.equal((await s.call('/api/account/email/confirm',{token:tokens[1].token})).statusCode,409);assert.equal((await s.accounts.current(a.token))?.email,'old@example.invalid');}finally{await s.app.close();await s.db.close()}});
+
+test('Billing profiles validate invoice type, remain private, and never create a paid purchase',async()=>{
+ const s=await setup();try{
+  const a=await s.create('billing-a@example.invalid'),b=await s.create('billing-b@example.invalid');await s.db.query('UPDATE users SET email_verified_at=now()');
+  const individual={kind:'individual',name:'Test Member',email:'billing-a@example.invalid',city:'İstanbul',district:'Kartal',address:'Test Mahallesi Örnek Sokak No 10',postalCode:'34860',companyName:'',taxOffice:'',taxNumber:''};
+  assert.equal((await s.call('/api/account/billing')).statusCode,401);
+  assert.equal((await s.call('/api/account/billing',individual)).statusCode,401);
+  assert.equal((await s.call('/api/account/billing',individual,a.token)).statusCode,200);
+  assert.equal((await s.call('/api/account/billing',undefined,a.token)).json().profile.address,individual.address);
+  assert.equal((await s.call('/api/account/billing',undefined,b.token)).json().profile,null);
+  assert.equal((await s.call('/api/account/billing',{...individual,kind:'company'},a.token)).statusCode,400);
+  assert.equal((await s.call('/api/account/billing',{...individual,postalCode:'123'},a.token)).statusCode,400);
+  assert.equal((await s.call('/api/account/billing',{...individual,cardNumber:'4111111111111111'},a.token)).statusCode,400);
+  const company={...individual,kind:'company',companyName:'Test Yazılım Ltd.',taxOffice:'Kartal',taxNumber:'1234567890'};
+  assert.equal((await s.call('/api/account/billing',company,a.token)).statusCode,200);
+  assert.equal((await s.call('/api/account/billing',undefined,a.token)).json().profile.companyName,company.companyName);
+  assert.equal((await s.call('/api/account/billing',{...company,kind:'individual'},a.token)).statusCode,200);
+  assert.equal((await s.call('/api/account/billing',undefined,a.token)).json().profile.taxNumber,'');
+  assert.equal((await s.db.query('SELECT * FROM purchases')).rows.length,0);
+  assert.equal((await s.db.query('SELECT * FROM access_grants')).rows.length,0);
+ }finally{await s.app.close();await s.db.close()}
+});

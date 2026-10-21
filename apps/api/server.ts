@@ -1,3 +1,4 @@
+import {billingProfile} from '../../packages/domain/billing-profile';
 import {AccountDetails} from './account-details';
 import {AccountSecurity} from './account-security';
 import {GmailConnections} from './gmail';
@@ -48,7 +49,7 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  });
  app.setErrorHandler((error,req,reply)=>{
   const code=error instanceof Error?error.message:'INTERNAL_ERROR';
-  const status=({UNAUTHORIZED:401,INVALID_LOGIN:401,ACCOUNT_EXISTS:409,PLAN_REQUIRED:402,INVALID_PLAN:400,INVALID_PASSWORD:400,INVALID_ACCOUNT:400,INVALID_POST:400,SETUP_CLOSED:409,INVALID_SETUP_TOKEN:403,EXISTING_ACCOUNT_PASSWORD_REQUIRED:401,SLUG_EXISTS:409,STALE_POST:409,NOT_FOUND:404,FORBIDDEN:403,EMAIL_NOT_VERIFIED:403,INVALID_ACCOUNT_TOKEN:400,EMAIL_UNAVAILABLE:503,EMAIL_IN_USE:409,EMAIL_UNCHANGED:400,GMAIL_NOT_CONNECTED:409,GMAIL_UNAVAILABLE:503,INVALID_OAUTH_STATE:400,GMAIL_AUTH_FAILED:400,GMAIL_CLIENT_INVALID:400,GMAIL_CODE_INVALID:400,GMAIL_IDENTITY_FAILED:400,GMAIL_REFRESH_REQUIRED:400,GMAIL_SCOPE_REQUIRED:400,LIMIT_REACHED:402,IDEMPOTENCY_CONFLICT:409} as Record<string,number>)[code]|| (typeof error==='object' && error!==null && 'validation' in error?400:500);
+  const status=({UNAUTHORIZED:401,INVALID_LOGIN:401,ACCOUNT_EXISTS:409,PLAN_REQUIRED:402,INVALID_PLAN:400,INVALID_PASSWORD:400,INVALID_ACCOUNT:400,INVALID_BILLING_PROFILE:400,INVALID_POST:400,SETUP_CLOSED:409,INVALID_SETUP_TOKEN:403,EXISTING_ACCOUNT_PASSWORD_REQUIRED:401,SLUG_EXISTS:409,STALE_POST:409,NOT_FOUND:404,FORBIDDEN:403,EMAIL_NOT_VERIFIED:403,INVALID_ACCOUNT_TOKEN:400,EMAIL_UNAVAILABLE:503,EMAIL_IN_USE:409,EMAIL_UNCHANGED:400,GMAIL_NOT_CONNECTED:409,GMAIL_UNAVAILABLE:503,INVALID_OAUTH_STATE:400,GMAIL_AUTH_FAILED:400,GMAIL_CLIENT_INVALID:400,GMAIL_CODE_INVALID:400,GMAIL_IDENTITY_FAILED:400,GMAIL_REFRESH_REQUIRED:400,GMAIL_SCOPE_REQUIRED:400,LIMIT_REACHED:402,IDEMPOTENCY_CONFLICT:409} as Record<string,number>)[code]|| (typeof error==='object' && error!==null && 'validation' in error?400:500);
   reply.code(status).send({code:status===500?'INTERNAL_ERROR':code,message:status===500?'İşlem tamamlanamadı.':status===400?'Girdi geçersiz.':'İşlem için hak veya geçerli istek gerekli.'});
  });
  const newPassword={type:'string',minLength:8,maxLength:128,pattern:PASSWORD_PATTERN};
@@ -59,6 +60,12 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  app.get('/api/auth/me',async req=>({user:await account(req)}));
  app.get('/api/account/details',async req=>accountDetails.details(await account(req)));
  const accountChangeRate=async(req:any,reply:any)=>{const user=await account(req);if(!await allowRequest(db,'account-change',user.id,10))return reply.code(429).send({code:'TOO_MANY_ATTEMPTS'})};
+ app.get('/api/account/billing',async req=>{const user=await account(req);const row=(await db.query<{profile:unknown}>('SELECT profile FROM billing_profiles WHERE user_id=$1 AND workspace_id=$2',[user.id,user.workspace_id])).rows[0];return {profile:row?.profile||null}});
+ app.post('/api/account/billing',{schema:{body:{type:'object',additionalProperties:false,properties:Object.fromEntries(['kind','name','email','city','district','address','postalCode','companyName','taxOffice','taxNumber'].map(key=>[key,{type:'string',maxLength:500}]))}},preHandler:accountChangeRate},async req=>{
+  const user=await account(req);if(production&&!user.email_verified_at&&user.role!=='owner')throw Error('EMAIL_NOT_VERIFIED');
+  const profile=billingProfile(req.body);
+  await db.query('INSERT INTO billing_profiles(user_id,workspace_id,profile) VALUES($1,$2,$3) ON CONFLICT(user_id) DO UPDATE SET profile=excluded.profile,updated_at=now()',[user.id,user.workspace_id,JSON.stringify(profile)]);return {ok:true};
+ });
  app.post('/api/account/profile',{schema:{body:{type:'object',additionalProperties:false,required:['name'],properties:{name:{type:'string',minLength:2,maxLength:80}}}},preHandler:accountChangeRate},async req=>{await accountDetails.updateName(await account(req),(req.body as {name:string}).name);return {ok:true}});
  app.post('/api/account/email/request',{schema:{body:credentials},preHandler:accountChangeRate},async req=>{const user=await account(req),body=req.body as {email:string;password:string};await accounts.verifyPassword(user.id,body.password);await accountDetails.requestEmail(user,body.email);return {ok:true}});
  app.post('/api/account/email/cancel',{preHandler:accountChangeRate},async req=>{await accountDetails.cancelEmail((await account(req)).id);return {ok:true}});

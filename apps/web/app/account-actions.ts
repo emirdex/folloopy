@@ -1,4 +1,5 @@
 'use server';
+import {billingProfile} from '../../../packages/domain/billing-profile';
 import {billingPeriod} from '../../../packages/domain/commercial-plans';
 import {cookies} from 'next/headers';
 import {redirect} from 'next/navigation';
@@ -28,6 +29,9 @@ export async function completePurchase(_state:FormState,form:FormData):Promise<F
  if(production&&process.env.BILLING_MODE!=='complimentary')return {error:'Paket aktivasyonu şu anda kullanılamıyor. Lütfen info@folloopy.com ile iletişime geçin.'};
  const plan=String(form.get('plan'));
  if(!['individual','team','business'].includes(plan))return {error:'Geçerli bir paket seçin.'};
+ if(form.get('deferInvoice')!=='on'){
+  try{const profile=billingProfile(Object.fromEntries(['kind','name','email','city','district','address','postalCode','companyName','taxOffice','taxNumber'].map(key=>[key,String(form.get(key)||'')])));await accountApi('/api/account/billing',profile)}catch{return {error:'Fatura bilgilerinizi kontrol edin. Şirket için 10 haneli vergi numarası, adres ve iletişim bilgileri gereklidir.'}}
+ }
  try{await accountApi(production?'/api/access/activate':'/api/purchase-preview',production?{plan}:{plan,idempotencyKey:String(form.get('purchaseKey')||'')})}catch{return {error:'Paketiniz etkinleştirilemedi. Tekrar deneyin.'}}
- redirect('/panel?welcome=1');
+ redirect('/odeme/tamamlandi');
 }
