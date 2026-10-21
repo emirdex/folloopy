@@ -1,4 +1,6 @@
 import {billingProfile} from '../../packages/domain/billing-profile';
+import {BulkMail} from './bulk-mail';
+import type {BulkInput} from '../../packages/domain/bulk-mail';
 import {MailDrafts} from './mail-drafts';
 import type {MailDraftInput} from '../../packages/domain/mail-drafts';
 import {AccountDetails} from './account-details';
@@ -27,6 +29,7 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  const service=new TrackingService(db,provider,origin);
  const accounts=new Accounts(db,production);
  const admin=new AdminService(db,accounts),blog=new BlogService(db);
+ const bulk=new BulkMail(db,gmail,options.encryptionKey,origin,production);
  const drafts=new MailDrafts(db,options.encryptionKey,production);
  const accountDetails=new AccountDetails(db,options.site||origin,options.encryptionKey);
  if(adminConfig)app.addHook('onReady',async()=>{await admin.init(adminConfig)});
@@ -65,7 +68,7 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  });
  app.setErrorHandler((error,req,reply)=>{
   const code=error instanceof Error?error.message:'INTERNAL_ERROR';
-  const status=({DRAFTS_UNAVAILABLE:503,INVALID_DRAFT:400,DRAFT_LIMIT_REACHED:409,DRAFT_PLAN_LIMIT:403,STALE_DRAFT:409,UNAUTHORIZED:401,INVALID_LOGIN:401,ACCOUNT_EXISTS:409,PLAN_REQUIRED:402,INVALID_PLAN:400,INVALID_PASSWORD:400,INVALID_ACCOUNT:400,INVALID_BILLING_PROFILE:400,INVALID_POST:400,SETUP_CLOSED:409,INVALID_SETUP_TOKEN:403,EXISTING_ACCOUNT_PASSWORD_REQUIRED:401,SLUG_EXISTS:409,STALE_POST:409,NOT_FOUND:404,FORBIDDEN:403,EMAIL_NOT_VERIFIED:403,INVALID_ACCOUNT_TOKEN:400,INVALID_VERIFICATION_CODE:400,TOO_MANY_ATTEMPTS:429,VERIFICATION_LOCKED:429,VERIFICATION_COOLDOWN:429,EMAIL_UNAVAILABLE:503,EMAIL_IN_USE:409,EMAIL_UNCHANGED:400,GMAIL_NOT_CONNECTED:409,GMAIL_UNAVAILABLE:503,INVALID_OAUTH_STATE:400,GMAIL_AUTH_FAILED:400,GMAIL_CLIENT_INVALID:400,GMAIL_CODE_INVALID:400,GMAIL_IDENTITY_FAILED:400,GMAIL_REFRESH_REQUIRED:400,GMAIL_SCOPE_REQUIRED:400,LIMIT_REACHED:402,IDEMPOTENCY_CONFLICT:409} as Record<string,number>)[code]|| (typeof error==='object' && error!==null && 'validation' in error?400:500);
+  const status=({BULK_UNAVAILABLE:503,BULK_INVALID_INPUT:400,BULK_INVALID_TEMPLATE:400,BULK_PLAN_REQUIRED:403,BULK_QUOTA_REQUIRED:402,BULK_SENDER_CHANGED:409,BULK_ACTIVE_CAMPAIGN:409,BULK_PREVIEW_EXPIRED:409,BULK_INVALID_STATE:409,DRAFTS_UNAVAILABLE:503,INVALID_DRAFT:400,DRAFT_LIMIT_REACHED:409,DRAFT_PLAN_LIMIT:403,STALE_DRAFT:409,UNAUTHORIZED:401,INVALID_LOGIN:401,ACCOUNT_EXISTS:409,PLAN_REQUIRED:402,INVALID_PLAN:400,INVALID_PASSWORD:400,INVALID_ACCOUNT:400,INVALID_BILLING_PROFILE:400,INVALID_POST:400,SETUP_CLOSED:409,INVALID_SETUP_TOKEN:403,EXISTING_ACCOUNT_PASSWORD_REQUIRED:401,SLUG_EXISTS:409,STALE_POST:409,NOT_FOUND:404,FORBIDDEN:403,EMAIL_NOT_VERIFIED:403,INVALID_ACCOUNT_TOKEN:400,INVALID_VERIFICATION_CODE:400,TOO_MANY_ATTEMPTS:429,VERIFICATION_LOCKED:429,VERIFICATION_COOLDOWN:429,EMAIL_UNAVAILABLE:503,EMAIL_IN_USE:409,EMAIL_UNCHANGED:400,GMAIL_NOT_CONNECTED:409,GMAIL_UNAVAILABLE:503,INVALID_OAUTH_STATE:400,GMAIL_AUTH_FAILED:400,GMAIL_CLIENT_INVALID:400,GMAIL_CODE_INVALID:400,GMAIL_IDENTITY_FAILED:400,GMAIL_REFRESH_REQUIRED:400,GMAIL_SCOPE_REQUIRED:400,LIMIT_REACHED:402,IDEMPOTENCY_CONFLICT:409} as Record<string,number>)[code]|| (typeof error==='object' && error!==null && 'validation' in error?400:500);
   reply.code(status).send({code:status===500?'INTERNAL_ERROR':code,message:status===500?'İşlem tamamlanamadı.':status===400?'Girdi geçersiz.':'İşlem için hak veya geçerli istek gerekli.'});
  });
  const newPassword={type:'string',minLength:8,maxLength:128,pattern:PASSWORD_PATTERN};
@@ -109,6 +112,14 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  app.post('/api/drafts',{schema:{body:draftBody},preHandler:draftMutationRate},async req=>drafts.save(await draftOwner(req),req.body as MailDraftInput));
  app.post('/api/drafts/:id',{schema:{params:idParams,body:{...draftBody,required:[...draftBody.required,'version'],properties:{...draftBody.properties,version:{type:'integer',minimum:1}}}},preHandler:draftMutationRate},async req=>{const{version,...input}=req.body as MailDraftInput&{version:number};return drafts.save(await draftOwner(req),input,(req.params as {id:string}).id,version)});
  app.post('/api/drafts/:id/delete',{schema:{params:idParams,body:{type:'object',additionalProperties:false,required:['version'],properties:{version:{type:'integer',minimum:1}}}},preHandler:draftMutationRate},async req=>drafts.remove(await draftOwner(req),(req.params as {id:string}).id,(req.body as {version:number}).version));
+ const bulkOwner=async(req:{headers:Record<string,unknown>})=>{await workspace(req);return account(req)};
+ const bulkRate=async(req:any)=>{const user=await bulkOwner(req);if(!await allowRequest(db,'bulk-write',user.id,30))throw Error('TOO_MANY_ATTEMPTS')};
+ app.get('/api/bulk',async req=>bulk.list(await bulkOwner(req)));
+ app.post('/api/bulk/preview',{bodyLimit:1024*1024,schema:{body:{type:'object',additionalProperties:false,required:['name','subject','text','tracking','csv','requestId'],properties:{name:{type:'string',minLength:1,maxLength:80},subject:{type:'string',minLength:1,maxLength:200},text:{type:'string',minLength:1,maxLength:10000},tracking:{type:'boolean'},csv:{type:'string',maxLength:524288},requestId:uuid}}},preHandler:bulkRate},async req=>bulk.preview(await bulkOwner(req),req.body as BulkInput));
+ app.get('/api/bulk/:id',{schema:{params:idParams,querystring:{type:'object',additionalProperties:false,properties:{offset:{type:'integer',minimum:0,maximum:500}}}}},async req=>bulk.detail(await bulkOwner(req),(req.params as {id:string}).id,(req.query as {offset?:number}).offset||0));
+ app.get('/api/bulk/:id/report',{schema:{params:idParams}},async req=>({csv:await bulk.report(await bulkOwner(req),(req.params as {id:string}).id)}));
+ app.post('/api/bulk/:id/confirm',{schema:{params:idParams,body:{type:'object',additionalProperties:false,properties:{}}},preHandler:bulkRate},async req=>bulk.confirm(await bulkOwner(req),(req.params as {id:string}).id));
+ app.post('/api/bulk/:id/control',{schema:{params:idParams,body:{type:'object',additionalProperties:false,required:['action'],properties:{action:{type:'string',enum:['pause','resume','cancel']}}}},preHandler:bulkRate},async req=>bulk.control(await bulkOwner(req),(req.params as {id:string}).id,(req.body as {action:'pause'|'resume'|'cancel'}).action));
  app.get('/api/admin/setup-status',()=>admin.status());
  app.post('/api/admin/setup',{schema:{body:{type:'object',additionalProperties:false,required:['token','name','password'],properties:{token:{type:'string',minLength:32,maxLength:128},name:{type:'string',minLength:2,maxLength:80,pattern:String.raw`.*\S.*`},password:newPassword}}},preHandler:async(_req,reply)=>{if(production&&!await allowRequest(db,'owner-setup','all',8))return reply.code(429).send({code:'TOO_MANY_ATTEMPTS'});if(setupAttempts.until<Date.now()){setupAttempts.count=0;setupAttempts.until=Date.now()+15*60000}if(++setupAttempts.count>8)return reply.code(429).send({code:'TOO_MANY_ATTEMPTS'})}},async req=>{const b=req.body as {token:string;name:string;password:string};return admin.setup(b.token,b.name,b.password)});
  app.get('/api/admin/overview',()=>admin.overview());
@@ -173,5 +184,5 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
   }
   return reply.send(gif);
  }});
- return {app,service,metrics};
+ return {app,service,metrics,bulk};
 }

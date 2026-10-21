@@ -38,7 +38,7 @@ export class GmailConnections{
    await tx.query('INSERT INTO mail_connections(workspace_id,email,refresh_token,scopes) VALUES($1,$2,$3,$4) ON CONFLICT(workspace_id) DO UPDATE SET email=excluded.email,refresh_token=excluded.refresh_token,scopes=excluded.scopes,updated_at=now()',[user.workspace_id,identity.email,seal(refreshToken,this.key),tokens.scope]);
   });
  }
- async status(workspace:string){const row=(await this.db.query<{email:string}>('SELECT email FROM mail_connections WHERE workspace_id=$1',[workspace])).rows[0];return {configured:this.configured,connected:!!row,email:row?.email||null}}
+ async status(workspace:string,db:DB=this.db){const row=(await db.query<{email:string}>('SELECT email FROM mail_connections WHERE workspace_id=$1',[workspace])).rows[0];return {configured:this.configured,connected:!!row,email:row?.email||null}}
  async disconnect(workspace:string){const row=await this.db.transaction(async tx=>{
   await tx.query('SELECT id FROM users WHERE workspace_id=$1 FOR UPDATE',[workspace]);
   await tx.query('DELETE FROM oauth_states WHERE user_id IN (SELECT id FROM users WHERE workspace_id=$1)',[workspace]);
