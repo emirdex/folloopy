@@ -25,6 +25,7 @@ const expectRedirect=async(path:string,target:string,token?:string,extraCookie='
  assert.equal(new URL(response.headers.get('location')!,origin).pathname,target,path);checks++;
 };
 try{
+ const resetForm=await fetch(origin+'/sifre-yenile');const resetHtml=await resetForm.text();assert.equal(resetForm.status,200);assert.ok(!resetHtml.includes('Giriş Ekranına Dön'));assert.ok(resetHtml.includes('Yeni şifrenizi belirleyin.'));checks++;
  const member=await accounts.register('Unverified Member','web-member@example.invalid','Synthetic-web-password-2026!');
  const owner=await accounts.register('Unverified Owner','web-owner@example.invalid','Synthetic-web-password-2026!');await db.query("UPDATE users SET role='owner' WHERE email='web-owner@example.invalid'");
  for(const session of [member.token,owner.token])for(const path of ['/panel','/panel?view=account','/panel?view=extensions','/paketler','/odeme?plan=team','/odeme/tamamlandi','/giris','/kayit','/admin'])await expectRedirect(path,'/hesap/dogrula',session);
