@@ -1,5 +1,6 @@
 'use client';
 import {useState} from 'react';
+import {SignatureBadge} from './signature-badge';
 import {BillingToggle} from './billing-toggle';
 import Link from 'next/link';
 import {ArrowUpRight,Mail,Eye,FileText,Download,MousePointer2,Activity} from 'lucide-react';
@@ -13,5 +14,5 @@ export function PlanPrice({plan,period='monthly'}:{plan:CommercialPlan;period?:B
 }
 export function PricingPlans({hasAccount,marketing=false}:{hasAccount:boolean;marketing?:boolean}){
  const[period,setPeriod]=useState<BillingPeriod>('monthly');
- return <div className="pricing-section-content" data-reveal><BillingToggle period={period} onChange={setPeriod}/><div className="commercial-pricing">{commercialPlans.map(plan=><article className={'commercial-plan '+(plan.id==='team'?'commercial-signature':'')} key={plan.id}><header><span className="commercial-plan-kicker">{plan.eyebrow}</span><h3>{plan.name}<span>{plan.id==='individual'?<Mail size={21}/>:<Activity size={21}/>}</span></h3><p>{plan.description}</p></header><PlanPrice plan={plan} period={period}/><PlanFeatureStory plan={plan}/><footer><Link href={(marketing?'/iletisim':hasAccount?'/paketler':'/kayit')+'?plan='+plan.id+'&billing='+period} className={'site-button '+(plan.id==='team'?'site-button-dark':'commercial-essential-button')}>{marketing?plan.name+' hakkında bilgi alın':'Satın al'}<ArrowUpRight size={17}/></Link></footer></article>)}</div></div>
+ return <div className="pricing-section-content" data-reveal><BillingToggle period={period} onChange={setPeriod}/><div className="commercial-pricing">{commercialPlans.map(plan=><article className={'commercial-plan '+(plan.id==='team'?'commercial-signature':'')} key={plan.id}>{plan.id==='team'?<SignatureBadge/>:null}<header><span className="commercial-plan-kicker">{plan.eyebrow}</span><h3>{plan.name}<span>{plan.id==='individual'?<Mail size={21}/>:<Activity size={21}/>}</span></h3><p>{plan.description}</p></header><PlanPrice plan={plan} period={period}/><PlanFeatureStory plan={plan}/><footer><Link href={(marketing?'/iletisim':hasAccount?'/paketler':'/kayit')+'?plan='+plan.id+'&billing='+period} className={'site-button '+(plan.id==='team'?'site-button-dark':'commercial-essential-button')}>{marketing?plan.name+' hakkında bilgi alın':'Satın al'}<ArrowUpRight size={17}/></Link></footer></article>)}</div></div>
 }
