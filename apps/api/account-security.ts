@@ -3,6 +3,7 @@ import {promisify} from 'node:util';
 import type {DB} from '../../packages/database/index';
 import {seal,unseal} from '../../packages/runtime/vault';
 import {validNewPassword} from '../../packages/domain/password-policy';
+import {securityEmailHtml} from '../../packages/domain/security-email';
 const scrypt=promisify(derive),digest=(s:string)=>createHash('sha256').update(s).digest('hex');
 export class AccountSecurity{
  constructor(private db:DB,private site:string,private key:string){}
@@ -39,6 +40,7 @@ export class AccountSecurity{
    }
    await tx.query('UPDATE users SET email_verified_at=now() WHERE id=$1',[userId]);
    await tx.query('DELETE FROM verification_codes WHERE user_id=$1',[userId]);
+   await tx.query("DELETE FROM account_tokens WHERE user_id=$1 AND purpose='verify'",[userId]);
    return 'ok';
   });
   // Fail outside the transaction so wrong-attempt counters remain committed.
@@ -49,7 +51,15 @@ export class AccountSecurity{
   const user=(await tx.query<{email:string}>('SELECT email FROM users WHERE id=$1 FOR UPDATE',[userId])).rows[0];if(!user)return;
   const token=randomBytes(32).toString('base64url'),id=randomUUID(),minutes=purpose==='verify'?1440:30;
   const url=this.site+(purpose==='verify'?'/hesap/dogrula':'/sifre-yenile')+'#token='+token;
-  const payload=seal(JSON.stringify({to:user.email,subject:purpose==='verify'?'Folloopy e-posta adresinizi doğrulayın':'Folloopy şifrenizi yenileyin',text:(purpose==='verify'?'E-posta adresinizi doğrulamak':'Şifrenizi yenilemek')+' için bağlantıyı açın:\n'+url+'\n\nBu işlemi siz başlatmadıysanız bu e-postayı yok sayabilirsiniz.'}),this.key);
+  const duration=purpose==='reset'?'30 dakika':'24 saat';
+  const html=securityEmailHtml({
+   title:purpose==='reset'?'Şifrenizi yenileyin.':'E-postanızı doğrulayın.',
+   description:purpose==='reset'?'Hesabınız için bir şifre yenileme isteği aldık. Yeni şifrenizi belirlemek için aşağıdaki düğmeyi kullanın.':'Folloopy hesabınızı güvenle kullanmaya başlamak için e-posta adresinizi doğrulayın.',
+   actionLabel:purpose==='reset'?'Şifremi Yenile':'E-Postamı Doğrula',actionUrl:url,
+   validity:duration+' geçerli · Tek kullanımlık bağlantı',
+   preheader:purpose==='reset'?'Şifrenizi güvenle yenileyin. Bağlantınız 30 dakika geçerli.':'E-posta adresinizi doğrulayarak hesabınıza devam edin.'
+  });
+  const payload=seal(JSON.stringify({to:user.email,subject:purpose==='verify'?'Folloopy e-posta adresinizi doğrulayın':'Folloopy şifrenizi yenileyin',html,text:(purpose==='verify'?'E-posta adresinizi doğrulamak':'Şifrenizi yenilemek')+' için bağlantıyı açın:\n'+url+'\n\nBağlantı '+duration+' geçerlidir ve tek kullanımlıktır.\n\nBu işlemi siz başlatmadıysanız bu e-postayı yok sayabilirsiniz.'}),this.key);
   await tx.query('DELETE FROM account_tokens WHERE user_id=$1 AND purpose=$2',[userId,purpose]);await tx.query("INSERT INTO account_tokens(token_hash,user_id,purpose,expires_at) VALUES($1,$2,$3,now()+($4::text||' minutes')::interval)",[digest(token),userId,purpose,minutes]);await tx.query('INSERT INTO mail_outbox(id,user_id,payload) VALUES($1,$2,$3)',[id,userId,payload]);
   });
  }

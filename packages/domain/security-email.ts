@@ -1,0 +1,20 @@
+import {escapeHtml} from './tracking';
+type SecurityEmail={title:string;description:string;actionLabel:string;actionUrl:string;validity:string;preheader:string};
+/** Inline styles and layout tables keep transactional mail usable without CSS,
+ * images or JavaScript. The plain-text alternative is supplied by the caller. */
+export function securityEmailHtml(message:SecurityEmail){
+ const url=new URL(message.actionUrl);
+ if(url.username||url.password||!(url.protocol==='https:'||(url.protocol==='http:'&&['localhost','127.0.0.1'].includes(url.hostname))))throw Error('INVALID_EMAIL_URL');
+ const e=escapeHtml,link=e(message.actionUrl),origin=e(url.origin);
+ return `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light"><title>${e(message.title)} · Folloopy</title></head><body style="margin:0;padding:0;background:#f3f6fc;color:#23354e;font-family:Arial,Helvetica,sans-serif;-webkit-text-size-adjust:100%"><div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all">${e(message.preheader)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;background:#f3f6fc"><tr><td align="center" style="padding:40px 16px 32px">
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px"><tr><td style="padding:0 8px 24px"><a href="${origin}" style="font-size:28px;font-weight:700;letter-spacing:-1px;text-decoration:none;color:#344d75">Folloopy<span style="color:#6a8be4">.</span></a></td><td align="right" style="padding:0 8px 24px;font-size:10px;letter-spacing:1.7px;color:#8395b2;font-weight:700">HESAP GÜVENLİĞİ</td></tr></table>
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;background:#ffffff;border:1px solid #e0e8f5;border-radius:24px;box-shadow:0 14px 45px #dde5f2"><tr><td style="padding:36px 30px 0"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="48" height="48" align="center" style="width:48px;height:48px;background:#edf3ff;border:1px solid #e1eaff;border-radius:16px;color:#6486d5;font-size:22px;font-weight:700">F</td></tr></table></td></tr>
+<tr><td style="padding:24px 30px 0"><h1 style="margin:0;font-size:30px;line-height:1.25;font-weight:700;letter-spacing:-0.8px;color:#23354e">${e(message.title)}</h1><p style="margin:18px 0 0;font-size:15px;line-height:1.85;color:#7b8da7">${e(message.description)}</p></td></tr>
+<tr><td style="padding:28px 30px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" bgcolor="#6485d6" style="background:#6485d6;border:1px solid #5c7dd0;border-radius:14px;mso-padding-alt:18px 24px"><a href="${link}" style="display:block;padding:18px 24px;border-radius:14px;color:#ffffff;font-size:15px;font-weight:700;text-align:center;text-decoration:none;line-height:1.3">${e(message.actionLabel)} &nbsp; &rarr;</a></td></tr></table></td></tr>
+<tr><td style="padding:18px 30px 28px;font-size:12px;line-height:1.8;color:#8294b0;text-align:center">${e(message.validity)}</td></tr>
+<tr><td style="padding:0 30px"><div style="height:1px;background:#edf1f7;font-size:1px;line-height:1px">&nbsp;</div></td></tr>
+<tr><td style="padding:23px 30px 30px"><p style="margin:0;font-size:12px;line-height:1.9;color:#8b9bb1">Bu isteği siz yapmadıysanız herhangi bir işlem yapmanız gerekmez.</p><p style="margin:12px 0 0;font-size:12px;line-height:1.9;color:#8b9bb1">Düğme açılmıyorsa <a href="${link}" style="color:#6485d6;text-decoration:underline">bu güvenli bağlantıyı</a> kullanabilirsiniz.</p></td></tr></table>
+<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px"><tr><td align="center" style="padding:24px 12px 0;font-size:11px;line-height:1.9;color:#97a6bb">E-posta etkileşimleriniz, tek çalışma alanında.<br><a href="${origin}" style="color:#8297b7;text-decoration:none">${e(url.hostname)}</a></td></tr></table>
+</td></tr></table></body></html>`;
+}
