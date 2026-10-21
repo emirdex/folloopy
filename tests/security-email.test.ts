@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
-import {securityEmailHtml,verificationCodeEmailHtml} from '../packages/domain/security-email';
+import {securityEmailHtml,verificationCodeEmailHtml,emailChangeEmailHtml,serviceEmailHtml} from '../packages/domain/security-email';
 import {openDatabase,migrate} from '../packages/database';
 import {Accounts} from '../apps/api/accounts';
 import {AccountSecurity} from '../apps/api/account-security';
@@ -30,4 +30,9 @@ test('Registration code email highlights the exact six-digit code without puttin
  assert.ok(html.includes('Folloopy’ye Hoş Geldiniz.'));assert.ok(html.includes('012345'));assert.ok(html.includes('10 dakika'));assert.ok(html.includes('Tek kullanımlık'));
  assert.ok(html.includes('href="https://panel.folloopy.example/hesap/dogrula"'));assert.ok(!/href="[^"]*012345/.test(html));assert.ok(!html.includes('<script'));
  assert.throws(()=>verificationCodeEmailHtml('<evil>','https://folloopy.example'),/INVALID_EMAIL_CODE/);
+});
+
+test('Email change templates keep recipient-specific actions, escaped details and both-address notice',()=>{
+ for(const currentAddress of [true,false]){const html=emailChangeEmailHtml({site:'https://folloopy.example',newEmail:'<new>&@example.invalid',actionUrl:'https://folloopy.example/hesap/eposta-degisikligi#token=synthetic',currentAddress});assert.ok(html.includes(currentAddress?'Değişikliği Onayla':'Yeni Adresimi Doğrula'));assert.ok(html.includes('&lt;new&gt;&amp;@example.invalid'));assert.ok(html.includes('İki adresin onayı gerekir'));assert.ok(html.includes('1 saat'));assert.ok(!html.includes('<new>'));}
+ const html=serviceEmailHtml({title:'İletişim',description:'Yeni mesaj',actionUrl:'https://folloopy.example/iletisim',actionLabel:'',validity:'',preheader:'Mesaj',hideAction:true,body:'<img src=x onerror=evil>\nİkinci satır',details:[{label:'KONU',value:'<script>unsafe</script>'}],notice:'Yanıtlayabilirsiniz.'});assert.ok(html.includes('&lt;img'));assert.ok(html.includes('<br>İkinci satır'));assert.ok(!html.includes('<script>'));assert.ok(!html.includes('bu güvenli bağlantıyı'));
 });

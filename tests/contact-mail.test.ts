@@ -8,7 +8,7 @@ test('İletişim formu geçersiz adres, başlık enjeksiyonu ve aşırı uzun me
 });
 test('İletişim e-postası sabit kurumsal alıcıya gider; ziyaretçi yalnızca yanıt adresidir',async()=>{
  let calls=0;
- const request:typeof fetch=async(url,options)=>{calls++;assert.equal(url,'https://api.resend.com/emails');const payload=JSON.parse(String(options?.body));assert.deepEqual(payload.to,['info@folloopy.com']);assert.equal(payload.reply_to,message.email);assert.equal(payload.from,'Folloopy <info@folloopy.com>');assert.ok(payload.text.includes(message.message));assert.equal(payload.html,undefined);assert.ok(new Headers(options?.headers).get('Idempotency-Key'));return new Response(JSON.stringify({id:'message-id'}),{status:200})};
+ const request:typeof fetch=async(url,options)=>{calls++;assert.equal(url,'https://api.resend.com/emails');const payload=JSON.parse(String(options?.body));assert.deepEqual(payload.to,['info@folloopy.com']);assert.equal(payload.reply_to,message.email);assert.equal(payload.from,'Folloopy <info@folloopy.com>');assert.ok(payload.text.includes(message.message));assert.ok(payload.html.includes('İLETİŞİM MERKEZİ'));assert.ok(payload.html.includes(message.message));assert.ok(!payload.html.includes('bu güvenli bağlantıyı'));assert.ok(new Headers(options?.headers).get('Idempotency-Key'));return new Response(JSON.stringify({id:'message-id'}),{status:200})};
  await deliverContact(message,{apiKey:'test-key',from:'Folloopy <info@folloopy.com>'},request);assert.equal(calls,1);
 });
 test('Yapılandırma eksikse iletişim gönderimi dış servise ulaşmaz',async()=>{

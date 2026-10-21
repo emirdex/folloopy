@@ -1,3 +1,4 @@
+import {serviceEmailHtml} from '../../../packages/domain/security-email';
 import {randomUUID} from 'node:crypto';
 
 export type ContactMessage={name:string;email:string;subject:string;message:string};
@@ -14,7 +15,7 @@ export async function deliverContact(input:ContactMessage,options:{apiKey:string
  const response=await request('https://api.resend.com/emails',{
   method:'POST',signal:AbortSignal.timeout(15000),
   headers:{Authorization:'Bearer '+options.apiKey,'Content-Type':'application/json','Idempotency-Key':randomUUID()},
-  body:JSON.stringify({from:options.from,to:['info@folloopy.com'],reply_to:input.email,subject:'Folloopy iletişim · '+input.subject,text:`Ad soyad: ${input.name}\nE-posta: ${input.email}\nKonu: ${input.subject}\n\n${input.message}`})
+  body:JSON.stringify({from:options.from,to:['info@folloopy.com'],reply_to:input.email,subject:'Folloopy iletişim · '+input.subject,html:serviceEmailHtml({title:'Yeni Bir Mesajınız Var.',description:'Folloopy iletişim formundan yeni bir talep alındı.',category:'İLETİŞİM MERKEZİ',preheader:'İletişim formundan yeni bir mesajınız var.',details:[{label:'GÖNDEREN',value:input.name},{label:'E-POSTA',value:input.email},{label:'KONU',value:input.subject}],body:input.message,actionUrl:'https://folloopy.com/iletisim',actionLabel:'',validity:'',hideAction:true,notice:'Bu e-postayı yanıtlayarak doğrudan gönderene ulaşabilirsiniz.'}),text:`Ad soyad: ${input.name}\nE-posta: ${input.email}\nKonu: ${input.subject}\n\n${input.message}`})
  });
  if(!response.ok)throw new Error('CONTACT_MAIL_FAILED');
  const result=await response.json();if(!result?.id)throw new Error('CONTACT_MAIL_FAILED');

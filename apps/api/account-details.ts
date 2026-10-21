@@ -1,5 +1,6 @@
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
 import type {DB} from '../../packages/database/index';
+import {emailChangeEmailHtml} from '../../packages/domain/security-email';
 import {seal} from '../../packages/runtime/vault';
 import type {Account} from './accounts';
 const digest=(value:string)=>createHash('sha256').update(value).digest('hex');
@@ -19,7 +20,7 @@ export class AccountDetails{
   name=name.trim();if(name.length<2||name.length>80||/[\r\n]/.test(name))throw Error('INVALID_ACCOUNT');
   await this.db.query('UPDATE users SET name=$1 WHERE id=$2',[name,user.id]);
  }
- private payload(to:string,subject:string,text:string){return seal(JSON.stringify({to,subject,text}),this.encryptionKey!)}
+ private payload(to:string,subject:string,text:string,html:string){return seal(JSON.stringify({to,subject,text,html}),this.encryptionKey!)}
  async requestEmail(user:Account,email:string,authorize?:(tx:DB)=>Promise<void>){
   if(!this.encryptionKey)throw Error('EMAIL_UNAVAILABLE');
   email=email.trim().toLowerCase();
@@ -34,9 +35,9 @@ export class AccountDetails{
    await tx.query("INSERT INTO account_email_changes(user_id,old_email,new_email,old_token_hash,new_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,now()+interval '1 hour')",[user.id,current.email,email,digest(oldToken),digest(newToken)]);
    const link=(token:string)=>this.site+'/hesap/eposta-degisikligi#token='+token;
    for(const message of [
-    {to:current.email,text:'Folloopy hesabınızın e-posta adresinin '+email+' olarak değiştirilmesi istendi. Bu değişikliği siz başlattıysanız aşağıdaki bağlantıyla mevcut adresinizden onaylayın:\n'+link(oldToken)},
-    {to:email,text:'Bu adresi Folloopy hesabınızda kullanmak için aşağıdaki bağlantıyla doğrulayın:\n'+link(newToken)}
-   ])await tx.query('INSERT INTO mail_outbox(id,user_id,payload) VALUES($1,$2,$3)',[randomUUID(),user.id,this.payload(message.to,'Folloopy e-posta değişikliği onayı',message.text+'\n\nDeğişiklik ancak iki adres de onayladığında tamamlanır. Bağlantı 1 saat geçerlidir. Bu işlemi siz başlatmadıysanız bağlantıya tıklamayın; hesabınızdaki talebi iptal edip şifrenizi yenileyin.')]);
+    {to:current.email,currentAddress:true,actionUrl:link(oldToken),text:'Folloopy hesabınızın e-posta adresinin '+email+' olarak değiştirilmesi istendi. Bu değişikliği siz başlattıysanız aşağıdaki bağlantıyla mevcut adresinizden onaylayın:\n'+link(oldToken)},
+    {to:email,currentAddress:false,actionUrl:link(newToken),text:'Bu adresi Folloopy hesabınızda kullanmak için aşağıdaki bağlantıyla doğrulayın:\n'+link(newToken)}
+   ])await tx.query('INSERT INTO mail_outbox(id,user_id,payload) VALUES($1,$2,$3)',[randomUUID(),user.id,this.payload(message.to,'Folloopy e-posta değişikliği onayı',message.text+'\n\nDeğişiklik ancak iki adres de onayladığında tamamlanır. Bağlantı 1 saat geçerlidir. Bu işlemi siz başlatmadıysanız bağlantıya tıklamayın; hesabınızdaki talebi iptal edip şifrenizi yenileyin.',emailChangeEmailHtml({site:this.site,newEmail:email,actionUrl:message.actionUrl,currentAddress:message.currentAddress}))]);
   });
  }
  async confirmEmail(token:string){
