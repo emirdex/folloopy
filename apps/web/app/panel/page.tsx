@@ -1,5 +1,6 @@
 import {AccountDetails} from './account-details';
 import {GmailConnection} from './gmail-connection';
+import {ExtensionHub} from './extension-hub';
 import {internalApiFetch,internalApiUrl,internalApiKey} from '../internal-api';
 import {FolloopyLogo,FolloopyMark} from '../folloopy-brand';
 import {randomUUID} from 'node:crypto';
@@ -48,7 +49,7 @@ async function stop(_previous:{error:string}|null,form:FormData):Promise<{error:
 }
 function date(value:string,long=false){return new Intl.DateTimeFormat('tr-TR',{...(long?{day:'numeric' as const,month:'long' as const}:{}),hour:'2-digit',minute:'2-digit',timeZone:'Europe/Istanbul'}).format(new Date(value))}
 function url(values:Params){const p=new URLSearchParams();Object.entries(values).forEach(([k,v])=>{if(v)p.set(k,v)});return '/panel'+(p.size?'?'+p.toString():'')}
-const nav=[{id:'overview',label:'Genel Bakış',icon:'overview'},{id:'messages',label:'Takip Edilen Mailler',icon:'mail'},{id:'activity',label:'Etkinlik Akışı',icon:'pulse'},{id:'setup',label:'Bağlı Hesaplar',icon:'link'},{id:'guide',label:'Kullanım Kılavuzu',icon:'book'},{id:'account',label:'Hesap Detayları',icon:'user'}] as const;
+const nav=[{id:'overview',label:'Genel Bakış',icon:'overview'},{id:'messages',label:'Takip Edilen Mailler',icon:'mail'},{id:'activity',label:'Etkinlik Akışı',icon:'pulse'},{id:'setup',label:'Bağlı Hesaplar',icon:'link'},{id:'extensions',label:'Eklentiler',icon:'sparkles'},{id:'guide',label:'Kullanım Kılavuzu',icon:'book'},{id:'account',label:'Hesap Detayları',icon:'user'}] as const;
 async function Shell({active,children,online=true}:{active:string;children:ReactNode;online?:boolean}){
  const user=await currentAccount();
  return <div className="product-shell"><header className="product-header"><Link className="brand" href="/panel"><FolloopyLogo/></Link><span className="header-separator"/><span className="workspace-name">Çalışma alanınız</span><div className="header-actions"><Link className="public-site-link" href="/">Web sitesi<Icon name="external" size={13}/></Link><Search/><span className="environment"><span className="status-dot"/>Çalışma alanı</span><Link href="/panel?view=compose" className="button button-dark header-compose">Yeni mail<Icon name="external" size={15}/></Link></div></header><div className="app-layout"><aside className="sidebar"><div className="sidebar-label">ÇALIŞMA ALANI</div><nav aria-label="Ana gezinme">{nav.map(item=><Link key={item.id} href={item.id==='overview'?'/panel':`/panel?view=${item.id}`} className={`nav-item ${active===item.id?'active':''}`} aria-current={active===item.id?'page':undefined} title={item.label}><Icon name={item.icon} size={19}/><span>{item.label}</span>{active===item.id?<span className="nav-current-dot"/>:null}</Link>)}</nav><div className="sidebar-bottom"><div className="workspace-badge"><span><FolloopyMark size={28}/></span><div><strong title={user?.name}>{user?.name||'Önizleme'}</strong><small title={user?.email}>{user?.email||'Yerel çalışma alanı'}</small></div></div><span className={`service-state ${online?'online':''}`}><i/>{online?'Servis bağlantısı açık':'Servise ulaşılamıyor'}</span></div></aside><main className="workspace-content" key={active}><div className="workspace-body">{!online?<div className="alert error" role="alert"><Icon name="info" size={18}/>Servis bağlantısı kurulamadı. Kayıtlar şu anda yüklenemiyor.<Refresh/></div>:null}{children}</div><footer className="workspace-footer"><span><Icon name="shield" size={13}/>E-posta etkileşimleriniz, tek çalışma alanında.</span><span>Folloopy / 0.1</span></footer></main></div></div>
@@ -64,6 +65,7 @@ export default async function Page({searchParams}:{searchParams:Promise<Params>}
  await requirePanel();
  const p=await searchParams;
  if(p.view==='account'){await requireAccount();return <Shell active="account"><PageHeading title="Hesap Detayları" description="Profilinizi, paket kullanımınızı ve ödeme geçmişinizi yönetin."/><AccountDetails/></Shell>}
+ if(p.view==='extensions'){const user=await currentAccount();return <Shell active="extensions"><PageHeading title="Eklentiler" description="Mailinizi alıştığınız yerden gönderin, takibini Folloopy’den yapın."/><ExtensionHub plan={user?.plan||null}/></Shell>}
  if(p.view==='guide'){await requireAccount();return <Shell active="guide"><MemberGuide/></Shell>}
  let messages:Message[]=[],online=true;
  try{messages=(await api('/api/messages')).messages}catch{online=false}
@@ -89,7 +91,7 @@ export default async function Page({searchParams}:{searchParams:Promise<Params>}
     </div></section></div></Shell>;
 
  }
- if(view==='setup'){const status=await api('/api/status').catch(()=>({gmailConfigured:false,gmailConnected:false,gmailEmail:null}));return <Shell active={active} online={online}><PageHeading title="Bağlı Hesaplar" description="E-posta hesabınızın bağlantısını ve izinlerini yönetin."/><GmailConnection connected={status.gmailConnected} configured={status.gmailConfigured} email={status.gmailEmail} mode={p.mode} reason={p.reason} connect={connectGmail} disconnect={disconnectGmail}/></Shell>}
+ if(view==='setup'){const status=await api('/api/status').catch(()=>({gmailConfigured:false,gmailConnected:false,gmailEmail:null}));return <Shell active={active} online={online}><PageHeading title="Bağlı Hesaplar" description="E-posta hesabınızın bağlantısını ve izinlerini yönetin."/><Link className="button button-outline" href="/panel?view=extensions" style={{marginBottom:20}}>Gmail Ve Outlook Eklentileri<Icon name="arrow" size={15}/></Link><GmailConnection connected={status.gmailConnected} configured={status.gmailConfigured} email={status.gmailEmail} mode={p.mode} reason={p.reason} connect={connectGmail} disconnect={disconnectGmail}/></Shell>}
 
  if(view==='activity'){
   const selected=messages.slice(0,12);
