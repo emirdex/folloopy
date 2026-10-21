@@ -4,9 +4,11 @@ import {cookies} from 'next/headers';
 import {redirect} from 'next/navigation';
 export type Account={id:string;workspace_id:string;name:string;email:string;plan:'individual'|'team'|'business'|null;role:'member'|'owner';email_verified_at?:string|null};
 export async function accountApi(path:string,body?:unknown){
+ // This helper is request-bound even when the public deployment rejects it.
+ const store=await cookies();
  const publicDeployment=process.env.DEPLOYMENT_ROLE==='public';
  if(publicDeployment&&path!=='/api/enterprise-requests')throw Error('ACCOUNT_HOST_REQUIRED');
- const token=publicDeployment?undefined:(await cookies()).get('mt_session')?.value;
+ const token=publicDeployment?undefined:store.get('mt_session')?.value;
  if(isMarketingMode())throw new Error('APPLICATION_UNAVAILABLE');
  const response=await internalApiFetch(internalApiUrl()+path,{method:body===undefined?'GET':'POST',headers:{Authorization:'Bearer '+internalApiKey(),...(token?{'x-user-session':token}:{}),...(body===undefined?{}:{'Content-Type':'application/json'})},...(body===undefined?{}:{body:JSON.stringify(body)}),cache:'no-store',signal:AbortSignal.timeout(20000)});
  const data=await response.json();
