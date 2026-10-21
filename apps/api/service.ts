@@ -81,6 +81,19 @@ export class TrackingService {
   const message=(await this.db.query(`SELECT m.id,m.subject,m.state,m.provider,m.sent_at,m.tracking_enabled,activity.activity_count,activity.first_activity_at,activity.last_activity_at FROM messages m ${activityJoin} WHERE m.workspace_id=$1 AND m.id=$2`,[workspace,id])).rows[0];
   if(!message) return null;
   const events=(await this.db.query(`SELECT e.id,e.occurred_at,e.kind,a.source,a.identity_relation,a.reason_codes,a.classifier_version FROM raw_events e LEFT JOIN event_assessments a ON a.event_id=e.id AND a.workspace_id=e.workspace_id WHERE e.workspace_id=$1 AND e.message_id=$2 ORDER BY e.occurred_at DESC LIMIT 100`,[workspace,id])).rows;
-  return {message,events};
+  // Group a burst of fetches into one detected opening. A five-minute quiet
+  // interval starts a new opening; retain the complete raw history unchanged.
+  const openings=(await this.db.query(`WITH eligible AS (
+   SELECT e.id,e.occurred_at,lag(e.occurred_at) OVER (ORDER BY e.occurred_at,e.id) AS previous_at
+   FROM raw_events e LEFT JOIN event_assessments a ON a.event_id=e.id AND a.workspace_id=e.workspace_id
+   JOIN messages m ON m.id=e.message_id AND m.workspace_id=e.workspace_id
+   WHERE e.workspace_id=$1 AND e.message_id=$2 AND e.kind='image_fetch' AND m.state='sent'
+   AND (a.source IS NULL OR a.source IN ('unknown','likely_human'))
+  ), grouped AS (
+   SELECT occurred_at,sum(CASE WHEN previous_at IS NULL OR occurred_at-previous_at>=interval '5 minutes' THEN 1 ELSE 0 END)
+    OVER (ORDER BY occurred_at,id ROWS UNBOUNDED PRECEDING) AS opening_group FROM eligible
+  ) SELECT min(occurred_at) AS first_at,max(occurred_at) AS last_at
+   FROM grouped GROUP BY opening_group ORDER BY min(occurred_at)`,[workspace,id])).rows;
+  return {message,events,openings};
  }
 }

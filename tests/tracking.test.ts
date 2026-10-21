@@ -105,11 +105,32 @@ test('Member opening summary aggregates repeated events and excludes identified 
   const list=await service.list(LOCAL_WORKSPACE),detail=await service.detail(LOCAL_WORKSPACE,sent.id);
   assert.equal(list[0].raw_count,2);assert.equal(list[0].activity_count,2);
   assert.ok(list[0].first_activity_at);assert.ok(list[0].last_activity_at);
+  assert.equal(detail!.openings.length,1);
   assert.equal(detail!.message.activity_count,2);assert.equal(+new Date(detail!.message.first_activity_at as string),+new Date(list[0].first_activity_at as string));
   await service.stop(LOCAL_WORKSPACE,sent.id);assert.equal((await service.detail(LOCAL_WORKSPACE,sent.id))!.message.activity_count,2);
   await db.query("UPDATE event_assessments SET source='known_automation'");
-  assert.equal((await service.list(LOCAL_WORKSPACE))[0].activity_count,0);assert.equal((await service.detail(LOCAL_WORKSPACE,sent.id))!.message.first_activity_at,null);
+  assert.equal((await service.list(LOCAL_WORKSPACE))[0].activity_count,0);assert.equal((await service.detail(LOCAL_WORKSPACE,sent.id))!.message.first_activity_at,null);assert.deepEqual((await service.detail(LOCAL_WORKSPACE,sent.id))!.openings,[]);
   await db.query("UPDATE event_assessments SET source='own_activity'");assert.equal((await service.list(LOCAL_WORKSPACE))[0].activity_count,0);
   assert.equal((await service.detail(LOCAL_WORKSPACE,sent.id))!.events.length,2);
+ }finally{await app.close();await db.close()}
+});
+
+
+test('Detected openings collapse bursts but keep later reopenings across the full history',async()=>{
+ const {db,service,app}=await setup();
+ try{
+  const sent=await service.send(LOCAL_WORKSPACE,key,input) as {id:string;testPixel:string};
+  const times=['2026-10-21T09:46:00Z','2026-10-21T09:46:02Z','2026-10-21T09:58:00Z','2026-10-21T09:58:01Z','2026-10-21T10:13:00Z','2026-10-21T10:18:00Z'];
+  for(const at of times){
+   await db.query("INSERT INTO raw_events(id,workspace_id,message_id,kind,occurred_at) VALUES(gen_random_uuid(),$1,$2,'image_fetch',$3)",[LOCAL_WORKSPACE,sent.id,at]);
+  }
+  // More than the raw-detail limit must not erase the first opening.
+  await db.query("INSERT INTO raw_events(id,workspace_id,message_id,kind,occurred_at) SELECT gen_random_uuid(),$1,$2,'image_fetch','2026-10-21T10:18:01Z'::timestamptz FROM generate_series(1,105)",[LOCAL_WORKSPACE,sent.id]);
+  const detail=(await service.detail(LOCAL_WORKSPACE,sent.id))!;
+  assert.equal(detail.events.length,100);assert.equal(detail.openings.length,4);
+  assert.deepEqual(detail.openings.map(o=>new Date(o.first_at as string).toISOString()),[times[0],times[2],times[4],times[5]].map(t=>new Date(t).toISOString()));
+  assert.equal(new Date(detail.openings[0].last_at as string).toISOString(),new Date(times[1]).toISOString());
+  await service.stop(LOCAL_WORKSPACE,sent.id);assert.equal((await service.detail(LOCAL_WORKSPACE,sent.id))!.openings.length,4);
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM raw_events WHERE message_id=$1',[sent.id])).rows[0].n,111);
  }finally{await app.close();await db.close()}
 });
