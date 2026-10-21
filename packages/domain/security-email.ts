@@ -1,8 +1,9 @@
 import {escapeHtml} from './tracking';
-type SecurityEmail={title:string;description:string;actionLabel:string;actionUrl:string;validity:string;preheader:string};
+type SecurityEmail={title:string;description:string;actionLabel:string;actionUrl:string;validity:string;preheader:string;verificationCode?:string};
 /** Inline styles and layout tables keep transactional mail usable without CSS,
  * images or JavaScript. The plain-text alternative is supplied by the caller. */
 export function securityEmailHtml(message:SecurityEmail){
+ if(message.verificationCode!==undefined&&!/^[0-9]{6}$/.test(message.verificationCode))throw Error('INVALID_EMAIL_CODE');
  const url=new URL(message.actionUrl);
  if(url.username||url.password||!(url.protocol==='https:'||(url.protocol==='http:'&&['localhost','127.0.0.1'].includes(url.hostname))))throw Error('INVALID_EMAIL_URL');
  const e=escapeHtml,link=e(message.actionUrl),origin=e(url.origin);
@@ -11,6 +12,7 @@ export function securityEmailHtml(message:SecurityEmail){
 <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px"><tr><td style="padding:0 8px 24px"><a href="${origin}" style="font-size:28px;font-weight:700;letter-spacing:-1px;text-decoration:none;color:#344d75">Folloopy<span style="color:#6a8be4">.</span></a></td><td align="right" style="padding:0 8px 24px;font-size:10px;letter-spacing:1.7px;color:#8395b2;font-weight:700">HESAP GÜVENLİĞİ</td></tr></table>
 <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;background:#ffffff;border:1px solid #e0e8f5;border-radius:24px;box-shadow:0 14px 45px #dde5f2"><tr><td style="padding:36px 30px 0"><table role="presentation" cellpadding="0" cellspacing="0"><tr><td width="48" height="48" align="center" style="width:48px;height:48px;background:#edf3ff;border:1px solid #e1eaff;border-radius:16px;color:#6486d5;font-size:22px;font-weight:700">F</td></tr></table></td></tr>
 <tr><td style="padding:24px 30px 0"><h1 style="margin:0;font-size:30px;line-height:1.25;font-weight:700;letter-spacing:-0.8px;color:#23354e">${e(message.title)}</h1><p style="margin:18px 0 0;font-size:15px;line-height:1.85;color:#7b8da7">${e(message.description)}</p></td></tr>
+${message.verificationCode?`<tr><td style="padding:28px 30px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5fe;background:linear-gradient(125deg,#f0f5ff,#f5f2fc);border:1px solid #dce6f8;border-radius:18px"><tr><td align="center" style="padding:22px 12px 10px;font-size:10px;font-weight:700;letter-spacing:2px;color:#8599ba">DOĞRULAMA KODUNUZ</td></tr><tr><td align="center" style="padding:0 12px 16px;font-family:Consolas,Monaco,monospace;font-size:38px;font-weight:700;line-height:1.4;letter-spacing:7px;color:#42649c">${e(message.verificationCode)}</td></tr><tr><td align="center" style="padding:0 16px 22px;font-size:12px;line-height:1.7;color:#899dbb">Tek kullanımlık &nbsp;&middot;&nbsp; 10 dakika geçerli</td></tr></table></td></tr>`:''}
 <tr><td style="padding:28px 30px 0"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" bgcolor="#6485d6" style="background:#6485d6;border:1px solid #5c7dd0;border-radius:14px;mso-padding-alt:18px 24px"><a href="${link}" style="display:block;padding:18px 24px;border-radius:14px;color:#ffffff;font-size:15px;font-weight:700;text-align:center;text-decoration:none;line-height:1.3">${e(message.actionLabel)} &nbsp; &rarr;</a></td></tr></table></td></tr>
 <tr><td style="padding:18px 30px 28px;font-size:12px;line-height:1.8;color:#8294b0;text-align:center">${e(message.validity)}</td></tr>
 <tr><td style="padding:0 30px"><div style="height:1px;background:#edf1f7;font-size:1px;line-height:1px">&nbsp;</div></td></tr>
@@ -18,3 +20,5 @@ export function securityEmailHtml(message:SecurityEmail){
 <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px"><tr><td align="center" style="padding:24px 12px 0;font-size:11px;line-height:1.9;color:#97a6bb">E-posta etkileşimleriniz, tek çalışma alanında.<br><a href="${origin}" style="color:#8297b7;text-decoration:none">${e(url.hostname)}</a></td></tr></table>
 </td></tr></table></body></html>`;
 }
+
+export function verificationCodeEmailHtml(code:string,site:string){return securityEmailHtml({title:'Folloopy’ye Hoş Geldiniz.',description:'Çalışma alanınız hazır. E-posta adresinizi doğrulamak için aşağıdaki 6 haneli kodu açık olan Folloopy ekranına girin.',actionLabel:'Doğrulama Ekranını Aç',actionUrl:site+'/hesap/dogrula',validity:'Kodu girdikten sonra Onayla düğmesine basarak hesabınıza devam edebilirsiniz.',preheader:'Hesabınızı tamamlamak için doğrulama kodunuz hazır.',verificationCode:code})}

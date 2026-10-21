@@ -3,7 +3,7 @@ import {promisify} from 'node:util';
 import type {DB} from '../../packages/database/index';
 import {seal,unseal} from '../../packages/runtime/vault';
 import {validNewPassword} from '../../packages/domain/password-policy';
-import {securityEmailHtml} from '../../packages/domain/security-email';
+import {securityEmailHtml,verificationCodeEmailHtml} from '../../packages/domain/security-email';
 const scrypt=promisify(derive),digest=(s:string)=>createHash('sha256').update(s).digest('hex');
 export class AccountSecurity{
  constructor(private db:DB,private site:string,private key:string){}
@@ -20,7 +20,7 @@ export class AccountSecurity{
    if(previous?.recent)return 'cooldown';
    let code:string;do{code=String(randomInt(0,1000000)).padStart(6,'0')}while(previous?.code_hash===this.codeHash(userId,code));
    await tx.query("INSERT INTO verification_codes(user_id,code_hash,expires_at) VALUES($1,$2,now()+interval '10 minutes') ON CONFLICT(user_id) DO UPDATE SET code_hash=excluded.code_hash,attempts=0,expires_at=excluded.expires_at,sent_at=now()",[userId,this.codeHash(userId,code)]);
-   const payload=seal(JSON.stringify({to:user.email,subject:'Folloopy doğrulama kodunuz',text:'Folloopy doğrulama kodunuz: '+code+'\n\nBu kod 10 dakika geçerlidir. Folloopy ekranındaki kod alanına girip Onayla düğmesine basın.\n'+this.site+'/hesap/dogrula\n\nBu işlemi siz başlatmadıysanız e-postayı yok sayabilirsiniz.'}),this.key);
+   const payload=seal(JSON.stringify({to:user.email,subject:'Folloopy doğrulama kodunuz',html:verificationCodeEmailHtml(code,this.site),text:'Folloopy doğrulama kodunuz: '+code+'\n\nBu kod 10 dakika geçerlidir. Folloopy ekranındaki kod alanına girip Onayla düğmesine basın.\n'+this.site+'/hesap/dogrula\n\nBu işlemi siz başlatmadıysanız e-postayı yok sayabilirsiniz.'}),this.key);
    await tx.query('INSERT INTO mail_outbox(id,user_id,payload) VALUES($1,$2,$3)',[randomUUID(),userId,payload]);
    return 'sent';
   });

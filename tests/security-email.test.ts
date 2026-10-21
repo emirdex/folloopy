@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
-import {securityEmailHtml} from '../packages/domain/security-email';
+import {securityEmailHtml,verificationCodeEmailHtml} from '../packages/domain/security-email';
 import {openDatabase,migrate} from '../packages/database';
 import {Accounts} from '../apps/api/accounts';
 import {AccountSecurity} from '../apps/api/account-security';
@@ -20,7 +20,14 @@ test('Reset delivery contains the same one-use link in styled HTML and plain tex
   const row=(await db.query<{payload:string}>('SELECT payload FROM mail_outbox ORDER BY created_at DESC LIMIT 1')).rows[0];const mail=JSON.parse(unseal(row.payload,key));const link=mail.text.match(/https:\/\/\S+#token=[\w-]{43}/)[0];
   assert.ok(mail.html.includes('href="'+link+'"'));assert.ok(mail.html.includes('Şifremi Yenile'));assert.ok(mail.html.includes('30 dakika'));assert.ok(mail.text.includes('30 dakika'));assert.ok(!row.payload.includes(link));
   await security.issue(user.id,'verify');await security.issueVerificationCode(user.id);
-  const otpRow=(await db.query<{payload:string}>('SELECT payload FROM mail_outbox ORDER BY created_at DESC LIMIT 1')).rows[0];const code=JSON.parse(unseal(otpRow.payload,key)).text.match(/kodunuz: ([0-9]{6})/)[1];await security.consumeVerificationCode(user.id,code);
+  const otpRow=(await db.query<{payload:string}>('SELECT payload FROM mail_outbox ORDER BY created_at DESC LIMIT 1')).rows[0];const otpMail=JSON.parse(unseal(otpRow.payload,key));assert.ok(otpMail.html.includes('DOĞRULAMA KODUNUZ'));assert.ok(!otpRow.payload.includes('DOĞRULAMA KODUNUZ'));const code=otpMail.text.match(/kodunuz: ([0-9]{6})/)[1];await security.consumeVerificationCode(user.id,code);
   assert.equal((await db.query("SELECT * FROM account_tokens WHERE user_id=$1 AND purpose='verify'",[user.id])).rows.length,0);
  }finally{await db.close()}
+});
+
+test('Registration code email highlights the exact six-digit code without putting it in a link',()=>{
+ const html=verificationCodeEmailHtml('012345','https://panel.folloopy.example');
+ assert.ok(html.includes('Folloopy’ye Hoş Geldiniz.'));assert.ok(html.includes('012345'));assert.ok(html.includes('10 dakika'));assert.ok(html.includes('Tek kullanımlık'));
+ assert.ok(html.includes('href="https://panel.folloopy.example/hesap/dogrula"'));assert.ok(!/href="[^"]*012345/.test(html));assert.ok(!html.includes('<script'));
+ assert.throws(()=>verificationCodeEmailHtml('<evil>','https://folloopy.example'),/INVALID_EMAIL_CODE/);
 });

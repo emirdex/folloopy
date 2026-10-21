@@ -1,5 +1,4 @@
 'use server';
-import {revalidatePath} from 'next/cache';
 import {accountApi,requireAccount} from './account-api';
 import {randomUUID} from 'node:crypto';
 export type VerificationResult={ok:boolean;message:string;next?:string};
@@ -25,7 +24,7 @@ export async function verifyRegistrationCode(form:FormData):Promise<Verification
    }else await accountApi('/api/purchase-preview',{plan,idempotencyKey:randomUUID()});
   }catch{next='/paketler'}
  }
- revalidatePath('/panel');return {ok:true,message:'Hesabınız başarıyla onaylanmıştır.',next};
+ return {ok:true,message:'Hesabınız başarıyla onaylanmıştır.',next};
 }
 export async function resendRegistrationCode(){
  await requireAccount();
