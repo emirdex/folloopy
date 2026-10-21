@@ -6,3 +6,15 @@
 @keyframes verify-success-arrive{from{opacity:0;transform:translateY(5px) scale(.94)}to{opacity:1;transform:none}}
 @media(max-width:650px){.verify-registration{padding:28px 22px;margin:30px auto 45px;border-radius:23px}.verify-registration h1{font-size:28px!important}.verify-actions{gap:9px;grid-template-columns:1fr 1.25fr}.verify-back,.verify-submit{padding:11px 9px;font-size:12px;gap:7px;min-height:49px}.verify-submit>svg:last-of-type:not(:first-child){display:none}.verify-code-input{font-size:27px;letter-spacing:12px;padding-left:17px}.verify-recipient{font-size:11px}.verify-success h2{font-size:18px!important}}
 @media(prefers-reduced-motion:reduce){.verify-registration *{animation:none!important;transition:none!important}.verify-trace-outline,.verify-trace-signal{stroke-dashoffset:0;opacity:1}.is-processing .verify-submit-progress,.verify-redirect-line{transform:scaleX(1)}.verify-submit.is-processing:before{display:none}}
+
+/* A quiet light sweep highlights the available resend action. */
+.verify-resend button{position:relative;isolation:isolate;overflow:hidden;min-height:40px;padding:10px 18px;border:1px solid #dbe6f6;border-radius:12px;background:linear-gradient(120deg,#ffffffba,#eaf1fc8c);box-shadow:inset 0 1px 0 #fff,0 3px 12px #7598ce0b;transition:border-color .25s,background .25s,box-shadow .25s}
+.verify-resend button:not(:disabled):hover{border-color:#acc4e8;background:linear-gradient(120deg,#fff,#e6eefc);color:#6386b9}
+.verify-resend button:disabled{background:#f5f7fb80;border-color:#e5ebf4;box-shadow:none}
+.verify-resend button::before{content:'';position:absolute;inset:-60% -35%;pointer-events:none;background:linear-gradient(110deg,transparent 35%,#ffffffed 49%,transparent 63%);transform:translateX(-110%);opacity:0;z-index:-1}
+@media(prefers-reduced-motion:no-preference){
+ .verify-resend button:not(:disabled){animation:verify-resend-glow 4.8s ease-in-out infinite}
+ .verify-resend button:not(:disabled)::before{animation:verify-resend-light 4.8s ease-in-out infinite}
+}
+@keyframes verify-resend-light{0%,18%{transform:translateX(-110%);opacity:0}28%{opacity:.85}58%{transform:translateX(110%);opacity:0}100%{transform:translateX(110%);opacity:0}}
+@keyframes verify-resend-glow{0%,70%,100%{box-shadow:inset 0 1px 0 #fff,0 3px 12px #7598ce0b}38%{box-shadow:inset 0 1px 0 #fff,0 0 18px #a8c3ec40}}
