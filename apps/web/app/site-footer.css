@@ -42,10 +42,5 @@
  .commerce-footer-top>nav>a{max-width:100%;min-height:44px;line-height:1.7;overflow-wrap:anywhere}
 }
 
-/* Legal documents navigate directly and use the entire row as a tap target. */
-.commerce-footer-top>nav[aria-label="Sözleşmeler ve politikalar"]{min-width:0;gap:4px;position:relative}
-.commerce-footer-top>nav[aria-label="Sözleşmeler ve politikalar"]>a{width:100%;min-height:44px;padding:9px 10px;margin-left:-10px;justify-content:space-between;gap:12px;border-radius:9px;line-height:1.7;cursor:pointer;position:relative;isolation:isolate;transition:background .2s,color .2s}
-.commerce-footer-top>nav[aria-label="Sözleşmeler ve politikalar"]>a>svg{flex-shrink:0;color:#9aafce;opacity:.65}
-.commerce-footer-top>nav[aria-label="Sözleşmeler ve politikalar"]>a:hover{color:#4e72b5;background:#edf3fd}
-.commerce-footer-top>nav[aria-label="Sözleşmeler ve politikalar"]>a:focus-visible{outline:2px solid #7b9bd2;outline-offset:2px;background:#edf3fd}
-.commerce-footer-top>nav[aria-label="Sözleşmeler ve politikalar"]>a:active{background:#e2ecfc}
+.commerce-footer-top>nav[aria-label="Sözleşmeler ve politikalar"]{min-width:0}
+.commerce-footer-top nav>a:focus-visible{outline:2px solid #7b9bd2;outline-offset:4px;border-radius:3px}
