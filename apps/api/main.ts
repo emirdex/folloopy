@@ -21,6 +21,7 @@ const security=config.encryption?new AccountSecurity(db,config.site,config.encry
 let busy=false,ticks=0;
 const worker=setInterval(async()=>{if(busy)return;busy=true;try{await processBatch(db);if(security){await security.deliver();if(++ticks%60===0)await security.cleanup()}}catch{console.error('WORKER_BATCH_FAILED')}finally{busy=false}},1000);
 await app.listen({host:'127.0.0.1',port:config.apiPort});
-console.log('Folloopy API ready');
+const bindAddress=app.server.address();
+console.log('Folloopy API ready',typeof bindAddress==='object'&&bindAddress?`TCP ${bindAddress.address}:${bindAddress.port}`:'local socket');
 let closing=false;const close=async()=>{if(closing)return;closing=true;clearInterval(worker);await app.close();while(busy)await new Promise(r=>setTimeout(r,20));await db.close();process.exit(0)};
 process.on('SIGTERM',close);process.on('SIGINT',close);

@@ -38,7 +38,7 @@ async function start(){
   api=spawn(process.execPath,['--import','tsx','apps/api/main.ts'],{cwd:__dirname,env:process.env,stdio:'inherit'});
   api.on('error',()=>stop(1));api.on('exit',()=>{if(!stopping)stop(1)});
   let ready=false;
-  for(let i=0;i<60&&!stopping;i++){try{const response=await fetch(config.apiUrl+'/health',{signal:AbortSignal.timeout(1000)});if(response.ok){ready=true;break}}catch{}await new Promise(resolve=>setTimeout(resolve,1000))}
+  for(let i=0;i<60&&!stopping;i++){try{const response=await fetch(config.apiUrl+'/health',{signal:AbortSignal.timeout(1000)});if(response.ok){ready=true;break}if(i===0)console.log('Folloopy API readiness status',response.status)}catch(error){if(i===0)console.log('Folloopy API readiness pending',error.cause?.code||error.name)}await new Promise(resolve=>setTimeout(resolve,1000))}
   if(!ready)throw Error('API_STARTUP_TIMEOUT');
  }
  if(stopping)return;
