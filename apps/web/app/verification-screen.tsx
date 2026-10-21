@@ -1,11 +1,12 @@
 'use client';
-import {useActionState,useEffect,useState} from 'react';
+import {useActionState,useEffect,useState,useTransition} from 'react';
 import {useRouter} from 'next/navigation';
+import {leaveVerification} from './account-actions';
 import {FlowHeader} from './onboarding';
 import {VerificationView} from './verification-view';
 import {verifyRegistrationCode,resendRegistrationCode,type VerificationResult} from './verification-actions';
 export function VerificationScreen({email,preferredPlan,resendAfter=0}:{email:string;preferredPlan?:string;resendAfter?:number}){
- const router=useRouter();
+ const router=useRouter();const[leaving,startLeaving]=useTransition();
  const[code,setCode]=useState(''),[legacy,setLegacy]=useState(''),[phase,setPhase]=useState<'entry'|'processing'|'success'>('entry');
  const[cooldown,setCooldown]=useState(resendAfter),[resending,setResending]=useState(false),[resendMessage,setResendMessage]=useState('');
  const[state,action]=useActionState(async(_previous:VerificationResult|null,form:FormData)=>{
@@ -19,5 +20,5 @@ export function VerificationScreen({email,preferredPlan,resendAfter=0}:{email:st
  useEffect(()=>{const timer=window.setInterval(()=>setCooldown(value=>Math.max(0,value-1)),1000);return ()=>window.clearInterval(timer)},[]);
  useEffect(()=>{if(!state?.ok)return;const timer=window.setTimeout(()=>router.replace(state.next||'/panel'),1400);return ()=>window.clearTimeout(timer)},[state,router]);
  const resend=async()=>{setResending(true);try{const result=await resendRegistrationCode();setResendMessage(result.message);setCooldown(result.resendAfter);if(result.ok){setLegacy('');setCode('')}}catch{setResendMessage('Kod gönderilemedi. Bağlantınızı kontrol edin.')}finally{setResending(false)}};
- return <div className="onboarding-page"><FlowHeader step={0}/><VerificationView email={email} code={legacy||code} legacy={!!legacy} preferredPlan={preferredPlan} phase={phase} action={action} onCode={setCode} onBack={()=>router.push('/giris')} onResend={resend} resendAfter={cooldown} resending={resending} resendMessage={resendMessage} error={state&&!state.ok?state.message:undefined}/></div>;
+ return <div className="onboarding-page"><FlowHeader step={0}/><VerificationView email={email} code={legacy||code} legacy={!!legacy} preferredPlan={preferredPlan} phase={phase} action={action} onCode={setCode} leaving={leaving} onBack={()=>startLeaving(async()=>{try{await leaveVerification()}catch{setResendMessage('Çıkış yapılamadı. Lütfen yeniden deneyin.')}})} onResend={resend} resendAfter={cooldown} resending={resending} resendMessage={resendMessage} error={state&&!state.ok?state.message:undefined}/></div>;
 }

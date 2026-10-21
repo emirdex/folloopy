@@ -22,7 +22,9 @@ async function authenticate(form:FormData,register:boolean):Promise<FormState>{
 }
 export async function registerAccount(_state:FormState,form:FormData){return authenticate(form,true)}
 export async function loginAccount(_state:FormState,form:FormData){return authenticate(form,false)}
-export async function logoutAccount(){await accountApi('/api/auth/logout',{});const store=await cookies();store.delete('mt_session');store.delete('mail_tracking_preview');redirect('/')}
+async function closeAccountSession(){await accountApi('/api/auth/logout',{});const store=await cookies();store.delete('mt_session');store.delete('mail_tracking_preview')}
+export async function logoutAccount(){await closeAccountSession();redirect('/')}
+export async function leaveVerification(){await closeAccountSession();redirect('/giris')}
 export async function completePurchase(_state:FormState,form:FormData):Promise<FormState>{
  await requireVerifiedAccount();
  const production=process.env.NODE_ENV==='production';
