@@ -2,6 +2,12 @@ import { randomUUID } from 'node:crypto';
 import type { DB } from '../../packages/database/index';
 import { token,tokenHash,escapeHtml } from '../../packages/domain/tracking';
 import type { MailProvider } from '../../packages/provider-adapters/index';
+const activityJoin=`LEFT JOIN LATERAL (
+ SELECT count(*)::int AS activity_count,min(e.occurred_at) AS first_activity_at,max(e.occurred_at) AS last_activity_at
+ FROM raw_events e LEFT JOIN event_assessments a ON a.event_id=e.id AND a.workspace_id=e.workspace_id
+ WHERE e.workspace_id=m.workspace_id AND e.message_id=m.id AND e.kind='image_fetch' AND m.state='sent'
+ AND (a.source IS NULL OR a.source IN ('unknown','likely_human'))
+) activity ON true`;
 export const LOCAL_WORKSPACE='00000000-0000-4000-8000-000000000001';
 export interface SendInput {subject:string;to:string;text:string;tracking:boolean}
 export async function seedLocal(db:DB){
@@ -66,13 +72,13 @@ export class TrackingService {
   });
  }
  async list(workspace:string,search='',offset=0){
-  return (await this.db.query(`SELECT m.id,m.subject,m.state,m.provider,m.sent_at,m.created_at,m.tracking_enabled,
+  return (await this.db.query(`SELECT m.id,m.subject,m.state,m.provider,m.sent_at,m.created_at,m.tracking_enabled,activity.activity_count,activity.first_activity_at,activity.last_activity_at,
    (SELECT count(*)::int FROM raw_events e WHERE e.workspace_id=m.workspace_id AND e.message_id=m.id) AS raw_count,
    (SELECT count(*)::int FROM event_assessments a JOIN raw_events e ON e.id=a.event_id AND e.workspace_id=a.workspace_id WHERE e.workspace_id=m.workspace_id AND e.message_id=m.id AND a.source='unknown') AS unknown_count
-   FROM messages m WHERE m.workspace_id=$1 AND m.subject ILIKE $2 ORDER BY m.created_at DESC,m.id LIMIT 50 OFFSET $3`,[workspace,`%${search}%`,offset])).rows;
+   FROM messages m ${activityJoin} WHERE m.workspace_id=$1 AND m.subject ILIKE $2 ORDER BY m.created_at DESC,m.id LIMIT 50 OFFSET $3`,[workspace,`%${search}%`,offset])).rows;
  }
  async detail(workspace:string,id:string){
-  const message=(await this.db.query('SELECT id,subject,state,provider,sent_at,tracking_enabled FROM messages WHERE workspace_id=$1 AND id=$2',[workspace,id])).rows[0];
+  const message=(await this.db.query(`SELECT m.id,m.subject,m.state,m.provider,m.sent_at,m.tracking_enabled,activity.activity_count,activity.first_activity_at,activity.last_activity_at FROM messages m ${activityJoin} WHERE m.workspace_id=$1 AND m.id=$2`,[workspace,id])).rows[0];
   if(!message) return null;
   const events=(await this.db.query(`SELECT e.id,e.occurred_at,e.kind,a.source,a.identity_relation,a.reason_codes,a.classifier_version FROM raw_events e LEFT JOIN event_assessments a ON a.event_id=e.id AND a.workspace_id=e.workspace_id WHERE e.workspace_id=$1 AND e.message_id=$2 ORDER BY e.occurred_at DESC LIMIT 100`,[workspace,id])).rows;
   return {message,events};

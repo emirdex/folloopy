@@ -96,3 +96,20 @@ test('DB arızasında piksel bozulmaz ve hata sayılır',async()=>{
  const {db,app,metrics}=await setup();await db.close();
  try{const response=await app.inject({method:'GET',url:'/t/o/'+'x'.repeat(43)+'.gif'});assert.equal(response.statusCode,200);assert.equal(metrics.collectorErrors,1)}finally{await app.close()}
 });
+
+test('Member opening summary aggregates repeated events and excludes identified automation/own activity',async()=>{
+ const {db,service,app}=await setup();
+ try{
+  const sent=await service.send(LOCAL_WORKSPACE,key,input) as {id:string;testPixel:string};const path=new URL(sent.testPixel).pathname;
+  await app.inject({method:'GET',url:path});await app.inject({method:'GET',url:path});await processBatch(db);
+  const list=await service.list(LOCAL_WORKSPACE),detail=await service.detail(LOCAL_WORKSPACE,sent.id);
+  assert.equal(list[0].raw_count,2);assert.equal(list[0].activity_count,2);
+  assert.ok(list[0].first_activity_at);assert.ok(list[0].last_activity_at);
+  assert.equal(detail!.message.activity_count,2);assert.equal(+new Date(detail!.message.first_activity_at as string),+new Date(list[0].first_activity_at as string));
+  await service.stop(LOCAL_WORKSPACE,sent.id);assert.equal((await service.detail(LOCAL_WORKSPACE,sent.id))!.message.activity_count,2);
+  await db.query("UPDATE event_assessments SET source='known_automation'");
+  assert.equal((await service.list(LOCAL_WORKSPACE))[0].activity_count,0);assert.equal((await service.detail(LOCAL_WORKSPACE,sent.id))!.message.first_activity_at,null);
+  await db.query("UPDATE event_assessments SET source='own_activity'");assert.equal((await service.list(LOCAL_WORKSPACE))[0].activity_count,0);
+  assert.equal((await service.detail(LOCAL_WORKSPACE,sent.id))!.events.length,2);
+ }finally{await app.close();await db.close()}
+});

@@ -107,3 +107,8 @@ input,textarea,select{scroll-margin-block:100px}
 .overview-grid>.connection-card>.button>svg{flex-shrink:0}
 @media(max-width:900px){.overview-grid>.connection-card{padding:27px}.overview-grid>.connection-card h2{font-size:28px;max-width:470px}.overview-grid>.connection-card>p{max-width:470px;font-size:14px}}
 @media(max-width:650px){.overview-grid>.connection-card{padding:25px 22px;border-radius:21px}.overview-grid>.connection-card h2{font-size:26px}.overview-grid>.connection-card>.button{width:100%;font-size:13px;min-height:46px}.overview-grid>.connection-card>.eyebrow{font-size:9px;letter-spacing:.7px}}
+
+/* One clear opening summary per mail; raw collector events stay out of the member UI. */
+.opening-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:0 24px 24px;padding:20px 24px;border:1px solid #d8e7f5;border-radius:18px;background:linear-gradient(125deg,#eef7ffc9,#f4f7ffc9);box-shadow:inset 0 1px 0 #fff}
+.opening-summary>div{display:flex;flex-direction:column;gap:8px;min-width:0}.opening-summary>div+div{padding-left:22px;border-left:1px solid #dbe7f3}.opening-summary span{font-size:12px;color:#8294ac}.opening-summary strong{font-size:14px;font-weight:500;color:#4c6d96;line-height:1.6}
+@media(max-width:650px){.opening-summary{margin:0 16px 20px;padding:17px;grid-template-columns:1fr;gap:15px}.opening-summary>div+div{padding:15px 0 0;border-left:0;border-top:1px solid #dbe7f3}}
