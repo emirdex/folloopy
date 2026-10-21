@@ -3,16 +3,13 @@ import {cookies} from 'next/headers';
 import {redirect} from 'next/navigation';
 import {revalidatePath} from 'next/cache';
 import {accountApi,adminApi,requireAdmin} from '../account-api';
-import {validNewPassword,PASSWORD_HELP} from '../../../../packages/domain/password-policy';
+import {ownerSetupIssue} from '../../../../packages/domain/owner-setup';
 export type AdminFormState={error:string;ok?:boolean}|null;
 export async function setupOwner(_state:AdminFormState,form:FormData):Promise<AdminFormState>{
- const token=String(form.get('token')||''),name=String(form.get('name')||'').trim(),password=String(form.get('password')||'');
- if(name.length<2||name.length>80)return {error:'Adınızı 2–80 karakter olarak girin.'};
- if(!validNewPassword(password))return {error:PASSWORD_HELP};
- if(password!==String(form.get('confirmation')||''))return {error:'Şifreler eşleşmiyor.'};
- if(token.length<32||token.length>128)return {error:'Geçerli kurulum anahtarı gerekli.'};
+ const issue=ownerSetupIssue(form);if(issue)return {error:issue.error};
+ const token=String(form.get('token')||'').trim(),name=String(form.get('name')||'').trim(),password=String(form.get('password')||'');
  try{const result=await accountApi('/api/admin/setup',{token,name,password});const store=await cookies();store.set('mt_session',result.token,{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',path:'/',maxAge:7*86400});store.delete('mail_tracking_preview')}
- catch(e){const code=e instanceof Error?e.message:'';return {error:code==='SETUP_CLOSED'?'İlk kurulum zaten tamamlandı. Giriş yapabilirsiniz.':code==='EXISTING_ACCOUNT_PASSWORD_REQUIRED'?'Bu e-posta ile mevcut hesabınız var. Mevcut hesap şifrenizi kullanın.':code==='TOO_MANY_ATTEMPTS'?'Çok fazla deneme. 15 dakika sonra tekrar deneyin.':'Kurulum tamamlanamadı. Kurulum anahtarını ve bilgilerinizi kontrol edin.'}}
+ catch(e){const code=e instanceof Error?e.message:'';return {error:code==='SETUP_CLOSED'?'İlk kurulum zaten tamamlandı. Giriş yapabilirsiniz.':code==='EXISTING_ACCOUNT_PASSWORD_REQUIRED'?'Bu e-posta ile mevcut hesabınız var. Mevcut hesap şifrenizi kullanın.':code==='TOO_MANY_ATTEMPTS'?'Çok fazla deneme. 15 dakika sonra tekrar deneyin.':code==='INVALID_SETUP_TOKEN'?'Kurulum anahtarı doğrulanamadı. Size özel anahtarı kontrol edin.':['PRIVATE_API_UNAVAILABLE','PRIVATE_API_REQUEST_FAILED','TimeoutError','AbortError','fetch failed'].includes(code)?'Sunucuya ulaşılamadı. Kısa süre sonra tekrar deneyin.':'Kurulum tamamlanamadı. Kurulum anahtarını ve bilgilerinizi kontrol edin.'}}
  redirect('/admin');
 }
 export async function savePost(_state:AdminFormState,form:FormData):Promise<AdminFormState>{
