@@ -9,5 +9,5 @@ test('Completed password reset replaces the edit heading with success and one cl
 });
 test('Security request and verification completion keep their own destination and success heading',()=>{
  const request=renderToStaticMarkup(createElement(SecurityResult,{mode:'request',message:'Adresiniz kayıtlıysa bağlantı gönderildi.'}));const verify=renderToStaticMarkup(createElement(SecurityResult,{mode:'verify',message:'Adresiniz doğrulandı.'}));
- assert.ok(request.includes('Bağlantınız Hazır.'));assert.ok(request.includes('href="/giris"'));assert.ok(verify.includes('E-Postanız Doğrulandı.'));assert.ok(verify.includes('href="/paketler"'));
+ assert.ok(request.includes('Gelen Kutunuzu Kontrol Edin.'));assert.ok(request.includes('href="/giris"'));assert.equal((request.match(/href="\/giris"/g)||[]).length,1);assert.ok(!request.includes('Giriş Ekranına Dön'));assert.ok(request.includes('security-complete-note'));assert.ok(verify.includes('E-Postanız Doğrulandı.'));assert.ok(verify.includes('href="/paketler"'));
 });
