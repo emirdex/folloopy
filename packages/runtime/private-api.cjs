@@ -1,4 +1,4 @@
-// Process-local IPC transport. The private API never needs a public listener.
+// Private process-local transport, plus IPC support for standalone runtimes.
 const {randomUUID}=require('node:crypto');
 const clientKey=Symbol.for('folloopy.privateApiFetch');
 const MAX_BODY=8*1024*1024;
@@ -34,6 +34,25 @@ function installPrivateApi(child,origin){
  return request;
 }
 function privateApiFetch(url,init){const request=process[clientKey];return request?request(url,init):fetch(url,init);}
+function installLocalApi(app,origin){
+ const request=async(url,init={})=>{
+  const target=new URL(url);if(target.origin!==origin||target.username||target.password)throw Error('PRIVATE_API_ORIGIN_INVALID');
+  let body;if(init.body!=null){if(typeof init.body==='string')body=Buffer.from(init.body);else if(ArrayBuffer.isView(init.body))body=Buffer.from(init.body.buffer,init.body.byteOffset,init.body.byteLength);else throw Error('PRIVATE_API_BODY_INVALID');}
+  if(body&&body.length>MAX_BODY)throw Error('PRIVATE_API_BODY_TOO_LARGE');
+  const signal=init.signal||AbortSignal.timeout(30000);signal.throwIfAborted();
+  const method=init.method||'GET';
+  return new Promise((resolve,reject)=>{
+   const abort=()=>reject(signal.reason||Error('PRIVATE_API_ABORTED'));
+   signal.addEventListener('abort',abort,{once:true});
+   Promise.resolve().then(()=>{signal.throwIfAborted();return app.inject({method,url:target.pathname+target.search,headers:Object.fromEntries(new Headers(init.headers)),...(body?{payload:body}:{})})}).then(response=>{
+    if(response.rawPayload.length>MAX_BODY)throw Error('PRIVATE_API_RESPONSE_TOO_LARGE');
+    resolve(new Response(method==='HEAD'||[204,205,304].includes(response.statusCode)?null:response.rawPayload,{status:response.statusCode,headers:response.headers}));
+   }).catch(reject).finally(()=>signal.removeEventListener('abort',abort));
+  });
+ };
+ process[clientKey]=request;
+ return request;
+}
 async function servePrivateApi(app,channel=process){
  await app.ready();
  channel.on('message',async m=>{
@@ -46,4 +65,4 @@ async function servePrivateApi(app,channel=process){
  });
  channel.send({type:'folloopy-api-ready'});
 }
-module.exports={installPrivateApi,privateApiFetch,servePrivateApi};
+module.exports={installPrivateApi,installLocalApi,privateApiFetch,servePrivateApi};
