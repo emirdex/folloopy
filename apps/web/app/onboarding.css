@@ -85,3 +85,9 @@
 .order-summary .flow-primary.flow-activate-glass:focus-visible{outline:2px solid #6ba989;outline-offset:4px}
 .order-summary .flow-primary.flow-activate-glass:disabled{opacity:.6;cursor:wait}
 @media(prefers-reduced-motion:reduce){.order-summary .flow-primary.flow-activate-glass:hover:not(:disabled){transform:none}}
+
+.auth-form-inner>.auth-recovery-link{display:flex;align-items:center;justify-content:center;gap:9px;width:fit-content;max-width:100%;min-height:44px;margin:18px auto 0;padding:10px 17px;border:1px solid #d7e3f5;border-radius:100px;background:linear-gradient(135deg,#f7faff,#edf3ffb8);color:#496da7;font-size:13px;font-weight:500;line-height:1.6;box-shadow:inset 0 1px 0 #fff,0 3px 10px #6688b50c;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.auth-form-inner>.auth-recovery-link:hover{color:#315b9f;border-color:#bdcfee;background:#eaf1fe;box-shadow:inset 0 1px 0 #fff,0 4px 13px #6688b51a}
+.auth-form-inner>.auth-recovery-link:focus-visible{outline:2px solid #7397d2;outline-offset:4px}
+.auth-recovery-link>svg{flex-shrink:0}
+@media(max-width:650px){.auth-form-inner>.auth-recovery-link{margin-top:18px;font-size:14px}}
