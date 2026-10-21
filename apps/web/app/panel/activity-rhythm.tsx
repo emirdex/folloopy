@@ -1,0 +1,2 @@
+import {Activity} from 'lucide-react';
+export function ActivityRhythm(){return <div className="stream-rhythm" aria-hidden="true"><span className="stream-latest-icon"><Activity size={23}/></span><svg className="stream-rhythm-wave" viewBox="0 0 180 52" fill="none"><path className="stream-rhythm-baseline" d="M0 26H35L43 21L49 31L60 7L69 45L78 22L85 26H116L123 19L130 32L138 26H180"/><path className="stream-rhythm-trace" pathLength="100" d="M0 26H35L43 21L49 31L60 7L69 45L78 22L85 26H116L123 19L130 32L138 26H180"/></svg></div>}
