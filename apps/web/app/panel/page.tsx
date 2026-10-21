@@ -32,7 +32,7 @@ async function api(path:string,init?:RequestInit){
  await requirePanel();
  const session=(await cookies()).get('mt_session')?.value;
  const res=await internalApiFetch(`${internalApiUrl()}${path}`,{...init,headers:{Authorization:`Bearer ${internalApiKey()}`,...(session?{'x-user-session':session}:{}),...(init?.body?{'Content-Type':'application/json'}:{}),...init?.headers},cache:'no-store',signal:AbortSignal.timeout(25000)});
- if(!res.ok)throw new Error(res.status===402?'Kullanım limitinize ulaştınız.':res.status===400?'Konu ve mesaj alanlarını kontrol edin.':'Servise ulaşılamadı. Yeniden deneyin.');
+ if(!res.ok)throw new Error(res.status===429?'Çok sık gönderim denemesi yaptınız. Bir dakika bekleyip yeniden deneyin.':res.status===402?'Kullanım limitinize ulaştınız.':res.status===400?'Konu ve mesaj alanlarını kontrol edin.':'Servise ulaşılamadı. Yeniden deneyin.');
  return res.json();
 }
 async function submit(_previous:{error:string}|null,form:FormData):Promise<{error:string}|null>{

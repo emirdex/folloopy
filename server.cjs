@@ -4,6 +4,9 @@ const {createServer}=require('node:http');
 const path=require('node:path');
 const next=require('next');
 const {installLocalApi}=require('./packages/runtime/private-api.cjs');
+const {publicOrigin,guardPublicRequest}=require('./packages/runtime/public-request.cjs');
+const trustedOrigin=publicOrigin(process.env);
+process.env.__NEXT_PRIVATE_ORIGIN=trustedOrigin;
 const mode=process.env.APP_MODE||'marketing';
 if(!['marketing','application'].includes(mode))throw new Error('CONFIG_APP_MODE_INVALID');
 process.env.APP_MODE=mode;
@@ -27,6 +30,9 @@ async function start(){
  // Queue cold-start requests until both the private API and Next are ready.
  server=createServer((req,res)=>{
   const serve=async()=>{
+   const denied=guardPublicRequest(req,trustedOrigin);
+   if(denied){res.writeHead(denied,{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store'});res.end('Geçersiz istek kaynağı.');return;}
+
    if(!handle&&!stopping){let timer;await Promise.race([startupReady,new Promise(resolve=>{timer=setTimeout(resolve,30000);timer.unref?.()})]);clearTimeout(timer);}
    if(res.destroyed)return;
    if(!handle||stopping){res.writeHead(503,{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'no-store','Retry-After':'2'});res.end('Uygulama hazırlanamadı. Lütfen kısa süre sonra yeniden deneyin.');return;}

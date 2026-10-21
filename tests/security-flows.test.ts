@@ -144,3 +144,10 @@ test('Concurrent reset and old-password login never leave an old-password sessio
   assert.equal(await s.accounts.current(a.token),null);await assert.rejects(()=>s.accounts.login(a.user.email,password),/INVALID_LOGIN/);
  }finally{await s.app.close();await s.db.close()}
 });
+test('Single-mail rate limits run before OAuth token refresh and are scoped to the workspace',async()=>{
+ const s=await setup();try{const a=await s.create('send-rate@example.invalid',true),b=await s.create('send-rate-other@example.invalid',true);await s.accounts.grant(a.user,'team');await s.accounts.grant(b.user,'team');
+ const call=(token:string)=>s.app.inject({method:'POST',url:'/api/messages/send',headers:{authorization:'Bearer '+apiKey,'x-user-session':token,'idempotency-key':'synthetic-send-rate-key-2026'},payload:{subject:'Rate check',to:'nobody@example.invalid',text:'No real delivery',tracking:false}});
+ // No connection exists, so accepted attempts stop before any network or mail delivery.
+ for(let i=0;i<20;i++)assert.equal((await call(a.token)).json().code,'GMAIL_NOT_CONNECTED');assert.equal((await call(a.token)).statusCode,429);assert.equal((await call(b.token)).json().code,'GMAIL_NOT_CONNECTED');assert.equal(s.provider.submissions.length,0);
+ }finally{await s.app.close();await s.db.close()}
+});

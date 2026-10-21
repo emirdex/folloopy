@@ -7,7 +7,9 @@ import {BulkMail,type BulkGateway} from '../apps/api/bulk-mail';
 import {TrackingService} from '../apps/api/service';
 import {FakeProvider,type MailProvider,type Submission} from '../packages/provider-adapters';
 import {buildServer} from '../apps/api/server';
-import {seal} from '../packages/runtime/vault';
+import {seal,unseal} from '../packages/runtime/vault';
+import {AccountSecurity} from '../apps/api/account-security';
+import {AccountDetails} from '../apps/api/account-details';
 import {parseBulkCsv,validateBulkInput,renderBulkText,csvCell,decodeBulkCsv,BULK_MAX_RECIPIENTS,type BulkInput} from '../packages/domain/bulk-mail';
 const key=randomBytes(32).toString('base64'),apiKey='bulk-mail-private-api-key-32-characters';
 const input=(csv='email,ad,soyad,sirket\ndeniz@example.invalid,Deniz,Aras,Arc\nselin@example.invalid,Selin,Kaya,Byte'):BulkInput=>({name:'Görüşme daveti',subject:'Merhaba {{ad}}',text:'Merhaba {{ad}} {{soyad}},\n{{sirket}} için görüşelim.',tracking:true,csv,requestId:randomUUID()});
@@ -69,4 +71,11 @@ test('Expired previews, unverified accounts and missing sessions cannot start a 
  }finally{await app.close();await close(s)}});
 test('A 500-recipient import reserves exactly the available quota and tracking can remain disabled',async()=>{const s=await setup();try{
  const csv='email,ad\n'+Array.from({length:500},(_,i)=>`contact${i}@example.invalid,Alıcı ${i}`).join('\n');const preview=await s.bulk.preview(s.user,{...input(csv),tracking:false});assert.equal(preview.report.recipients.length,500);await s.bulk.confirm(s.user,preview.id!);assert.equal(await s.used(),500);await s.bulk.processOne();assert.equal((s.sender as FakeProvider).submissions.length,1);assert.equal((await s.db.query('SELECT * FROM tracking_tokens')).rows.length,0);assert.equal((await s.bulk.detail(s.user,preview.id!)).recipients.length,50);assert.equal((await s.bulk.detail(s.user,preview.id!,450)).hasMore,false);await s.bulk.control(s.user,preview.id!,'cancel');assert.equal(await s.used(),1);
+ }finally{await close(s)}});
+
+test('Password recovery pauses a queued campaign, invalidates sessions and never sends pending mail',async()=>{const s=await setup();try{
+ const preview=await s.bulk.preview(s.user,input());await s.bulk.confirm(s.user,preview.id!);const security=new AccountSecurity(s.db,'https://panel.example',key);await security.issue(s.user.id,'reset');const row=(await s.db.query<{payload:string}>('SELECT payload FROM mail_outbox ORDER BY created_at DESC LIMIT 1')).rows[0];const token=JSON.parse(unseal(row.payload,key)).text.match(/#token=([\w-]{43})/)[1];await security.consume(token,'reset','Recovered-synthetic-password-2026!');assert.equal(await s.accounts.current(s.token),null);assert.equal((await s.bulk.detail(s.user,preview.id!)).reason,'ACCOUNT_SECURITY_CHANGED');assert.equal(await s.bulk.processOne(),false);assert.equal((s.sender as FakeProvider).submissions.length,0);assert.equal(await s.used(),2);
+ }finally{await close(s)}});
+test('Confirmed email changes pause queued campaigns while cancelling an unconfirmed change leaves them intact',async()=>{const s=await setup();try{
+ const preview=await s.bulk.preview(s.user,input());await s.bulk.confirm(s.user,preview.id!);const details=new AccountDetails(s.db,'https://panel.example',key);await details.requestEmail(s.user,'new-owner@example.invalid');const tokens=(await s.db.query<{payload:string}>('SELECT payload FROM mail_outbox ORDER BY created_at,id')).rows.map(row=>JSON.parse(unseal(row.payload,key)).text.match(/#token=([\w-]{43})/)[1]);assert.equal((await details.confirmEmail(tokens[0])).completed,false);assert.equal((await s.bulk.detail(s.user,preview.id!)).status,'queued');await details.confirmEmail(tokens[1]);assert.equal((await s.bulk.detail(s.user,preview.id!)).status,'paused');assert.equal(await s.bulk.processOne(),false);assert.equal((s.sender as FakeProvider).submissions.length,0);assert.equal(await s.accounts.current(s.token),null);
  }finally{await close(s)}});

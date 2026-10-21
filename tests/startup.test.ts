@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import path from 'node:path';
+import {createRequire} from 'node:module';
 
 const source=readFileSync(new URL('../server.cjs',import.meta.url),'utf8');
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
@@ -15,6 +16,7 @@ function startup(){
  const server={on(){},listen(){events.push('listen')},close(done:()=>void){events.push('close');done()}};
  const app={prepare:()=>{events.push('prepare');return prepared},getRequestHandler:()=> (req:any,res:any)=>{forwarded.push(req);res.writeHead(200);res.end('ready')},close:async()=>{}};
  const deps:Record<string,any>={
+  './packages/runtime/public-request.cjs':createRequire(import.meta.url)('../packages/runtime/public-request.cjs'),
   'node:http':{createServer:(handler:any)=>{request=handler;return server}},
   './apps/api/runtime.ts':{startApi:()=>{events.push('api-start');return initialized}},
   'node:path':path,
@@ -23,8 +25,8 @@ function startup(){
   './packages/runtime/private-api.cjs':{installLocalApi:()=>{events.push('private-api-installed');return ()=>health}},
   './packages/runtime/config.ts':{productionConfig:()=>({apiPort:4000,apiUrl:'http://127.0.0.1:4000'})},
  };
- runInNewContext(source,{require:(name:string)=>{assert.ok(name in deps,name);return deps[name]},__dirname:process.cwd(),process:{env:{APP_MODE:'application',PORT:'3000'},on(){},exit:(code:number)=>exits.push(code)},console:{log(){},error(){}},fetch:()=>health,AbortSignal,setTimeout,clearTimeout});
- const response=(req:any={method:'GET',url:'/'})=>{const result:any={status:0,headers:{},body:''};request(req, {headersSent:false,writeHead:(status:number,headers:any={})=>{result.status=status;result.headers=headers},end:(body:string)=>{result.body=body}});return result};
+ runInNewContext(source,{require:(name:string)=>{assert.ok(name in deps,name);return deps[name]},__dirname:process.cwd(),process:{env:{APP_MODE:'application',PORT:'3000',SITE_URL:'https://folloopy.example'},on(){},exit:(code:number)=>exits.push(code)},console:{log(){},error(){}},fetch:()=>health,AbortSignal,setTimeout,clearTimeout});
+ const response=(req:any={method:'GET',url:'/'})=>{const result:any={status:0,headers:{},body:''};request({...req,headers:{host:'folloopy.example',...(req.method==='POST'?{origin:'https://folloopy.example'}:{}),...req.headers}}, {headersSent:false,writeHead:(status:number,headers:any={})=>{result.status=status;result.headers=headers},end:(body:string)=>{result.body=body}});return result};
  return {events,exits,forwarded,response,healthReady,apiReady:()=>apiReady({app:{},close:async()=>{events.push('api-close')}}),apiFailed,nextReady,nextFailed};
 }
 
@@ -40,7 +42,7 @@ test('Cold-start GET and login POST wait for API and web readiness instead of re
  assert.equal(get.status,0);assert.equal(post.status,0);
  boot.nextReady();await tick();
  assert.equal(get.status,200);assert.equal(post.status,200);
- assert.equal(boot.forwarded[1],postRequest);
+ assert.equal(boot.forwarded[1].body,postRequest.body);
  assert.deepEqual(boot.exits,[]);
 });
 
@@ -57,4 +59,9 @@ test('A failed database/API initialization exits without exposing the applicatio
  boot.apiFailed(Error('database unavailable'));await tick();
  assert.equal(queued.status,503);assert.deepEqual(boot.forwarded,[]);
  assert.deepEqual(boot.events,['listen','api-start','close']);assert.deepEqual(boot.exits,[1]);
+});
+
+test('Untrusted hosts and cross-origin POSTs are rejected before cold-start queuing or Next execution',async()=>{
+ const boot=startup();const host=boot.response({method:'GET',url:'/panel',headers:{host:'attacker.example'}});assert.equal(host.status,421);const origin=boot.response({method:'POST',url:'/giris',headers:{origin:'https://attacker.example','x-forwarded-host':'attacker.example'}});assert.equal(origin.status,403);assert.deepEqual(boot.forwarded,[]);
+ boot.apiReady();await tick();boot.healthReady({ok:true});await tick();boot.nextReady();await tick();assert.deepEqual(boot.forwarded,[]);
 });
