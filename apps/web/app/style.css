@@ -140,3 +140,7 @@ input,textarea,select{scroll-margin-block:100px}
 .metric-mint{--metric-glass-top:#dcf5e9c9;--metric-glass-bottom:#bfe9d7db;--metric-glass-rgb:58,137,107}
 .metric-peach{--metric-glass-top:#ffedd9c9;--metric-glass-bottom:#f8d4b6db;--metric-glass-rgb:178,121,76}
 .metric-lilac{--metric-glass-top:#ece7ffc9;--metric-glass-bottom:#d9d0f5db;--metric-glass-rgb:125,103,175}
+
+/* Reveal only a still-pending route fallback; never hold up the route itself. */
+.folloopy-route-loading{visibility:hidden;animation:folloopy-route-loading-reveal 0s .8s forwards!important}
+@keyframes folloopy-route-loading-reveal{to{visibility:visible}}
