@@ -15,5 +15,6 @@ backups/
 work/
 *.png
 !apps/web/public/**/*.png
+!extensions/gmail/icons/*.png
 
 apps/web/extension-release/

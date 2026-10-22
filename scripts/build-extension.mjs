@@ -1,6 +1,6 @@
 // Deterministic ZIP (stored entries). Only explicit release files; never include credentials.
 import {readFile,mkdir,writeFile} from 'node:fs/promises';
-const files=['manifest.json','background.js','popup.html','popup.css','popup.js','gmail.js','gmail.css'];
+const files=['manifest.json','background.js','popup.html','popup.css','popup.js','gmail.js','gmail.css','icons/icon16.png','icons/icon32.png','icons/icon48.png','icons/icon128.png'];
 const crc=b=>{let c=0xffffffff;for(const n of b){c^=n;for(let k=0;k<8;k++)c=(c>>>1)^((c&1)?0xedb88320:0)}return (c^0xffffffff)>>>0};
 let offset=0;const parts=[],directory=[];
 for(const file of files){const bytes=await readFile(new URL('../extensions/gmail/'+file,import.meta.url)),name=Buffer.from(file),sum=crc(bytes),h=Buffer.alloc(30);h.writeUInt32LE(0x04034b50);h.writeUInt16LE(20,4);h.writeUInt32LE(sum,14);h.writeUInt32LE(bytes.length,18);h.writeUInt32LE(bytes.length,22);h.writeUInt16LE(name.length,26);parts.push(h,name,bytes);const d=Buffer.alloc(46);d.writeUInt32LE(0x02014b50);d.writeUInt16LE(20,4);d.writeUInt16LE(20,6);d.writeUInt32LE(sum,16);d.writeUInt32LE(bytes.length,20);d.writeUInt32LE(bytes.length,24);d.writeUInt16LE(name.length,28);d.writeUInt32LE(offset,42);directory.push(d,name);offset+=h.length+name.length+bytes.length}

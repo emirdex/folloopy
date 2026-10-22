@@ -1,0 +1,21 @@
+{
+  "title": "Folloopy — Gmail Takibi",
+  "summary": "Gmail’de hazırladığınız tek alıcılı metin mesajlarını Folloopy takibiyle gönderin. Signature üyeliği ve bağlı Gmail hesabı gerekir.",
+  "description": "Gmail’de hazırlayın, Folloopy ile takipli gönderin.\n\nFolloopy, Gmail’in yeni mesaj penceresine “Folloopy ile gönder” düğmesi ekler. Bu düğmeyle gönderdiğiniz mesajın gönderim durumunu ve algılanan açılma hareketlerini Folloopy panelinizden inceleyebilirsiniz.\n\nNASIL ÇALIŞIR?\n• Folloopy hesabınızı oluşturun ve e-posta adresinizi doğrulayın.\n• Signature veya Enterprise erişiminizi etkinleştirin; Gmail hesabınızı Folloopy panelinde bağlayın.\n• Eklentiyi hesabınızla eşleştirin ve panelde bağlantıyı onaylayın.\n• Gmail’de yeni mesaj hazırlayın. Bir alıcı, konu ve metin girin; Folloopy ile gönder düğmesine basın.\n• Gönderen hesabı ve alıcıyı onaylayın. Sonuçları Folloopy panelinden takip edin.\n\nÜYELİK GEREKSİNİMİ\nEklentiyi yüklemek ücretsizdir. Kullanım için Folloopy Signature veya Enterprise erişimi ve bağlı Gmail hesabı gerekir. Essential paket eklenti kullanımını kapsamaz. Güncel paket koşulları: https://folloopy.com/#planlar\n\nİLK SÜRÜMÜN KAPSAMI\nTek alıcılı, yeni ve düz metin mesajları desteklenir. Ekler, görseller, biçimlendirme, CC/BCC ve yanıt zincirleri desteklenmez. Gmail’in normal Gönder düğmesiyle gönderilen mesajlara takip eklenmez. Outlook desteklenmez. Gönderim sonrası Gmail taslağı açık kalabilir; aynı taslağı tekrar göndermeyin.\n\nGİZLİLİK VE KONTROL\nMesaj içeriği yalnızca sizin başlattığınız ve onayladığınız gönderim için Folloopy hizmetine iletilir. Gelen kutunuzdaki diğer e-postalar toplanmaz; genel tarama geçmişiniz kaydedilmez. Gmail bağlantısı sunucuda yönetilir. Her gönderimde aktif paket, oturum ve bağlı gönderen hesabı doğrulanır. Bağlantıyı panelden kaldırabilirsiniz.\n\nÖLÇÜM SINIRLARI\nAçılma kaydı, e-postanın bir kişi tarafından kesin olarak okunduğunu kanıtlamaz. Görsel engelleme, önbellek ve gizlilik özellikleri ölçümü etkileyebilir.\n\nDestek: info@folloopy.com\nGizlilik: https://folloopy.com/yasal/gizlilik-politikasi",
+  "singlePurpose": "Kullanıcının Gmail yeni mesaj penceresinde hazırladığı tek alıcılı düz metin e-postayı, kendi onayıyla bağlı Gmail hesabından Folloopy takibi ekleyerek göndermek ve sonucu Folloopy panelinde göstermektir.",
+  "permissionJustifications": {
+    "storage": "Eklentiye özel cihaz erişim belirteci ve kısa süreli eşleştirme bilgileri chrome.storage.local içinde saklanır. Erişim TRUSTED_CONTEXTS ile sınırlandırılır. Özel imza anahtarı dışa aktarılamaz olarak IndexedDB’de tutulur. Veriler oturum ve paket doğrulaması içindir; genel tarama verisi saklanmaz.",
+    "host": "https://panel.folloopy.com yalnızca eşleştirme, bağlantı kontrolü, erişim iptali ve kullanıcının onayladığı gönderim isteğini /eklentiler/api üzerinden iletmek için kullanılır. Gönderimler imzalı istek ve sunucu tarafındaki aktif paket kontrolüyle sınırlandırılır.",
+    "contentScript": "https://mail.google.com üzerinde yeni mesaj penceresini bulur ve Folloopy ile gönder düğmesi ekler. Kullanıcı düğmeye basıp onayladığında aktif mesajın gönderen/alıcı adresi, konusu ve düz metin gövdesi alınır. Gelen kutusundaki diğer mesajlar toplanmaz. Gönderim doğrudan içerik betiğinden değil eklenti servis çalışanı üzerinden yapılır."
+  },
+  "remoteCode": false,
+  "privacyUrl": "https://folloopy.com/yasal/gizlilik-politikasi",
+  "homepageUrl": "https://folloopy.com/",
+  "supportUrl": "https://folloopy.com/iletisim",
+  "dataCategories": [
+    "Personally identifiable information: bağlı hesap ve gönderen/alıcı e-posta adresleri",
+    "Authentication information: eklenti cihaz eşleştirmesi ve erişim belirteci",
+    "Personal communications: kullanıcının onayladığı mesaj konusu ve gövdesi"
+  ],
+  "reviewerNotes": "Gerçek Chrome/Gmail kurulum ve gönderim denemesi tamamlanmadan incelemeye gönderilmemeli. Google OAuth Audience test/production durumu ayrıca doğrulanmalı. İnceleme hesabı gerekiyorsa kullanıcı hesabı veya şifresi paylaşılmadan ayrı ve sınırlı bir inceleme hesabı planlanmalı."
+}
