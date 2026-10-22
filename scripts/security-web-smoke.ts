@@ -21,15 +21,25 @@ const web=next({dev:false,dir:'./apps/web',hostname:'127.0.0.1',port:address.por
 let checks=0;
 const expectRedirect=async(path:string,target:string,token?:string,extraCookie='')=>{
  const response=await fetch(origin+path,{redirect:'manual',headers:{cookie:(token?'mt_session='+token+'; ':'')+extraCookie}});
- assert.ok([303,307,308].includes(response.status),`${path}: expected redirect, got ${response.status}`);
- assert.equal(new URL(response.headers.get('location')!,origin).pathname,target,path);checks++;
+ const html=await response.text();
+ if([303,307,308].includes(response.status))assert.equal(new URL(response.headers.get('location')!,origin).pathname,target,path);
+ else{
+  // Next may stream a shell before auth finishes, then emit its documented
+  // meta redirect. Require the exact destination AND absence of private UI.
+  assert.equal(response.status,200,path);
+  const tag=html.match(/<meta[^>]+id="__next-page-redirect"[^>]*>/)?.[0];
+  const destination=tag?.match(/content="[^"]*?url=([^"]+)"/)?.[1]?.replace(/&amp;/g,'&');
+  assert.ok(destination,`${path}: missing redirect`);assert.equal(new URL(destination,origin).pathname,target,path);
+  for(const marker of ['Genel Bakış','Mail Özeti','Fatura Bilgileri'])assert.ok(!html.includes(marker),path+': leaked protected UI');
+ }
+ checks++;
 };
 try{
  const resetForm=await fetch(origin+'/sifre-yenile');const resetHtml=await resetForm.text();assert.equal(resetForm.status,200);assert.ok(!resetHtml.includes('Giriş Ekranına Dön'));assert.ok(resetHtml.includes('Yeni şifrenizi belirleyin.'));checks++;
  const member=await accounts.register('Unverified Member','web-member@example.invalid','Synthetic-web-password-2026!');
  const owner=await accounts.register('Unverified Owner','web-owner@example.invalid','Synthetic-web-password-2026!');await db.query("UPDATE users SET role='owner' WHERE email='web-owner@example.invalid'");
- for(const session of [member.token,owner.token])for(const path of ['/panel','/panel?view=account','/panel?view=extensions','/paketler','/odeme?plan=team','/odeme/tamamlandi','/giris','/kayit','/admin'])await expectRedirect(path,'/hesap/dogrula',session);
- for(const path of ['/panel','/panel?view=account','/paketler','/odeme?plan=team','/admin'])await expectRedirect(path,'/giris',undefined,'mail_tracking_preview=active');
+ for(const session of [member.token,owner.token])for(const path of ['/panel','/panel?view=account','/panel?view=extensions','/panel?view=bulk','/panel?view=compose','/eklentiler/indir','/paketler','/odeme?plan=team','/odeme/tamamlandi','/giris','/kayit','/admin'])await expectRedirect(path,'/hesap/dogrula',session);
+ for(const path of ['/panel','/panel?view=account','/panel?view=bulk','/eklentiler/indir','/paketler','/odeme?plan=team','/admin'])await expectRedirect(path,'/giris',undefined,'mail_tracking_preview=active');
  // Exercise the real Server Action: returning from verification must revoke
  // the session, not bounce between /giris and /hesap/dogrula.
  const manifest=JSON.parse(await readFile('apps/web/.next/server/server-reference-manifest.json','utf8'));
@@ -41,7 +51,16 @@ try{
  member.token=(await accounts.login('web-member@example.invalid','Synthetic-web-password-2026!')).token;
  await db.query('UPDATE users SET email_verified_at=now()');
  await expectRedirect('/panel','/paketler',member.token);await expectRedirect('/admin','/admin/erisim',member.token);await expectRedirect('/hesap/dogrula','/admin',owner.token);
- const account=(await accounts.current(member.token))!;for(const plan of ['individual','team'] as const){await accounts.grant(account,plan);const response=await fetch(origin+'/panel',{redirect:'manual',headers:{cookie:'mt_session='+member.token}});assert.equal(response.status,200,plan);const html=await response.text();assert.ok(html.includes('Genel Bakış'));checks++}
+ const account=(await accounts.current(member.token))!;for(const plan of ['individual','team'] as const){await accounts.grant(account,plan);const response=await fetch(origin+'/panel',{redirect:'manual',headers:{cookie:'mt_session='+member.token}});assert.equal(response.status,200,plan);const html=await response.text();assert.ok(html.includes('Genel Bakış'));checks++;
+  const download=await fetch(origin+'/eklentiler/indir',{redirect:'manual',headers:{cookie:'mt_session='+member.token}});assert.equal(download.status,plan==='team'?200:403);if(plan==='team'){assert.equal(download.headers.get('content-type'),'application/zip');assert.ok(download.headers.get('cache-control')?.includes('no-store'));assert.equal(Buffer.from(await download.arrayBuffer()).readUInt32LE(0),0x04034b50)}checks++;
+ }
+ // Browser cookies cannot substitute for signed extension credentials.
+ process.env.DEPLOYMENT_ROLE='panel';
+ for(const source of ['https://unauthorized.example','chrome-extension://'+'a'.repeat(32)]){
+  const response=await fetch(origin+'/eklentiler/api',{method:'POST',headers:{Origin:source,'Content-Type':'application/json',cookie:'mt_session='+member.token},body:JSON.stringify({operation:'send',payload:{}})});
+  assert.equal(response.status,source.startsWith('chrome-extension:')?401:403);checks++;
+ }
+ delete process.env.DEPLOYMENT_ROLE;
  const verifiedPage=await fetch(origin+'/admin',{headers:{cookie:'mt_session='+owner.token},redirect:'manual'});assert.equal(verifiedPage.status,200);checks++;
  console.log(`Web authorization smoke: ${checks} HTTP checks passed.`);
 }finally{await new Promise<void>((resolve,reject)=>server.close(error=>error?reject(error):resolve()));await web.close();await api.close();await db.close()}

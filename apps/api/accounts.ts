@@ -44,9 +44,9 @@ export class Accounts{
   await db.query('UPDATE users SET last_login_at=now() WHERE id=$1',[id]);
   return {token};
  }
- async current(token:string):Promise<Account|null>{
+ async current(token:string,db:DB=this.db):Promise<Account|null>{
   if(!/^[\w-]{43}$/.test(token))return null;
-  return (await this.db.query<Account>(`SELECT u.id,u.workspace_id,u.name,u.email,u.role,u.email_verified_at,${this.production?'g.plan':'COALESCE(g.plan,p.plan)'} AS plan FROM sessions s JOIN users u ON u.id=s.user_id LEFT JOIN preview_purchases p ON p.workspace_id=u.workspace_id LEFT JOIN access_grants g ON g.workspace_id=u.workspace_id WHERE s.token_hash=$1 AND s.expires_at>now()`,[digest(token)])).rows[0]||null;
+  return (await db.query<Account>(`SELECT u.id,u.workspace_id,u.name,u.email,u.role,u.email_verified_at,${this.production?'g.plan':'COALESCE(g.plan,p.plan)'} AS plan FROM sessions s JOIN users u ON u.id=s.user_id LEFT JOIN preview_purchases p ON p.workspace_id=u.workspace_id LEFT JOIN access_grants g ON g.workspace_id=u.workspace_id WHERE s.token_hash=$1 AND s.expires_at>now()`,[digest(token)])).rows[0]||null;
  }
  async logout(token:string){await this.db.query('DELETE FROM sessions WHERE token_hash=$1',[digest(token)])}
  async grant(account:Account,plan:Plan){

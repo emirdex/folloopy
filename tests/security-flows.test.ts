@@ -7,7 +7,7 @@ import {AccountSecurity} from '../apps/api/account-security';
 import {buildServer} from '../apps/api/server';
 import {FakeProvider} from '../packages/provider-adapters';
 import {TrackingService} from '../apps/api/service';
-import {unseal} from '../packages/runtime/vault';
+import {seal,unseal} from '../packages/runtime/vault';
 const apiKey='security-flow-synthetic-internal-key-2026',key=randomBytes(32).toString('base64'),password='Synthetic-security-password-2026!';
 async function setup(billing='complimentary'){
  const db=await openDatabase();await migrate(db);const provider=new FakeProvider();
@@ -150,4 +150,33 @@ test('Single-mail rate limits run before OAuth token refresh and are scoped to t
  // No connection exists, so accepted attempts stop before any network or mail delivery.
  for(let i=0;i<20;i++)assert.equal((await call(a.token)).json().code,'GMAIL_NOT_CONNECTED');assert.equal((await call(a.token)).statusCode,429);assert.equal((await call(b.token)).json().code,'GMAIL_NOT_CONNECTED');assert.equal(s.provider.submissions.length,0);
  }finally{await s.app.close();await s.db.close()}
+});
+
+test('Panel sends recheck session, verification, package and Gmail identity after OAuth refresh',async()=>{
+ const s=await setup();const originalFetch=globalThis.fetch,oldId=process.env.GOOGLE_CLIENT_ID,oldSecret=process.env.GOOGLE_CLIENT_SECRET;
+ process.env.GOOGLE_CLIENT_ID='synthetic-client';process.env.GOOGLE_CLIENT_SECRET='synthetic-secret';
+ let release=()=>{};
+ try{
+  for(const change of ['logout','reset','unverified','no-plan','disconnected','sender-changed','unchanged']){
+   const a=await s.create('send-race-'+change+'@example.invalid',true);await s.accounts.grant(a.user,'team');
+   await s.db.query('INSERT INTO mail_connections(workspace_id,email,refresh_token,scopes) VALUES($1,$2,$3,$4)',[a.user.workspace_id,'sender@example.invalid',seal('synthetic-refresh',key),'https://www.googleapis.com/auth/gmail.send']);
+   let entered!:()=>void;const reached=new Promise<void>(resolve=>{entered=resolve});const waiting=new Promise<void>(resolve=>{release=resolve});let deliveries=0;
+   globalThis.fetch=async input=>{if(String(input).includes('/token')){entered();await waiting;return Response.json({access_token:'synthetic-access'})}deliveries++;return Response.json({id:'synthetic-receipt',threadId:'synthetic-thread'})};
+   const pending=Promise.resolve(s.app.inject({method:'POST',url:'/api/messages/send',headers:{authorization:'Bearer '+apiKey,'x-user-session':a.token,'idempotency-key':'synthetic-send-race-'+change},payload:{subject:'Synthetic race',to:'recipient@example.invalid',text:'No actual delivery',tracking:true}}));
+   await reached;
+   if(change==='logout')await s.accounts.logout(a.token);
+   if(change==='reset'){
+    await s.security.issue(a.user.id,'reset');const row=(await s.db.query<{payload:string}>('SELECT payload FROM mail_outbox WHERE user_id=$1 ORDER BY created_at DESC LIMIT 1',[a.user.id])).rows[0];
+    const token=JSON.parse(unseal(row.payload,key)).text.match(/#token=([\w-]{43})/)[1];await s.security.consume(token,'reset','New-synthetic-reset-password-2026!');
+   }
+   if(change==='unverified')await s.db.query('UPDATE users SET email_verified_at=NULL WHERE id=$1',[a.user.id]);
+   if(change==='no-plan')await s.db.query('DELETE FROM access_grants WHERE workspace_id=$1',[a.user.workspace_id]);
+   if(change==='disconnected')await s.db.query('DELETE FROM mail_connections WHERE workspace_id=$1',[a.user.workspace_id]);
+   if(change==='sender-changed')await s.db.query('UPDATE mail_connections SET email=$2 WHERE workspace_id=$1',[a.user.workspace_id,'other@example.invalid']);
+   release();const response=await pending;const allowed=change==='unchanged';
+   assert.equal(response.statusCode===200,allowed,change+': '+response.body);assert.equal(deliveries,allowed?1:0,change);
+   assert.equal((await s.db.query<{used:number}>('SELECT used FROM entitlements WHERE workspace_id=$1',[a.user.workspace_id])).rows[0].used,allowed?1:0,change);
+   assert.equal((await s.db.query('SELECT id FROM messages WHERE workspace_id=$1',[a.user.workspace_id])).rows.length,allowed?1:0,change);
+  }
+ }finally{release();globalThis.fetch=originalFetch;if(oldId===undefined)delete process.env.GOOGLE_CLIENT_ID;else process.env.GOOGLE_CLIENT_ID=oldId;if(oldSecret===undefined)delete process.env.GOOGLE_CLIENT_SECRET;else process.env.GOOGLE_CLIENT_SECRET=oldSecret;await s.app.close();await s.db.close()}
 });

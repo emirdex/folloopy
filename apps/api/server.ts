@@ -37,14 +37,14 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  if(adminConfig)app.addHook('onReady',async()=>{await admin.init(adminConfig)});
  const owner=(req:{headers:Record<string,unknown>})=>admin.owner(String(req.headers['x-user-session']||''));
  app.addHook('preValidation',async(req,reply)=>{if(req.url.startsWith('/api/admin/')){reply.header('Cache-Control','no-store');if(!['/api/admin/setup','/api/admin/setup-status'].includes(req.url.split('?')[0]))await owner(req)}});
- const workspace=async(req:{headers:Record<string,unknown>})=>{
+ const workspace=async(req:{headers:Record<string,unknown>},queryDb:DB=db)=>{
   const token=req.headers['x-user-session'];
   if(!token){if(production)throw new Error('UNAUTHORIZED');return LOCAL_WORKSPACE;}
-  const user=await accounts.current(String(token));
+  const user=await accounts.current(String(token),queryDb);
   if(!user)throw new Error('UNAUTHORIZED');
   if(production&&!user.email_verified_at)throw new Error('EMAIL_NOT_VERIFIED');
   if(!user.plan)throw new Error('PLAN_REQUIRED');
-  if(production){const entitlement=(await db.query<{status:string}>('SELECT status FROM entitlements WHERE workspace_id=$1',[user.workspace_id])).rows[0];if(entitlement?.status!=='active')throw Error('FORBIDDEN');}
+  if(production){const entitlement=(await queryDb.query<{status:string}>('SELECT status FROM entitlements WHERE workspace_id=$1',[user.workspace_id])).rows[0];if(entitlement?.status!=='active')throw Error('FORBIDDEN');}
   return user.workspace_id;
  };
  const account=async(req:{headers:Record<string,unknown>})=>{const user=await accounts.current(String(req.headers['x-user-session']||''));if(!user)throw new Error('UNAUTHORIZED');return user};
@@ -165,7 +165,14 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  app.post('/api/gmail/callback',{schema:{body:{type:'object',additionalProperties:false,required:['state','code'],properties:{state:{type:'string',maxLength:128},code:{type:'string',maxLength:4096}}}}},async req=>{const b=req.body as {state:string;code:string};await gmail.finish(await account(req),String(req.headers['x-user-session']||''),b.state,b.code);return {ok:true}});
  app.post('/api/gmail/disconnect',async req=>{await gmail.disconnect((await account(req)).workspace_id);return {ok:true}});
  app.post('/api/messages/send',{schema:{body:{type:'object',additionalProperties:false,required:['subject','to','text','tracking'],properties:{subject:{type:'string',minLength:1,maxLength:200,pattern:'^[^\\r\\n]+$'},to:{type:'string',maxLength:254,pattern:'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$'},text:{type:'string',minLength:1,maxLength:10000},tracking:{type:'boolean'}}},headers:{type:'object',required:['idempotency-key'],properties:{'idempotency-key':{type:'string',minLength:16,maxLength:128,pattern:'^[A-Za-z0-9_-]+$'}}}}},async req=>{
-  const w=await workspace(req);if(!await allowRequest(db,'single-mail-send',w,20,60))throw Error('TOO_MANY_ATTEMPTS');const connected=await gmail.provider(w);const sender=new TrackingService(db,connected.provider,origin,connected.from);return sender.send(w,String(req.headers['idempotency-key']),req.body as any);
+  const w=await workspace(req);if(!await allowRequest(db,'single-mail-send',w,20,60))throw Error('TOO_MANY_ATTEMPTS');const connected=await gmail.provider(w);const sender=new TrackingService(db,connected.provider,origin,connected.from);return sender.send(w,String(req.headers['idempotency-key']),req.body as any,undefined,async tx=>{
+   // OAuth refresh is asynchronous: never use authority captured before a logout,
+   // password reset, verification/package revocation or Gmail account change.
+   if(await workspace(req,tx)!==w)throw Error('FORBIDDEN');
+   const current=await gmail.status(w,tx);
+   if(!current.connected)throw Error('GMAIL_NOT_CONNECTED');
+   if(current.email?.toLowerCase()!==connected.from.toLowerCase())throw Error('FORBIDDEN');
+  });
  });
  app.addContentTypeParser('application/octet-stream',{parseAs:'buffer',bodyLimit:BLOG_IMAGE_LIMIT},(_req,body,done)=>done(null,body));
  app.post('/api/admin/media',{bodyLimit:BLOG_IMAGE_LIMIT},async(req,reply)=>{const user=await owner(req),bytes=req.body as Buffer;if(!Buffer.isBuffer(bytes)||bytes.length>BLOG_IMAGE_LIMIT)return reply.code(413).send({code:'INVALID_IMAGE'});const type=blogImageType(bytes);if(!type)return reply.code(415).send({code:'INVALID_IMAGE'});const name=randomUUID()+'.'+type.ext;await db.query('INSERT INTO blog_media(name,mime,bytes,owner_id) VALUES($1,$2,$3,$4)',[name,type.mime,bytes,user.id]);return reply.code(201).send({url:'/blog/media/'+name})});
