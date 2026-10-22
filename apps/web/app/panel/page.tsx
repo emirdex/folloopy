@@ -75,7 +75,7 @@ export default async function Page({searchParams}:{searchParams:Promise<Params>}
  if(p.view==='bulk')return <Shell active="bulk"><PageHeading title="Toplu Gönderim" description="Alıcı listenize ayrı ayrı gönderin. Her mailin takibi sizde kalsın."/><BulkPage campaign={p.campaign} offset={p.offset}/></Shell>;
  if(p.view==='drafts')return <Shell active="drafts"><PageHeading title="Mail Taslakları" description="Kaydettiğiniz mail içeriklerini düzenleyin ve yeniden kullanın."/><Drafts/></Shell>;
  if(p.view==='account'){await requireAccount();return <Shell active="account"><PageHeading title="Hesap Detayları" description="Profilinizi, paket kullanımınızı ve ödeme geçmişinizi yönetin."/><AccountDetails/></Shell>}
- if(p.view==='extensions'){const user=await currentAccount();return <Shell active="extensions"><PageHeading title="Eklentiler" description="Mailinizi alıştığınız yerden gönderin, takibini Folloopy’den yapın."/><ExtensionHub plan={user?.plan||null} pair={p.pair} mode={p.mode}/></Shell>}
+ if(p.view==='extensions'){const user=await currentAccount();return <Shell active="extensions"><PageHeading title="Eklentiler" description="Gmail ve Outlook eklentilerinin durumunu inceleyin, kurulum ve hesap bağlantılarınızı yönetin."/><ExtensionHub plan={user?.plan||null} pair={p.pair} mode={p.mode}/></Shell>}
  if(p.view==='guide'){await requireAccount();return <Shell active="guide"><MemberGuide/></Shell>}
  let messages:Message[]=[],online=true;
  try{messages=(await api('/api/messages')).messages}catch{online=false}
