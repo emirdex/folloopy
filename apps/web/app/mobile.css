@@ -1,0 +1,158 @@
+/* Shared mobile layout contract; tables keep their own horizontal scroll. */
+@media(max-width:900px){
+ html{scroll-padding-top:90px}
+ body :is(input,textarea,select):not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=file]){font-size:16px!important;max-width:100%}
+ body :is(input,select):not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=file]){min-height:48px}
+ body textarea{line-height:1.65}
+ .member-panel-page .workspace-body,.admin-root .admin-main,.journal-page .journal-main,.onboarding-page main{min-width:0}
+ .member-panel-page :is(.bulk-compose-grid,.draft-editor,.settings-layout,.compose-layout,.record-layout)>*,.admin-root :is(.editor-columns,.admin-detail-columns)>*{min-width:0}
+ .admin-root .admin-table-scroll,.member-panel-page .table-scroll,.mi-main .mi-table-wrap{max-width:100%;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+ .journal-page .article-body :is(img,video),.admin-root .editor-preview img{max-width:100%;height:auto}
+ .journal-page .article-body :is(pre,table){display:block;max-width:100%;overflow-x:auto}
+ .admin-root .admin-details dd,.member-panel-page :is(.record-info dd,.feed-event h3,.bulk-import-help),.journal-page :is(.journal-featured h2,.journal-card h2,.journal-deck){overflow-wrap:anywhere}
+ body :is(.search-dialog,.extension-approval-dialog){max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);overflow-y:auto;overscroll-behavior:contain}
+ .member-inspector .mi-close,.extension-approval-dialog .extension-approval-close,.search-dialog .icon-button{min-width:44px;min-height:44px}
+ .member-inspector .mi-tabs>button{min-height:44px}
+}
+@media(max-width:650px){
+ /* Let phone pages scroll naturally rather than trapping the form in a short viewport. */
+ .member-panel-page{height:auto;min-height:100dvh;overflow:visible}
+ .member-panel-page .product-shell{min-height:calc(100dvh - 48px)}
+ .member-panel-page .app-layout{min-height:0;flex:1}
+ .member-panel-page .workspace-content{height:auto;min-height:0;overflow:visible;padding-inline:16px}
+ .member-panel-page .workspace-body{flex:initial;overflow:visible;scrollbar-gutter:auto;padding-top:22px;padding-bottom:24px}
+ .member-panel-page .workspace-footer{margin-top:auto;min-height:54px;padding-bottom:max(14px,env(safe-area-inset-bottom));flex-wrap:wrap;gap:8px}
+ .member-panel-page .product-header{padding:12px;gap:8px}
+ .member-panel-page .header-actions{gap:6px;min-width:0}
+ .member-panel-page .global-search{display:grid;place-items:center;min-width:44px;min-height:44px;padding:0}
+ .member-panel-page .header-actions .connection-indicator{font-size:11px;gap:6px;padding:0}
+ .member-panel-page .header-actions .connection-indicator>span{white-space:normal;max-width:80px;line-height:1.4}
+ .member-panel-page .header-compose{min-height:44px;padding:11px 13px;font-size:13px}
+ .member-panel-page .workspace-account-menu summary{min-height:44px}
+ .member-panel-page .workspace-account-dropdown{max-width:calc(100vw - 24px);right:0}
+ .member-panel-page .section-tabs{overflow-x:auto;flex-wrap:nowrap}
+ .member-panel-page .section-tabs a{font-size:13px;min-height:44px;white-space:nowrap;flex-shrink:0}
+ .member-panel-page :is(.drafts-summary p,.draft-card p,.drafts-limit-note,.extension-intro p){font-size:14px;line-height:1.8}
+ .member-panel-page .page-heading{gap:16px;flex-wrap:wrap}
+ .member-panel-page .page-heading h1{font-size:30px;line-height:1.15;overflow-wrap:anywhere}
+ .member-panel-page .page-heading p{font-size:14px;line-height:1.75}
+ .member-panel-page :is(.bulk-card,.draft-editor-form,.draft-preview,.member-profile-card){border-radius:20px}
+ .member-panel-page :is(.bulk-card,.draft-preview){padding:22px 18px}
+ .member-panel-page :is(.bulk-label,.draft-editor-form label,.member-account-form label){font-size:13px;line-height:1.6}
+ .member-panel-page :is(.bulk-import-help,.bulk-paste,.draft-preview-note,.draft-preview-intro){font-size:14px;line-height:1.8}
+ .member-panel-page .bulk-template,.member-panel-page .bulk-paste summary{min-height:44px;font-size:14px}
+ .member-panel-page .bulk-variables button,.member-panel-page .draft-editor-variable-buttons button{min-height:44px;font-size:12px}
+ .member-panel-page .draft-editor-variable-buttons code{font-size:11px}
+ .member-panel-page .draft-editor-form>fieldset{padding:22px 18px}
+ .member-panel-page .draft-editor-form>footer{padding:20px 18px}
+ .member-panel-page .draft-editor-form>footer>div{gap:12px;align-items:stretch}
+ .member-panel-page .draft-editor-form>footer a{display:flex;align-items:center;min-height:44px;font-size:13px}
+ .member-panel-page .draft-editor-form>footer .draft-save-button{font-size:14px;flex:1;min-width:160px}
+ .member-panel-page .draft-editor-form>footer>span{font-size:12px;line-height:1.6}
+ .member-panel-page .record-info{grid-template-columns:minmax(0,1fr)}
+ .member-panel-page .record-info :is(h2,dl){grid-column:auto}
+ .member-panel-page .record-heading h1{font-size:25px;overflow-wrap:anywhere}
+ .member-panel-page .feed-event-title{flex-wrap:wrap;gap:6px}
+ .member-panel-page .feed-event h3{font-size:15px;line-height:1.5}
+ .member-panel-page .feed-event p{font-size:14px;line-height:1.7}
+ .search-dialog .dialog-heading{gap:12px}
+ .search-dialog form{display:grid;grid-template-columns:20px minmax(0,1fr);gap:10px}
+ .search-dialog form .button{grid-column:1/-1;min-height:46px}
+ .search-dialog form input{width:100%;min-width:0}
+ .search-dialog>p{font-size:13px;line-height:1.7}
+ /* Admin forms and modal content use the same phone reading sizes. */
+ .admin-root .admin-shell{padding:12px}
+ .admin-root .admin-topbar{gap:12px;padding:16px}
+ .admin-root .admin-topbar>div{width:100%;justify-content:space-between;gap:8px}
+ .admin-root .admin-topbar>div>a,.admin-root .admin-topbar button{font-size:12px;min-height:44px}
+ .admin-root .admin-heading h1{font-size:31px;line-height:1.15;overflow-wrap:anywhere}
+ .admin-root .admin-main :is(.admin-info p,.admin-note,.admin-details,.admin-table td,.admin-member-list small){font-size:13px;line-height:1.75}
+ .admin-root .admin-table :is(th,small){font-size:12px;line-height:1.6}
+ .admin-root .admin-table td{padding:16px}
+ .admin-root .admin-row-link{width:44px;height:44px}
+ .admin-root .admin-search{flex-wrap:wrap;padding:16px;gap:10px}
+ .admin-root .admin-search input{flex:1;min-width:100px}
+ .admin-root .admin-search button,.admin-root .admin-search>a{min-height:44px;display:flex;align-items:center;font-size:13px}
+ .admin-root .admin-section-title{padding:20px 16px;gap:12px;flex-wrap:wrap}
+ .admin-root .admin-section-title a{font-size:13px;min-height:44px;display:flex;align-items:center}
+ .admin-root .admin-member-list{padding-inline:16px}
+ .admin-root .admin-member-list>a{flex-wrap:wrap;min-width:0}
+ .admin-root .admin-member-list>a>div{min-width:0;flex:1}
+ .admin-root .admin-member-list strong{font-size:14px;overflow-wrap:anywhere}
+ .admin-root .admin-member-list small{overflow-wrap:anywhere}
+ .admin-root .admin-details>div{grid-template-columns:minmax(0,1fr);gap:5px}
+ .admin-root .editor-toolbar{position:static;gap:10px;align-items:stretch}
+ .admin-root .editor-toolbar>.admin-quiet{flex-basis:100%;display:flex;align-items:center;min-height:44px;font-size:14px}
+ .admin-root .editor-toolbar :is(.admin-primary,.admin-secondary){flex:1;min-height:48px;font-size:13px}
+ .admin-root .editor-columns>.admin-surface{padding:22px 18px}
+ .admin-root .admin-form label{font-size:13px;line-height:1.6}
+ .admin-root .admin-form small{font-size:12px;line-height:1.7}
+ .admin-root .editor-formatting{flex-wrap:wrap}
+ .admin-root .editor-formatting button{width:44px;min-height:44px}
+ .admin-root .editor-inline-image{min-width:0;grid-template-columns:minmax(0,1fr)}
+ .admin-root .editor-upload{min-height:46px;font-size:13px;white-space:normal}
+ .admin-root .admin-pagination{font-size:13px;gap:12px;flex-wrap:wrap}
+ .admin-root .admin-pagination a{min-height:44px;display:flex;align-items:center}
+ .member-inspector .mi-main-heading{padding:18px 16px;gap:12px;align-items:flex-start}
+ .member-inspector .mi-main-heading h2{font-size:24px!important;overflow-wrap:anywhere}
+ .member-inspector .mi-header-actions{gap:5px}
+ .member-inspector .mi-content{padding:18px 14px}
+ .member-inspector .mi-section{padding:17px 14px}
+ .member-inspector :is(.mi-fields dt,.mi-section>header p,.mi-note,.mi-timeline p,.mi-info p,.mi-channels small){font-size:12px;line-height:1.75}
+ .member-inspector :is(.mi-fields dd,.mi-channels strong,.mi-timeline strong){font-size:14px;line-height:1.6}
+ .member-inspector .mi-fields>div{grid-template-columns:minmax(0,1fr);gap:4px}
+ .member-inspector .mi-tabs>button{font-size:12px;padding-inline:13px}
+ .member-inspector .mi-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .member-inspector .mi-kpis span{font-size:11px;line-height:1.6;display:block}
+ .member-inspector .mi-timeline li{flex-wrap:wrap}
+ .member-inspector .mi-timeline time{max-width:none;margin-left:43px;font-size:11px}
+ .member-inspector .mi-footer{flex-wrap:wrap;gap:6px;padding:12px 14px;font-size:10px}
+ .member-inspector .mi-table td{font-size:12px}
+ /* Public pages retain a comfortable reading width and consistent side gutters. */
+ .journal-page .journal-main{margin-inline:20px;min-width:0}
+ .journal-page .journal-toolbar{gap:18px}
+ .journal-page .journal-toolbar form{width:100%;min-height:48px;padding:0 12px;border:1px solid #dfe7f4;border-radius:13px}
+ .journal-page .journal-toolbar input{width:100%;flex:1}
+ .journal-page .journal-toolbar button{min-width:44px;min-height:44px}
+ .journal-page :is(.journal-card p,.journal-featured p){font-size:15px;line-height:1.8}
+ .journal-page .article-body :is(p,li){font-size:16px;line-height:1.85;overflow-wrap:anywhere}
+ .journal-page .article-body h2{font-size:26px;line-height:1.25;overflow-wrap:anywhere}
+ .journal-page .journal-article h1{font-size:clamp(32px,9vw,42px);line-height:1.12;overflow-wrap:anywhere}
+ .journal-page .journal-deck{font-size:17px;line-height:1.7}
+ .journal-page .journal-article-end a{display:inline-flex;align-items:center;min-height:44px}
+ .onboarding-page .password-input>button{min-width:44px;min-height:44px;display:grid;place-items:center}
+ .onboarding-page .flow-header{gap:12px}
+ .onboarding-page .flow-header-actions{flex-wrap:wrap}
+ .onboarding-page :is(.account-form label,.billing-fields label){font-size:14px}
+ .onboarding-page .account-name-row{gap:10px;min-width:0}
+ .onboarding-page .account-name-row>label{min-width:0}
+ .onboarding-page .billing-fields{grid-template-columns:minmax(0,1fr)}
+ .onboarding-page .billing-fields>*{min-width:0}
+ .onboarding-page .billing-submit{min-height:50px;font-size:15px;white-space:normal}
+ .onboarding-page .membership-billing-caption{line-height:1.7}
+ .landing-page :is(.site-button,.site-menu-button){min-height:44px}
+ .landing-page .site-menu-button{min-width:44px}
+ .landing-page .hero-buttons{flex-wrap:wrap}
+ .landing-page :is(.hero-copy h1,.section-heading h2){overflow-wrap:anywhere}
+ .legal-page :is(.legal-body,.corporate-grid,.contact-form-fields)>*{min-width:0}
+ .legal-page .contact-form label{font-size:14px;line-height:1.6}
+ .legal-page .contact-submit{min-height:48px;font-size:15px}
+ .legal-page .merchant-details dd{overflow-wrap:anywhere}
+ .legal-page .legal-header{flex-wrap:wrap}
+ .legal-page .legal-document :is(p,li){font-size:16px;line-height:1.85}
+}
+@media(max-width:360px){
+ .member-panel-page .product-header{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+ .member-panel-page .header-actions{width:100%;display:grid;grid-template-columns:44px minmax(0,1fr) auto;margin:0}
+ .member-panel-page .header-actions .connection-indicator{justify-self:center}
+ .member-panel-page .workspace-account-bar{padding-inline:12px}
+ .member-panel-page .workspace-content{padding-inline:14px}
+ .member-panel-page .metric{padding:16px 12px}
+ .member-panel-page .metric-top{font-size:12px}
+ .member-panel-page .draft-editor-form>footer>div{flex-direction:column}
+ .onboarding-page .flow-header-actions{width:100%;justify-content:flex-end}
+ .journal-page .journal-main{margin-inline:16px}
+ .member-inspector .mi-kpis{grid-template-columns:minmax(0,1fr)}
+ .member-inspector .mi-kpis>div{padding:12px 14px}
+ .member-inspector .mi-kpis strong{margin:0 0 4px}
+}
