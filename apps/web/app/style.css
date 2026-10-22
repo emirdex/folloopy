@@ -130,3 +130,6 @@ input,textarea,select{scroll-margin-block:100px}
 .message-table .tracking-on>i{background:#39a574;box-shadow:0 0 0 3px #43ab7d12;animation:mail-tracking-pulse 2.2s ease-in-out infinite}
 @keyframes mail-tracking-pulse{0%,100%{opacity:1;box-shadow:0 0 0 3px #43ab7d12}50%{opacity:.38;box-shadow:0 0 0 5px #43ab7d05}}
 @media(prefers-reduced-motion:reduce){.message-table .tracking-on>i{animation:none}}
+
+/* Subtle branded glass badge in the message summary. */
+.gmail-channel-glass{display:inline-flex;align-items:center;justify-content:center;padding:6px 12px;border:1px solid #dbe5f8bd;border-radius:11px;background:linear-gradient(125deg,#edf4ffb8,#ffffffd9 48%,#eef7f2a6);box-shadow:inset 0 1px 0 #fff,0 3px 10px #5b7dac0b;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);font-weight:500;line-height:1.35;white-space:nowrap}
