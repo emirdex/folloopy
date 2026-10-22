@@ -15,7 +15,7 @@
   const compose=body.closest('[role="dialog"]');if(!compose||compose.querySelector('.folloopy-compose'))return;
   const toolbar=compose.querySelector('[role="button"][data-tooltip*="Send"], [role="button"][data-tooltip*="Gönder"], [role="button"][aria-label^="Send"], [role="button"][aria-label^="Gönder"]');if(!toolbar)return;
   const wrap=document.createElement('div');wrap.className='folloopy-compose';
-  const button=document.createElement('button');button.type='button';button.textContent='Folloopy ile gönder ↗';
+  const button=document.createElement('button');button.type='button';button.textContent='Folloopy ile gönder';
   const note=document.createElement('span');note.setAttribute('role','status');note.setAttribute('aria-live','polite');note.className='folloopy-compose-status';
   button.title='Bu mesajı Folloopy takibiyle gönderin. Bağlı hesap ve paket gönderim sırasında doğrulanır.';
   wrap.append(button,note);
