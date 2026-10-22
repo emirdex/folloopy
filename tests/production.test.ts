@@ -96,3 +96,19 @@ test('OAuth failures identify the failed stage without storing incomplete connec
   globalThis.fetch=originalFetch;if(oldId===undefined)delete process.env.GOOGLE_CLIENT_ID;else process.env.GOOGLE_CLIENT_ID=oldId;if(oldSecret===undefined)delete process.env.GOOGLE_CLIENT_SECRET;else process.env.GOOGLE_CLIENT_SECRET=oldSecret;await app.close();await db.close();
  }
 });
+
+test('Reactivating the current package is a no-op without quota, grant or purchase changes',async()=>{
+ const s=await setup();try{
+  const u=await s.user('existing-plan@example.invalid');await s.db.query('UPDATE users SET email_verified_at=now() WHERE id=$1',[u.id]);
+  for(const plan of ['individual','team']){
+   const first=await s.call('/api/access/activate',{plan},u.token);assert.equal(first.statusCode,200);assert.equal(first.json().alreadyActive,false);
+   await s.db.query('UPDATE entitlements SET used=37,message_limit=75 WHERE workspace_id=$1',[u.workspace_id]);
+   const before=(await s.db.query('SELECT * FROM access_grants WHERE workspace_id=$1',[u.workspace_id])).rows;
+   const repeated=await s.call('/api/access/activate',{plan},u.token);assert.equal(repeated.statusCode,200);assert.equal(repeated.json().alreadyActive,true);
+   assert.deepEqual((await s.db.query('SELECT * FROM access_grants WHERE workspace_id=$1',[u.workspace_id])).rows,before);
+   const quota=(await s.db.query<{used:number;message_limit:number}>('SELECT used,message_limit FROM entitlements WHERE workspace_id=$1',[u.workspace_id])).rows[0];assert.equal(quota.used,37);assert.equal(quota.message_limit,75);
+   assert.equal((await s.db.query('SELECT * FROM purchases WHERE workspace_id=$1',[u.workspace_id])).rows.length,0);
+  }
+  await s.db.query("UPDATE entitlements SET status='suspended' WHERE workspace_id=$1",[u.workspace_id]);assert.equal((await s.call('/api/access/activate',{plan:'team'},u.token)).statusCode,403);
+ }finally{await s.app.close();await s.db.close()}
+});

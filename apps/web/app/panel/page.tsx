@@ -82,7 +82,7 @@ export default async function Page({searchParams}:{searchParams:Promise<Params>}
   return <Shell active="drafts"><PageHeading title={draft?'Taslağı Düzenle':'Yeni Taslak'} description="Yeniden kullanabileceğiniz, kişiselleştirilmiş mail içerikleri hazırlayın."/><DraftEditor key={p.draft||'new'} draft={draft} bulkAllowed={user?.plan==='team'||user?.plan==='business'}/></Shell>;
  }
  if(p.view==='drafts')return <Shell active="drafts"><PageHeading title="Mail Taslakları" description="Kaydettiğiniz mail içeriklerini düzenleyin ve yeniden kullanın."/><Drafts/></Shell>;
- if(p.view==='account'){await requireAccount();return <Shell active="account"><PageHeading title="Hesap Detayları" description="Profilinizi, paket kullanımınızı ve ödeme geçmişinizi yönetin."/><AccountDetails/></Shell>}
+ if(p.view==='account'){await requireAccount();return <Shell active="account"><PageHeading title="Hesap Detayları" description={p.mode==='plan-already-active'?'Bu paket hesabınızda zaten etkin. Yeniden ödeme veya etkinleştirme yapmanız gerekmiyor.':'Profilinizi, paket kullanımınızı ve ödeme geçmişinizi yönetin.'}/><AccountDetails/></Shell>}
  if(p.view==='extensions'){const user=await currentAccount();return <Shell active="extensions"><PageHeading title="Eklentiler" description="Gmail ve Outlook eklentilerinin durumunu inceleyin, kurulum ve hesap bağlantılarınızı yönetin."/><ExtensionHub plan={user?.plan||null} pair={p.pair} mode={p.mode}/></Shell>}
  if(p.view==='guide'){await requireAccount();return <Shell active="guide"><MemberGuide/></Shell>}
  let messages:Message[]=[],online=true;

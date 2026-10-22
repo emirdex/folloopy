@@ -51,15 +51,18 @@ export class Accounts{
  async logout(token:string){await this.db.query('DELETE FROM sessions WHERE token_hash=$1',[digest(token)])}
  async grant(account:Account,plan:Plan){
   if(!Object.hasOwn(plans,plan))throw new Error('INVALID_PLAN');
-  await this.db.transaction(async tx=>{
+  return this.db.transaction(async tx=>{
    const user=(await tx.query<{email_verified_at:string|null}>('SELECT email_verified_at FROM users WHERE id=$1 AND workspace_id=$2 FOR UPDATE',[account.id,account.workspace_id])).rows[0];
    if(!user)throw Error('UNAUTHORIZED');
    if(this.production&&!user.email_verified_at)throw Error('EMAIL_NOT_VERIFIED');
    if(this.production&&plan==='business')throw Error('INVALID_PLAN');
    const entitlement=(await tx.query<{status:string}>('SELECT status FROM entitlements WHERE workspace_id=$1 FOR UPDATE',[account.workspace_id])).rows[0];
    if(entitlement&&(entitlement.status==='suspended'||(this.production&&entitlement.status!=='active')))throw Error('FORBIDDEN');
+   const existing=(await tx.query<{plan:string}>('SELECT plan FROM access_grants WHERE workspace_id=$1',[account.workspace_id])).rows[0];
+   if(entitlement?.status==='active'&&existing?.plan===plan)return {changed:false};
    await tx.query("INSERT INTO access_grants(workspace_id,plan,mode) VALUES($1,$2,'complimentary') ON CONFLICT(workspace_id) DO UPDATE SET plan=excluded.plan",[account.workspace_id,plan]);
    await tx.query("INSERT INTO entitlements(workspace_id,status,message_limit) VALUES($1,'active',$2) ON CONFLICT(workspace_id) DO UPDATE SET status='active',message_limit=excluded.message_limit",[account.workspace_id,plans[plan].limit]);
+   return {changed:true};
   });
  }
 

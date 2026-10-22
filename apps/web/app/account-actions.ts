@@ -26,7 +26,9 @@ async function closeAccountSession(){await accountApi('/api/auth/logout',{});con
 export async function logoutAccount(){await closeAccountSession();redirect('/')}
 export async function leaveVerification(){await closeAccountSession();redirect('/giris')}
 export async function completePurchase(_state:FormState,form:FormData):Promise<FormState>{
- await requireVerifiedAccount();
+ const user=await requireVerifiedAccount();
+ const requestedPlan=String(form.get('plan'));
+ if(['individual','team'].includes(requestedPlan)&&user.plan===requestedPlan)redirect('/panel?view=account&mode=plan-already-active');
  const production=process.env.NODE_ENV==='production';
  if(production&&process.env.BILLING_MODE!=='complimentary')return {error:'Paket aktivasyonu şu anda kullanılamıyor. Lütfen info@folloopy.com ile iletişime geçin.'};
  const plan=String(form.get('plan'));
@@ -34,8 +36,9 @@ export async function completePurchase(_state:FormState,form:FormData):Promise<F
  if(form.get('deferInvoice')!=='on'){
   try{const profile=billingProfile(Object.fromEntries(['kind','name','email','city','district','address','postalCode','companyName','taxOffice','taxNumber'].map(key=>[key,String(form.get(key)||'')])));await accountApi('/api/account/billing',profile)}catch{return {error:'Fatura bilgilerinizi kontrol edin. Şirket için 10 haneli vergi numarası, adres ve iletişim bilgileri gereklidir.'}}
  }
- try{await accountApi(production?'/api/access/activate':'/api/purchase-preview',production?{plan}:{plan,idempotencyKey:String(form.get('purchaseKey')||'')})}catch{return {error:'Paketiniz etkinleştirilemedi. Tekrar deneyin.'}}
- redirect('/odeme/tamamlandi');
+ let alreadyActive=false;
+ try{const result=await accountApi(production?'/api/access/activate':'/api/purchase-preview',production?{plan}:{plan,idempotencyKey:String(form.get('purchaseKey')||'')});alreadyActive=result.alreadyActive===true}catch{return {error:'Paketiniz etkinleştirilemedi. Tekrar deneyin.'}}
+ redirect(alreadyActive?'/panel?view=account&mode=plan-already-active':'/odeme/tamamlandi');
 }
 
 function entryQuery(form:FormData){const plan=String(form.get('preferredPlan')||'');return ['individual','team'].includes(plan)?'?plan='+plan+'&billing='+billingPeriod(form.get('billing')):''}

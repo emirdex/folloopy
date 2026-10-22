@@ -147,7 +147,7 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  app.post('/api/access/activate',{schema:{body:{type:'object',additionalProperties:false,required:['plan'],properties:{plan:{type:'string',enum:['individual','team']}}}}},async(req,reply)=>{
   const user=await account(req);if(production&&!user.email_verified_at)throw Error('EMAIL_NOT_VERIFIED');
   if(options.billing!=='complimentary')return reply.code(403).send({code:'BILLING_UNAVAILABLE'});
-  await accounts.grant(user,(req.body as {plan:Plan}).plan);return {ok:true,mode:'complimentary'};
+  const result=await accounts.grant(user,(req.body as {plan:Plan}).plan);return {ok:true,mode:'complimentary',alreadyActive:!result.changed};
  });
  app.get('/api/auth/verify/code/status',async(req,reply)=>{if(!security)return reply.code(503).send({code:'EMAIL_UNAVAILABLE'});return security.codeStatus((await account(req)).id)});
  app.post('/api/auth/verify/code/request',async(req,reply)=>{const user=await account(req);if(!security)return reply.code(503).send({code:'EMAIL_UNAVAILABLE'});if(!await allowRequest(db,'verify-code-send',user.id,5))return reply.code(429).send({code:'TOO_MANY_ATTEMPTS'});await security.issueVerificationCode(user.id);return {ok:true,resendAfter:60}});
