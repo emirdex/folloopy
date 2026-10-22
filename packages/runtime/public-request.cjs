@@ -13,7 +13,8 @@ function guardPublicRequest(req,origin){
  const unsafe=!['GET','HEAD','OPTIONS'].includes(req.method||'GET');
  if(unsafe){
   const source=req.headers.origin;
-  if(typeof source!=='string'||source!==trusted.origin)return 403;
+  const extension=req.url==='/eklentiler/api'&&req.method==='POST'&&/^chrome-extension:\/\/[a-p]{32}$/.test(source||'');
+  if(!extension&&(typeof source!=='string'||source!==trusted.origin))return 403;
  }
  // Upstream forwarded values are not an authority for redirects or action forwarding.
  req.headers.host=trusted.host;

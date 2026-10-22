@@ -1,0 +1,11 @@
+{
+ "manifest_version":3,
+ "name":"Folloopy — Gmail Takibi",
+ "version":"1.0.0",
+ "description":"Gmail’de hazırladığınız tek alıcılı metin mesajlarını Folloopy takibiyle gönderin. Signature üyeliği ve bağlı Gmail hesabı gerekir.",
+ "permissions":["storage"],
+ "host_permissions":["https://panel.folloopy.com/*"],
+ "background":{"service_worker":"background.js"},
+ "action":{"default_popup":"popup.html","default_title":"Folloopy"},
+ "content_scripts":[{"matches":["https://mail.google.com/*"],"js":["gmail.js"],"css":["gmail.css"]}]
+}

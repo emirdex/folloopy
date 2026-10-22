@@ -26,7 +26,7 @@ export const dynamic='force-dynamic';
 type Message={id:string;subject:string;state:string;provider:string;sent_at:string|null;created_at:string;tracking_enabled:boolean;raw_count:number;unknown_count:number;activity_count:number;first_activity_at:string|null;last_activity_at:string|null};
 type Observation={id:string;occurred_at:string;kind:string;source:string|null;classifier_version:string|null};
 type Detail={message:Pick<Message,'id'|'subject'|'state'|'provider'|'sent_at'|'tracking_enabled'|'activity_count'|'first_activity_at'|'last_activity_at'>;events:Observation[];openings:{first_at:string;last_at:string}[]};
-type Params={q?:string;id?:string;filter?:string;view?:string;mode?:string;reason?:string;welcome?:string;draft?:string;campaign?:string;offset?:string};
+type Params={q?:string;id?:string;filter?:string;view?:string;mode?:string;reason?:string;welcome?:string;draft?:string;campaign?:string;offset?:string;pair?:string};
 const states:Record<string,string>={sent:'Gönderim onaylandı',sending:'Gönderim kontrol ediliyor',unknown:'Gönderim kontrol ediliyor',failed:'Gönderilemedi',prepared:'Hazırlanıyor'};
 async function api(path:string,init?:RequestInit){
  await requirePanel();
@@ -75,7 +75,7 @@ export default async function Page({searchParams}:{searchParams:Promise<Params>}
  if(p.view==='bulk')return <Shell active="bulk"><PageHeading title="Toplu Gönderim" description="Alıcı listenize ayrı ayrı gönderin. Her mailin takibi sizde kalsın."/><BulkPage campaign={p.campaign} offset={p.offset}/></Shell>;
  if(p.view==='drafts')return <Shell active="drafts"><PageHeading title="Mail Taslakları" description="Kaydettiğiniz mail içeriklerini düzenleyin ve yeniden kullanın."/><Drafts/></Shell>;
  if(p.view==='account'){await requireAccount();return <Shell active="account"><PageHeading title="Hesap Detayları" description="Profilinizi, paket kullanımınızı ve ödeme geçmişinizi yönetin."/><AccountDetails/></Shell>}
- if(p.view==='extensions'){const user=await currentAccount();return <Shell active="extensions"><PageHeading title="Eklentiler" description="Mailinizi alıştığınız yerden gönderin, takibini Folloopy’den yapın."/><ExtensionHub plan={user?.plan||null}/></Shell>}
+ if(p.view==='extensions'){const user=await currentAccount();return <Shell active="extensions"><PageHeading title="Eklentiler" description="Mailinizi alıştığınız yerden gönderin, takibini Folloopy’den yapın."/><ExtensionHub plan={user?.plan||null} pair={p.pair} mode={p.mode}/></Shell>}
  if(p.view==='guide'){await requireAccount();return <Shell active="guide"><MemberGuide/></Shell>}
  let messages:Message[]=[],online=true;
  try{messages=(await api('/api/messages')).messages}catch{online=false}

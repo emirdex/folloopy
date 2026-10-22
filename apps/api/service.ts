@@ -18,13 +18,14 @@ export async function seedLocal(db:DB){
 }
 export class TrackingService {
  constructor(readonly db:DB,private provider:MailProvider,private origin:string,private from='local-test@example.invalid'){}
- async send(workspace:string,key:string,input:SendInput,reservation?:{recipientId:string;lease:string}){
+ async send(workspace:string,key:string,input:SendInput,reservation?:{recipientId:string;lease:string},authorize?:(tx:DB)=>Promise<void>){
   if(/[\r\n]/.test(this.from)||/[\r\n]/.test(input.to)||/[\r\n]/.test(input.subject))throw new Error('INVALID_MESSAGE');
   const hash=tokenHash(JSON.stringify(input));
   const prepared=await this.db.transaction(async tx=>{
    // Tek workspace kilidi: aynı idempotency key ve son kota hakkı eşzamanlı tüketilemez.
    const entitlement=(await tx.query<{status:string;used:number;message_limit:number}>('SELECT * FROM entitlements WHERE workspace_id=$1 FOR UPDATE',[workspace])).rows[0];
    if(!entitlement) throw new Error('FORBIDDEN');
+   if(authorize)await authorize(tx);
    const existing=(await tx.query<{id:string;state:string;payload_hash:string}>('SELECT id,state,payload_hash FROM messages WHERE workspace_id=$1 AND idempotency_key=$2',[workspace,key])).rows[0];
    if(existing){if(existing.payload_hash!==hash) throw new Error('IDEMPOTENCY_CONFLICT');return {id:existing.id,state:existing.state,replay:true};}
    if(!['active','local_test'].includes(entitlement.status)||(!reservation&&entitlement.used>=entitlement.message_limit)) throw new Error('LIMIT_REACHED');

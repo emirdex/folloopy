@@ -1,0 +1,5 @@
+CREATE TABLE extension_pairs(id uuid PRIMARY KEY, challenge text NOT NULL, public_key jsonb NOT NULL, user_id uuid REFERENCES users(id) ON DELETE CASCADE, session_hash text, sender text, expires_at timestamptz NOT NULL, consumed boolean NOT NULL DEFAULT false);
+CREATE TABLE extension_devices(id uuid PRIMARY KEY, user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE, workspace_id uuid NOT NULL REFERENCES workspaces(id), session_hash text NOT NULL, token_hash text NOT NULL, public_key jsonb NOT NULL, sender text NOT NULL, expires_at timestamptz NOT NULL, revoked boolean NOT NULL DEFAULT false, created_at timestamptz NOT NULL DEFAULT now(), last_seen_at timestamptz);
+CREATE INDEX extension_devices_user ON extension_devices(user_id);
+CREATE TABLE extension_nonces(device_id uuid NOT NULL REFERENCES extension_devices(id) ON DELETE CASCADE, nonce uuid NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY(device_id,nonce));
+CREATE INDEX extension_nonces_created ON extension_nonces(created_at);

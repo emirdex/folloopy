@@ -13,7 +13,7 @@
     "worker": "node --import tsx apps/worker/main.ts",
     "test": "node --import tsx --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "build": "next build apps/web --webpack",
+    "build": "node scripts/build-extension.mjs && next build apps/web --webpack",
     "db:migrate": "node --import tsx scripts/migrate.ts",
     "smoke": "node --import tsx scripts/smoke.ts",
     "start": "node server.cjs",

@@ -15,3 +15,5 @@ backups/
 work/
 *.png
 !apps/web/public/**/*.png
+
+apps/web/extension-release/

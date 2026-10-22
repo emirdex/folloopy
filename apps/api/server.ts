@@ -1,3 +1,4 @@
+import {GmailExtension} from './gmail-extension';
 import {billingProfile} from '../../packages/domain/billing-profile';
 import {BulkMail} from './bulk-mail';
 import type {BulkInput} from '../../packages/domain/bulk-mail';
@@ -30,6 +31,7 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  const accounts=new Accounts(db,production);
  const admin=new AdminService(db,accounts),blog=new BlogService(db);
  const bulk=new BulkMail(db,gmail,options.encryptionKey,origin,production);
+ const extension=new GmailExtension(db,gmail,origin);
  const drafts=new MailDrafts(db,options.encryptionKey,production);
  const accountDetails=new AccountDetails(db,options.site||origin,options.encryptionKey);
  if(adminConfig)app.addHook('onReady',async()=>{await admin.init(adminConfig)});
@@ -50,11 +52,12 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  // Only login, recovery and verification are available before email ownership is proven.
  const onboardingRoutes=new Set(['/api/auth/register','/api/auth/login','/api/auth/me','/api/auth/logout','/api/auth/verify/request','/api/auth/verify/confirm','/api/auth/reset/request','/api/auth/reset/confirm','/api/auth/verify/code/status','/api/auth/verify/code/request','/api/auth/verify/code/confirm','/api/admin/setup','/api/admin/setup-status','/api/account/email/confirm','/api/enterprise-requests']);
  app.addHook('preValidation',async req=>{
+  if(req.url==='/api/extension/transport')return;
   if(!production||!req.url.startsWith('/api/')||onboardingRoutes.has(req.url.split('?')[0]))return;
   const user=await account(req);if(!user.email_verified_at)throw Error('EMAIL_NOT_VERIFIED');
   if(req.url.startsWith('/api/gmail/'))await workspace(req);
   const path=req.url.split('?')[0];
-  if(path==='/api/gmail/start'||path==='/api/gmail/disconnect'||path==='/api/access/activate'){
+  if(path==='/api/extension/approve'||path==='/api/extension/revoke'||path==='/api/gmail/start'||path==='/api/gmail/disconnect'||path==='/api/access/activate'){
    if(!await allowRequest(db,'private-mutation:'+path,user.id,30))throw Error('TOO_MANY_ATTEMPTS');
   }
  });
@@ -154,6 +157,10 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
   app.post('/api/auth/'+purpose+'/request',{schema:{body:{type:'object',additionalProperties:false,required:['email'],properties:{email:credentials.properties.email}}},preHandler:authRate},async(req,reply)=>{if(!security)return reply.code(503).send({code:'EMAIL_UNAVAILABLE'});await security.request((req.body as {email:string}).email,purpose);return {ok:true}});
   app.post('/api/auth/'+purpose+'/confirm',{schema:{body:{...tokenBody,required:purpose==='reset'?['token','password']:['token']}},preHandler:async(_req,reply)=>{if(!await allowRequest(db,'token-confirm','all',200))return reply.code(429).send({code:'TOO_MANY_ATTEMPTS'})}},async(req,reply)=>{if(!security)return reply.code(503).send({code:'EMAIL_UNAVAILABLE'});const b=req.body as {token:string;password?:string};await security.consume(b.token,purpose,b.password,purpose==='verify'?(await account(req)).id:undefined);return {ok:true}});
  }
+ app.post('/api/extension/transport',async req=>{const b=req.body as any;if(b?.operation==='pair')return extension.begin(b.payload);if(b?.operation==='exchange')return extension.exchange(b.payload);return extension.request(b)});
+ app.get('/api/extension/status',async req=>extension.status(await account(req)));
+ app.post('/api/extension/approve',async req=>extension.approve(await account(req),String(req.headers['x-user-session']||''),String((req.body as any)?.id||'')));
+ app.post('/api/extension/revoke',async req=>extension.revoke(await account(req)));
  app.post('/api/gmail/start',async req=>{const user=await account(req);if(production&&!user.email_verified_at)throw Error('EMAIL_NOT_VERIFIED');return {url:await gmail.begin(user,String(req.headers['x-user-session']||''))}});
  app.post('/api/gmail/callback',{schema:{body:{type:'object',additionalProperties:false,required:['state','code'],properties:{state:{type:'string',maxLength:128},code:{type:'string',maxLength:4096}}}}},async req=>{const b=req.body as {state:string;code:string};await gmail.finish(await account(req),String(req.headers['x-user-session']||''),b.state,b.code);return {ok:true}});
  app.post('/api/gmail/disconnect',async req=>{await gmail.disconnect((await account(req)).workspace_id);return {ok:true}});

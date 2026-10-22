@@ -5,7 +5,7 @@ export function siteOrigins(env:Record<string,string|undefined>){
  return {publicOrigin,appOrigin,split:publicOrigin!==appOrigin};
 }
 function origin(value:string){const url=new URL(value);if(!['https:','http:'].includes(url.protocol)||url.username||url.password||url.pathname!=='/'||url.search||url.hash)throw Error('CONFIG_ORIGIN_INVALID');return url.origin}
-export function isAccountPath(path:string){return ['/giris','/kayit','/panel','/admin','/hesap','/paketler','/odeme','/sifre-yenile','/sifremi-unuttum','/baglantilar'].some(prefix=>path===prefix||path.startsWith(prefix+'/'))}
+export function isAccountPath(path:string){return ['/giris','/kayit','/panel','/admin','/hesap','/paketler','/odeme','/sifre-yenile','/sifremi-unuttum','/baglantilar','/eklentiler'].some(prefix=>path===prefix||path.startsWith(prefix+'/'))}
 export function isPublicPath(path:string){return path==='/'||['/blog','/hakkimizda','/iletisim','/yasal'].some(prefix=>path===prefix||path.startsWith(prefix+'/'))}
 export function destinationHref(href:string,env:Record<string,string|undefined>){
  if(!href.startsWith('/')||href.startsWith('//'))return href;

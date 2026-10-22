@@ -18,3 +18,12 @@ test('Only the explicit public www alias redirects; unsafe requests and unknown 
  for(const request of [{method:'POST',url:'/giris',headers:{host:'www.folloopy.com'}},{method:'GET',url:'/kayit',headers:{host:'attacker.folloopy.com'}},{method:'GET',url:'//evil.example',headers:{host:'www.folloopy.com'}}])assert.equal(canonicalRedirect(request,origins.SITE_URL,true),null);
  assert.equal(canonicalRedirect({method:'GET',url:'/giris',headers:{host:'www.panel.folloopy.com'}},origins.APP_URL,false),null);
 });
+
+test('Chrome origin exception is limited to the credential-free extension transport',()=>{
+ const origin='https://panel.folloopy.com';
+ const req=(url:string,source:string,method='POST')=>({url,method,headers:{host:'panel.folloopy.com',origin:source}});
+ const extension='chrome-extension://'+'a'.repeat(32);
+ assert.equal(guardPublicRequest(req('/eklentiler/api',extension),origin),null);
+ for(const path of ['/panel','/eklentiler/indir','/eklentiler/api/other','/eklentiler/api?x=1','/api/auth/logout'])assert.equal(guardPublicRequest(req(path,extension),origin),403);
+ for(const source of ['https://attacker.example','chrome-extension://invalid','null',''])assert.equal(guardPublicRequest(req('/eklentiler/api',source),origin),403);
+});
