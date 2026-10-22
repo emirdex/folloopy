@@ -10,7 +10,12 @@
   const toolbar=compose.querySelector('[role="button"][data-tooltip*="Send"], [role="button"][data-tooltip*="Gönder"], [role="button"][aria-label^="Send"], [role="button"][aria-label^="Gönder"]');if(!toolbar)return;
   const wrap=document.createElement('div');wrap.className='folloopy-compose';
   const button=document.createElement('button');button.type='button';button.textContent='Folloopy ile gönder ↗';
-  const note=document.createElement('span');note.setAttribute('role','status');note.textContent='Takip açık · Düz metin';wrap.append(button,note);toolbar.parentElement.append(wrap);
+  const note=document.createElement('span');note.setAttribute('role','status');note.setAttribute('aria-live','polite');note.className='folloopy-compose-status';
+  button.title='Bu mesajı Folloopy takibiyle gönderin. Bağlı hesap ve paket gönderim sırasında doğrulanır.';
+  wrap.append(button,note);
+  // Keep our control outside Gmail's native split Send button.
+  const mount=toolbar.closest?.('td')||toolbar.parentElement.parentElement||toolbar.parentElement;
+  mount.append(wrap);
   let key=crypto.randomUUID(),fingerprint='',locked=false;
   button.onclick=async()=>{
    if(locked)return;button.disabled=true;
