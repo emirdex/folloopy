@@ -95,3 +95,5 @@
 .flow-header-actions{display:flex;align-items:center;gap:20px}.flow-header-actions form{margin:0}@media(max-width:650px){.flow-header-actions{gap:12px}.flow-header-actions .flow-quiet{font-size:10px;gap:4px}.flow-header-actions .flow-quiet svg{width:12px;height:12px}}
 
 .account-form .account-name-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}.account-form .account-name-row>label{min-width:0;margin:0}.account-form .account-name-row input{min-width:0;width:100%}@media(max-width:480px){.account-form .account-name-row{gap:10px}}
+
+.recovery-lock{overflow:visible}.recovery-lock-shackle{transform-origin:7px 11px}.auth-recovery-link:focus-visible .recovery-lock-shackle{animation:recovery-unlock 1.65s cubic-bezier(.4,0,.2,1) infinite}@media(hover:hover){.auth-recovery-link:hover .recovery-lock-shackle{animation:recovery-unlock 1.65s cubic-bezier(.4,0,.2,1) infinite}}@keyframes recovery-unlock{0%,12%,82%,100%{transform:rotate(0)}32%,55%{transform:rotate(-28deg)}}@media(prefers-reduced-motion:reduce){.auth-recovery-link:hover .recovery-lock-shackle,.auth-recovery-link:focus-visible .recovery-lock-shackle{animation:none}}
