@@ -1,9 +1,15 @@
 (()=>{
  const text=(node,message)=>{node.textContent=message};
  function currentSender(){
-  const account=document.querySelector('a[href*="accounts.google.com/SignOutOptions"]')||document.querySelector('a[aria-label*="Google"]');
-  const label=(account?.getAttribute('aria-label')||'')+' '+(account?.getAttribute('data-email')||'');
-  return label.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/)?.[0]?.toLowerCase();
+  // Gmail also renders the account switcher as a button (including Workspace).
+  // Read only account controls, never message text or the selected recipient.
+  const selectors=['[aria-label*="Google Hesabı:"][aria-label*="@"]','[aria-label*="Google Account:"][aria-label*="@"]','a[href*="accounts.google.com/SignOutOptions"]','[role="banner"] [aria-label*="Google"][aria-label*="@"]'];
+  for(const selector of selectors){
+   const account=document.querySelector(selector);
+   const label=(account?.getAttribute('aria-label')||'')+' '+(account?.getAttribute('data-email')||'');
+   const email=label.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/)?.[0]?.toLowerCase();
+   if(email)return email;
+  }
  }
  function attach(body){
   const compose=body.closest('[role="dialog"]');if(!compose||compose.querySelector('.folloopy-compose'))return;

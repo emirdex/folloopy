@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Folloopy — Gmail Takibi",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Gmail’de hazırladığınız tek alıcılı metin mesajlarını Folloopy takibiyle gönderin. Signature üyeliği ve bağlı Gmail hesabı gerekir.",
   "permissions": [
     "storage"
