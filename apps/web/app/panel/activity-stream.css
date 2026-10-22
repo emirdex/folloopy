@@ -19,3 +19,11 @@
 @media(max-width:1100px) and (min-width:701px){.stream-filters{margin-left:21px;margin-right:21px;gap:5px}.stream-filters a{gap:6px;padding:10px 7px}.stream-filter-icon{width:25px;height:25px}.stream-filter-label{font-size:11px}}
 @media(max-width:600px){.stream-filters{gap:5px;padding:6px;border-radius:16px}.stream-filters a{display:grid;grid-template-columns:1fr 1fr;gap:7px 5px;padding:10px 5px;border-radius:11px;min-height:72px}.stream-filter-label{grid-column:1/-1;grid-row:1;font-size:11px;text-align:center}.stream-filter-icon{grid-column:1;grid-row:2;justify-self:end;width:24px;height:24px;border-radius:8px}.stream-filter-icon svg{width:14px;height:14px}.stream-filter-count{grid-column:2;grid-row:2;justify-self:start;min-width:22px;height:22px;font-size:10px}.stream-filters a.is-selected:after{left:25%;right:25%}}
 @media(prefers-reduced-motion:reduce){.stream-filters a{transition:none}}
+
+/* Keep activity filtering local: quiet feedback, no page loading overlay. */
+.stream-filter-pending{position:absolute;bottom:0;left:24%;right:24%;height:2px;border-radius:4px;background:var(--filter-accent);pointer-events:none;animation:stream-filter-breathe 1.2s ease-in-out infinite}
+.stream-filters a:has(.stream-filter-pending){background:#ffffffb3;color:var(--filter-accent);border-color:#ffffffed}
+.stream-days{animation:stream-filter-reveal .18s ease-out both}
+@keyframes stream-filter-breathe{0%,100%{opacity:.25;transform:scaleX(.7)}50%{opacity:.6;transform:scaleX(1)}}
+@keyframes stream-filter-reveal{from{opacity:.78;transform:translateY(2px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.stream-filter-pending,.stream-days{animation:none}}
