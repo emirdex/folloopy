@@ -125,3 +125,9 @@
 .flow-header .flow-header-actions .flow-quiet svg{flex-shrink:0;width:14px;height:14px}
 @media(max-width:650px){.flow-header-actions{gap:8px}.flow-header .flow-header-actions .flow-quiet{font-size:12px;padding:10px 13px;gap:7px;min-height:44px}}
 @media(prefers-reduced-motion:reduce){.flow-header .flow-header-actions .flow-quiet{transition:none}.flow-header .flow-header-actions .flow-quiet:hover{transform:none}}
+
+.auth-form-inner>.flow-back{color:#47699f;font-size:14px;font-weight:600;gap:10px;min-height:36px;text-decoration:underline;text-decoration-color:#9db5d76b;text-decoration-thickness:1px;text-underline-offset:5px;transition:color .2s,text-decoration-color .2s}
+.auth-form-inner>.flow-back>svg{width:18px;height:18px;stroke-width:2.2;transition:transform .2s ease}
+.auth-form-inner>.flow-back:is(:hover,:focus-visible){color:#31568f;text-decoration-color:currentColor}
+.auth-form-inner>.flow-back:hover>svg{transform:translateX(-3px)}
+@media(prefers-reduced-motion:reduce){.auth-form-inner>.flow-back>svg{transition:none}.auth-form-inner>.flow-back:hover>svg{transform:none}}
