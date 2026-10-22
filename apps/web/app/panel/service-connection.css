@@ -2,3 +2,5 @@
 @keyframes connection-dot-breathe{0%,100%{opacity:.55}45%{opacity:1}}
 @keyframes connection-dot-halo{0%{opacity:.35;transform:scale(.7)}75%,100%{opacity:0;transform:scale(2.2)}}
 @media(prefers-reduced-motion:reduce){.connection-indicator .connection-indicator-dot,.connection-indicator-dot:after{animation:none}.connection-indicator-dot:after{display:none}}
+
+.product-header .connection-indicator{margin:0;flex-shrink:0;white-space:nowrap;font-size:12px;padding-inline:2px}.product-header .connection-indicator>span{overflow-wrap:normal}@media(max-width:650px){.product-header .connection-indicator{font-size:10px;gap:6px;padding-inline:4px}}
