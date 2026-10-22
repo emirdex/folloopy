@@ -79,3 +79,23 @@ test('Password recovery pauses a queued campaign, invalidates sessions and never
 test('Confirmed email changes pause queued campaigns while cancelling an unconfirmed change leaves them intact',async()=>{const s=await setup();try{
  const preview=await s.bulk.preview(s.user,input());await s.bulk.confirm(s.user,preview.id!);const details=new AccountDetails(s.db,'https://panel.example',key);await details.requestEmail(s.user,'new-owner@example.invalid');const tokens=(await s.db.query<{payload:string}>('SELECT payload FROM mail_outbox ORDER BY created_at,id')).rows.map(row=>JSON.parse(unseal(row.payload,key)).text.match(/#token=([\w-]{43})/)[1]);assert.equal((await details.confirmEmail(tokens[0])).completed,false);assert.equal((await s.bulk.detail(s.user,preview.id!)).status,'queued');await details.confirmEmail(tokens[1]);assert.equal((await s.bulk.detail(s.user,preview.id!)).status,'paused');assert.equal(await s.bulk.processOne(),false);assert.equal((s.sender as FakeProvider).submissions.length,0);assert.equal(await s.accounts.current(s.token),null);
  }finally{await close(s)}});
+
+test('Company subjects and explicit salutations survive preview, encrypted storage, delivery and report',async()=>{
+ const s=await setup();try{
+  const request={...input('email,ad,soyad,sirket,hitap\ndeniz@example.invalid,Deniz,Yilmaz,Arcbyte,Hanım\nali@example.invalid,Ali,Kaya,Dex,Bey'),subject:'{{sirket}} için teklif',text:'Merhaba {{ad}} {{hitap}}, {{sirket}} için görüşelim.'};
+  const preview=await s.bulk.preview(s.user,request);
+  assert.equal(preview.samples?.[0].subject,'Arcbyte için teklif');assert.equal(preview.samples?.[0].text,'Merhaba Deniz Hanım, Arcbyte için görüşelim.');assert.equal(preview.samples?.[1].text,'Merhaba Ali Bey, Dex için görüşelim.');
+  await s.bulk.confirm(s.user,preview.id!);await s.bulk.processOne();await s.advance();await s.bulk.processOne();
+  assert.equal((s.sender as FakeProvider).submissions.length,2);
+  for(const submission of (s.sender as FakeProvider).submissions){assert.doesNotMatch(submission.raw,/\{\{/)}
+  const detail=await s.bulk.detail(s.user,preview.id!);assert.equal(detail.recipients[0].hitap,'Hanım');assert.equal(detail.recipients[1].hitap,'Bey');assert.match(await s.bulk.report(s.user,preview.id!),/Hanım/);
+ }finally{await close(s)}
+});
+test('Salutations support Turkish headers and reject missing values, newlines, oversized fields and unknown variables',()=>{
+ const report=parseBulkCsv('e-posta;ad;firma;hitap\na@example.invalid;A;Arc;Bey');assert.equal(report.recipients[0].hitap,'Bey');
+ assert.throws(()=>validateBulkInput({...input('email,ad\na@example.invalid,A'),text:'Merhaba {{ad}} {{hitap}}'}),{message:'BULK_INVALID_TEMPLATE'});
+ assert.throws(()=>renderBulkText('{{untrusted}}',report.recipients[0]),{message:'BULK_INVALID_TEMPLATE'});
+ assert.ok(parseBulkCsv('email,hitap\na@example.invalid,"Bey\nInjected"').issues.length);
+ assert.ok(parseBulkCsv('email,hitap\na@example.invalid,'+'a'.repeat(101)).issues.length);
+ assert.equal(renderBulkText('{{ad}}', {email:'old@example.invalid',ad:'Eski',soyad:'',sirket:''}),'Eski');
+});

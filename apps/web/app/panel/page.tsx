@@ -3,6 +3,7 @@ import {ServiceConnection} from './service-connection';
 import {AccountDetails} from './account-details';
 import {GmailConnection} from './gmail-connection';
 import {Drafts} from './drafts';
+import {DraftEditor} from './draft-editor';
 import {BulkPage} from './bulk';
 import type {MailDraft,MailDraftList} from '../../../../packages/domain/mail-drafts';
 import {accountApi} from '../account-api';
@@ -38,6 +39,7 @@ async function api(path:string,init?:RequestInit){
 async function submit(_previous:{error:string}|null,form:FormData):Promise<{error:string}|null>{
  'use server';
  await requirePanel();
+ if(/\{\{|\}\}/.test(String(form.get('subject'))+String(form.get('text'))))return {error:'Göndermeden önce değişkenleri alıcınızın bilgileriyle doldurun veya taslağı Toplu Gönderim ekranında kullanın.'};
  let id:string;
  try{
   const result=await api(process.env.NODE_ENV==='production'?'/api/messages/send':'/api/test-submissions',{method:'POST',headers:{'idempotency-key':String(form.get('key'))},body:JSON.stringify({subject:String(form.get('subject')),to:process.env.NODE_ENV==='production'?String(form.get('to')||''):'recipient@example.invalid',text:String(form.get('text')),tracking:form.get('tracking')==='on'})});
@@ -72,7 +74,13 @@ function ConnectionCard(){return <section className="connection-card"><span clas
 export default async function Page({searchParams}:{searchParams:Promise<Params>}){
  await requirePanel();
  const p=await searchParams;
- if(p.view==='bulk')return <Shell active="bulk"><PageHeading title="Toplu Gönderim" description="Alıcı listenize ayrı ayrı gönderin. Her mailin takibi sizde kalsın."/><BulkPage campaign={p.campaign} offset={p.offset}/></Shell>;
+ if(p.view==='bulk')return <Shell active="bulk"><PageHeading title="Toplu Gönderim" description="Alıcı listenize ayrı ayrı gönderin. Her mailin takibi sizde kalsın."/><BulkPage campaign={p.campaign} offset={p.offset} draft={p.draft}/></Shell>;
+ if(p.view==='draft-editor'){
+  let draft:MailDraft|undefined;
+  try{if(p.draft){if(!/^[a-f0-9-]{36}$/.test(p.draft))throw Error('NOT_FOUND');draft=await accountApi('/api/drafts/'+p.draft)}}catch{return <Shell active="drafts"><PageHeading title="Taslak Açılamadı" description="Taslak silinmiş veya paketinizin sınırı dışında olabilir."/><Link className="button button-outline" href="/panel?view=drafts">Taslaklara dön</Link></Shell>}
+  const user=await currentAccount();
+  return <Shell active="drafts"><PageHeading title={draft?'Taslağı Düzenle':'Yeni Taslak'} description="Yeniden kullanabileceğiniz, kişiselleştirilmiş mail içerikleri hazırlayın."/><DraftEditor key={p.draft||'new'} draft={draft} bulkAllowed={user?.plan==='team'||user?.plan==='business'}/></Shell>;
+ }
  if(p.view==='drafts')return <Shell active="drafts"><PageHeading title="Mail Taslakları" description="Kaydettiğiniz mail içeriklerini düzenleyin ve yeniden kullanın."/><Drafts/></Shell>;
  if(p.view==='account'){await requireAccount();return <Shell active="account"><PageHeading title="Hesap Detayları" description="Profilinizi, paket kullanımınızı ve ödeme geçmişinizi yönetin."/><AccountDetails/></Shell>}
  if(p.view==='extensions'){const user=await currentAccount();return <Shell active="extensions"><PageHeading title="Eklentiler" description="Gmail ve Outlook eklentilerinin durumunu inceleyin, kurulum ve hesap bağlantılarınızı yönetin."/><ExtensionHub plan={user?.plan||null} pair={p.pair} mode={p.mode}/></Shell>}
