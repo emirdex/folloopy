@@ -93,7 +93,7 @@ export default async function Page({searchParams}:{searchParams:Promise<Params>}
   const m=detail.message;
   return <Shell active={active} online={online}>
    <div className="breadcrumb"><Link href="/panel?view=messages">Takip Edilen Mailler</Link><Icon name="chevron" size={12}/><span>Mail Ayrıntısı</span></div>
-   <div className="record-heading"><Link className="back-circle" href="/panel?view=messages" aria-label="Maillere dön"><Icon name="arrow" size={19}/></Link><div><h1>{m.subject}</h1><p>{m.sent_at?date(m.sent_at,true):'Gönderim onayı bekleniyor'}</p></div><Chip color={m.tracking_enabled?'blue':'neutral'}>{m.tracking_enabled?'Takip Açık':'Takip Durduruldu'}</Chip></div>
+   <div className="record-heading"><Link className="back-circle" href="/panel?view=messages" aria-label="Maillere dön"><Icon name="arrow" size={19}/></Link><div><h1>{m.subject}</h1><p>{m.sent_at?date(m.sent_at,true):'Gönderim onayı bekleniyor'}</p></div><Chip color={m.tracking_enabled?'tracking-on':'tracking-off'}>{m.tracking_enabled?'Takip Açık':'Takip Durduruldu'}</Chip></div>
    <div className="record-layout"><aside className="surface record-info"><h2>Mail Özeti</h2><dl>
     <div><dt>Gönderim Kanalı</dt><dd>{m.provider==='gmail'?'Gmail':m.provider==='fake'?'Gönderim yapılmadı':'Folloopy'}</dd></div>
     <div><dt>Gönderim</dt><dd><Chip color={m.state==='sent'?'green':'amber'}>{states[m.state]}</Chip></dd></div>
