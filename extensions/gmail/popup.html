@@ -1,1 +1,37 @@
-<!doctype html><html lang="tr"><meta charset="utf-8"><link rel="stylesheet" href="popup.css"><title>Folloopy</title><main><span class="eyebrow">GMAIL TAKİBİ</span><h1>folloopy<span>●</span></h1><p id="status" role="status">Bağlantı kontrol ediliyor…</p><button id="pair">Hesabımı bağla ↗</button><button id="check" class="secondary">Panelde onayladım · Kontrol et</button><button id="disconnect" class="secondary">Bağlantıyı kaldır</button><a href="https://panel.folloopy.com/panel?view=extensions" target="_blank" rel="noreferrer">Kurulum ve bağlantı rehberi ↗</a><a href="https://folloopy.com/yasal/gizlilik-politikasi" target="_blank" rel="noreferrer">Gizlilik ve veri kullanımı ↗</a><small>Signature üyeliği gerekir. Gmail’de “Folloopy ile gönder” düğmesini kullanın. Tek alıcı ve düz metin desteklenir; ekler, CC/BCC ve yanıt zincirleri desteklenmez.</small></main><script src="popup.js"></script></html>
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="popup.css">
+  <title>Folloopy</title>
+</head>
+<body>
+<main id="popup" data-state="loading" aria-busy="true">
+  <header class="brand-row">
+    <a class="brand" href="https://panel.folloopy.com/panel" target="_blank" rel="noreferrer" aria-label="Folloopy panelini aç"><img src="icons/icon128.png" alt="" width="42" height="34"><span>folloopy</span></a>
+    <span class="browser-label">Chrome eklentisi</span>
+  </header>
+
+  <section class="connection-card" aria-labelledby="heading">
+    <div class="card-top"><span class="provider"><svg viewBox="0 0 24 18" aria-hidden="true"><path fill="#4285f4" d="M0 3v13a2 2 0 0 0 2 2h3V7z"/><path fill="#34a853" d="M19 7v11h3a2 2 0 0 0 2-2V3z"/><path fill="#ea4335" d="m5 7 7 5 7-5V1l-7 5-7-5z"/><path fill="#fbbc04" d="M19 1v6l5-4V2a2 2 0 0 0-3-1z"/><path fill="#c5221f" d="M5 1v6L0 3V2a2 2 0 0 1 3-1z"/></svg>Gmail</span><span id="connection-label" class="connection-label"><i></i><span id="connection-text">Kontrol ediliyor</span></span></div>
+    <div class="connection-copy"><h1 id="heading">Bağlantınız kontrol ediliyor</h1><p id="description">Hesap bilgileriniz doğrulanıyor.</p></div>
+    <div id="account" class="account" hidden><span id="avatar" class="avatar" aria-hidden="true">F</span><div class="account-copy"><span class="account-label">Bağlı hesap</span><strong id="sender"></strong></div><button id="refresh" class="icon-button" type="button" aria-label="Bağlantıyı yenile" title="Bağlantıyı yenile"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-1l2 6M4 12l2 6a7 7 0 0 0 12-1"/></svg></button></div>
+    <p id="notice" class="notice" role="status" aria-live="polite" hidden></p>
+    <div class="actions">
+      <a id="panel" class="button primary" href="https://panel.folloopy.com/panel" target="_blank" rel="noreferrer" hidden>Paneli aç <span aria-hidden="true">↗</span></a>
+      <button id="pair" class="button primary" type="button" hidden>Hesabı bağla <span aria-hidden="true">↗</span></button>
+      <button id="check" class="button primary" type="button" hidden>Onayı kontrol et <span aria-hidden="true">↻</span></button>
+      <button id="retry" class="button primary" type="button" hidden>Yeniden dene <span aria-hidden="true">↻</span></button>
+      <button id="disconnect" class="disconnect" type="button" hidden>Bağlantıyı kaldır</button>
+    </div>
+  </section>
+
+  <aside id="usage" class="usage" hidden><span class="usage-icon" aria-hidden="true">↗</span><p>Mesajınızı Gmail’de hazırlayın.<br><strong>Folloopy ile gönder</strong> ile takibe alın.</p></aside>
+  <p id="requirement" class="requirement" hidden><span>Signature</span> üyeliği ve bağlı Gmail hesabı gerekir.</p>
+  <footer><a href="https://panel.folloopy.com/panel?view=extensions" target="_blank" rel="noreferrer">Kurulum rehberi <span aria-hidden="true">↗</span></a><span class="footer-divider"></span><a href="https://folloopy.com/yasal/gizlilik-politikasi" target="_blank" rel="noreferrer">Gizlilik <span aria-hidden="true">↗</span></a></footer>
+  <details class="support"><summary>Kullanım bilgileri</summary><p>Yeni, tek alıcılı düz metin mesajları desteklenir. Ekler, görseller, CC/BCC ve yanıt zincirleri desteklenmez. Normal Gönder düğmesiyle gönderilen mesajlar takip edilmez.</p></details>
+</main>
+<script src="popup.js"></script>
+</body>
+</html>
