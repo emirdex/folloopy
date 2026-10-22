@@ -147,3 +147,16 @@
 .mail-journey .journey-steps button:active{transform:translateY(1px) scale(.98);box-shadow:none}
 @media(max-width:650px){.mail-journey .journey-steps{gap:6px}.mail-journey .journey-steps button>span{min-width:18px;height:20px;border-radius:5px}}
 @media(prefers-reduced-motion:reduce){.mail-journey .journey-steps button{transition:none}.mail-journey .journey-steps button:hover,.mail-journey .journey-steps button:active{transform:none}}
+
+/* Match the Gmail toolbar: native send on the left, tracked send on the right. */
+.mail-journey .journey-send-actions{display:inline-flex;align-items:center;gap:10px;min-width:0;flex-shrink:0}
+.mail-journey .journey-native-send{display:inline-flex;align-items:center;justify-content:space-between;height:42px;padding-left:17px;gap:15px;border-radius:22px;background:#0b57d0;color:#fff;font-size:13px;font-weight:500;white-space:nowrap}
+.mail-journey .journey-native-send>span{display:grid;place-items:center;align-self:stretch;width:29px;border-left:1px solid #ffffff45}
+.mail-journey .journey-folloopy-send{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 15px;border:1px solid #425b91;border-radius:11px;background:linear-gradient(145deg,#4b649e,#334c82);box-shadow:inset 0 1px 0 #ffffff30,0 2px 4px #253b6514;color:#fff;font-size:13px;font-weight:500;line-height:1;white-space:nowrap;animation:journey-tracked-send-press var(--journey-duration) linear both}
+.mail-journey .journey-folloopy-send>svg:first-child{width:16px;height:16px;opacity:.9}
+.mail-journey .journey-folloopy-send>svg:nth-last-child(2){width:13px;height:13px;opacity:.7}
+.mail-journey .journey-folloopy-send>.compose-cursor{left:calc(100% + 65px);bottom:100px;width:23px;height:23px}
+@keyframes journey-compose-cursor{0%,20%{opacity:0;left:calc(100% + 65px);bottom:100px;transform:scale(1)}30%{opacity:1}48%,57%{opacity:1;left:calc(100% - 25px);bottom:-4px;transform:scale(1)}52%{transform:scale(.85)}67%,100%{opacity:0;left:calc(100% - 12px);bottom:-9px;transform:scale(1)}}
+@keyframes journey-tracked-send-press{0%,48%,56%,100%{transform:scale(1);filter:brightness(1)}51%,54%{transform:scale(.97);filter:brightness(.88)}}
+@media(max-width:650px){.mail-journey .journey-compose-foot{flex-wrap:wrap;gap:12px}.mail-journey .journey-send-actions{gap:7px}.mail-journey .journey-native-send{height:38px;padding-left:13px;gap:10px;font-size:11px}.mail-journey .journey-native-send>span{width:24px}.mail-journey .journey-folloopy-send{height:38px;padding:0 10px;gap:6px;font-size:11px}.mail-journey .journey-folloopy-send>svg:first-child{width:14px;height:14px}.mail-journey .journey-tracking{margin-left:auto}}
+@media(prefers-reduced-motion:reduce){.mail-journey .journey-folloopy-send{animation:none}}
