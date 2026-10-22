@@ -65,3 +65,8 @@ test('Untrusted hosts and cross-origin POSTs are rejected before cold-start queu
  const boot=startup();const host=boot.response({method:'GET',url:'/panel',headers:{host:'attacker.example'}});assert.equal(host.status,421);const origin=boot.response({method:'POST',url:'/giris',headers:{origin:'https://attacker.example','x-forwarded-host':'attacker.example'}});assert.equal(origin.status,403);assert.deepEqual(boot.forwarded,[]);
  boot.apiReady();await tick();boot.healthReady({ok:true});await tick();boot.nextReady();await tick();assert.deepEqual(boot.forwarded,[]);
 });
+
+test('Public www GET navigation redirects to the canonical site before cold start, without weakening POST checks',async()=>{
+ const boot=startup();const page=boot.response({method:'GET',url:'/kayit?plan=team',headers:{host:'www.folloopy.example'}});assert.equal(page.status,308);assert.equal(page.headers.Location,'https://folloopy.example/kayit?plan=team');assert.equal(boot.response({method:'POST',url:'/giris',headers:{host:'www.folloopy.example'}}).status,421);
+ boot.apiReady();await tick();boot.healthReady({ok:true});await tick();boot.nextReady();await tick();assert.deepEqual(boot.forwarded,[]);
+});

@@ -21,4 +21,11 @@ function guardPublicRequest(req,origin){
  req.headers['x-forwarded-proto']=trusted.protocol.slice(0,-1);
  return null;
 }
-module.exports={publicOrigin,guardPublicRequest};
+function canonicalRedirect(req,origin,allowWww){
+ const trusted=new URL(origin);
+ if(!allowWww||trusted.hostname.startsWith('www.')||!['GET','HEAD'].includes(req.method||'GET'))return null;
+ if(typeof req.headers?.host!=='string'||req.headers.host.toLowerCase()!=='www.'+trusted.host.toLowerCase())return null;
+ if(typeof req.url!=='string'||!req.url.startsWith('/')||req.url.startsWith('//'))return null;
+ return trusted.origin+req.url;
+}
+module.exports={publicOrigin,guardPublicRequest,canonicalRedirect};

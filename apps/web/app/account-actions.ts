@@ -37,3 +37,7 @@ export async function completePurchase(_state:FormState,form:FormData):Promise<F
  try{await accountApi(production?'/api/access/activate':'/api/purchase-preview',production?{plan}:{plan,idempotencyKey:String(form.get('purchaseKey')||'')})}catch{return {error:'Paketiniz etkinleştirilemedi. Tekrar deneyin.'}}
  redirect('/odeme/tamamlandi');
 }
+
+function entryQuery(form:FormData){const plan=String(form.get('preferredPlan')||'');return ['individual','team'].includes(plan)?'?plan='+plan+'&billing='+billingPeriod(form.get('billing')):''}
+export async function switchToLogin(form:FormData){await closeAccountSession();redirect('/giris'+entryQuery(form))}
+export async function switchToRegistration(form:FormData){await closeAccountSession();redirect('/kayit'+entryQuery(form))}

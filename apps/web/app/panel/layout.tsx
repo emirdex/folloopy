@@ -9,5 +9,5 @@ export default async function PanelLayout({children}:{children:ReactNode}){
  const user=await requirePanel();
  const names:Record<string,string>={individual:'Essential',team:'Signature',business:'Enterprise'};
  const plan=user?.plan?names[user.plan]||'Paketim':null;
- return <div className="member-panel-page"><div className="workspace-account-bar"><div className="workspace-account-context"><LayoutDashboard size={14} aria-hidden="true"/><span>Çalışma alanı</span>{plan?<Link href="/panel?view=account" className="workspace-plan-pill" aria-label={`${plan} paketimin ayrıntıları`}><Package size={12} aria-hidden="true"/>{plan}</Link>:null}</div><AccountMenu name={user?.name} email={user?.email} preview={!user}/></div>{children}</div>;
+ return <div className="member-panel-page"><div className="workspace-account-bar"><div className="workspace-account-context"><LayoutDashboard size={14} aria-hidden="true"/><span>Çalışma alanı</span>{plan?<Link href="/panel?view=account" className="workspace-plan-pill" aria-label={`${plan} paketimin ayrıntıları`}><Package size={12} aria-hidden="true"/>{plan}</Link>:null}</div><AccountMenu name={user?.name} email={user?.email} preview={!user} owner={user?.role==='owner'}/></div>{children}</div>;
 }

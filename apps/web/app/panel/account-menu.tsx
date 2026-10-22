@@ -1,10 +1,10 @@
 'use client';
 import {useEffect,useRef} from 'react';
-import {ChevronDown,LogOut,Package,UserRound,Wallet} from 'lucide-react';
+import {ChevronDown,LogOut,Package,UserRound,Wallet,ShieldCheck} from 'lucide-react';
 import Link from '../destination-link';
 import {logoutAccount} from '../account-actions';
 import {endPurchasePreview} from '../preview-actions';
-export function AccountMenu({name,email,preview}:{name?:string;email?:string;preview:boolean}){
+export function AccountMenu({name,email,preview,owner=false}:{name?:string;email?:string;preview:boolean;owner?:boolean}){
  const menu=useRef<HTMLDetailsElement>(null);
  const initials=name?.trim().split(/\s+/).slice(0,2).map(part=>part[0]).join('')||'F';
  useEffect(()=>{
@@ -13,5 +13,5 @@ export function AccountMenu({name,email,preview}:{name?:string;email?:string;pre
   document.addEventListener('pointerdown',outside);document.addEventListener('keydown',escape);
   return()=>{document.removeEventListener('pointerdown',outside);document.removeEventListener('keydown',escape)};
  },[]);
- return <details ref={menu} className="workspace-account-menu"><summary><span className="workspace-account-avatar" aria-hidden="true">{initials}</span><span>Hesabım</span><ChevronDown size={13} aria-hidden="true"/></summary><div className="workspace-account-dropdown"><div className="workspace-account-identity"><strong>{name||'Hesabım'}</strong><span>{email||'Çalışma alanınız'}</span></div><nav aria-label="Hesap işlemleri" onClick={event=>{if(event.target instanceof Element&&event.target.closest('a')&&menu.current)menu.current.open=false}}><Link href="/panel?view=account"><UserRound size={16} aria-hidden="true"/>Hesap ayarları</Link><Link href="/panel?view=account#billing"><Wallet size={16} aria-hidden="true"/>Fatura bilgileri</Link><Link href="/paketler"><Package size={16} aria-hidden="true"/>Paketleri incele</Link></nav><form action={preview?endPurchasePreview:logoutAccount}><button type="submit"><LogOut size={16} aria-hidden="true"/>Çıkış yap</button></form></div></details>;
+ return <details ref={menu} className="workspace-account-menu"><summary><span className="workspace-account-avatar" aria-hidden="true">{initials}</span><span>Hesabım</span><ChevronDown size={13} aria-hidden="true"/></summary><div className="workspace-account-dropdown"><div className="workspace-account-identity"><strong>{name||'Hesabım'}</strong><span>{email||'Çalışma alanınız'}</span></div><nav aria-label="Hesap işlemleri" onClick={event=>{if(event.target instanceof Element&&event.target.closest('a')&&menu.current)menu.current.open=false}}>{owner?<Link href="/admin"><ShieldCheck size={16} aria-hidden="true"/>Site yönetimi</Link>:null}<Link href="/panel?view=account"><UserRound size={16} aria-hidden="true"/>Hesap ayarları</Link><Link href="/panel?view=account#billing"><Wallet size={16} aria-hidden="true"/>Fatura bilgileri</Link><Link href="/paketler"><Package size={16} aria-hidden="true"/>Paketleri incele</Link></nav><form action={preview?endPurchasePreview:logoutAccount}><button type="submit"><LogOut size={16} aria-hidden="true"/>Çıkış yap</button></form></div></details>;
 }

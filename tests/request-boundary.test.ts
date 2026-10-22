@@ -11,3 +11,10 @@ test('Custom server pins its origin by deployment role and rejects host/origin s
  const req={method:'POST',headers:{host:'panel.folloopy.com',origin:origins.APP_URL,'x-forwarded-host':'evil.example','x-forwarded-proto':'http'}};assert.equal(guardPublicRequest(req,origins.APP_URL),null);assert.equal(req.headers['x-forwarded-host'],'panel.folloopy.com');assert.equal(req.headers['x-forwarded-proto'],'https');
  assert.equal(guardPublicRequest({method:'GET',headers:{host:'folloopy.com'}},origins.SITE_URL),null);
 });
+
+test('Only the explicit public www alias redirects; unsafe requests and unknown hosts stay blocked',()=>{
+ const{canonicalRedirect}=createRequire(import.meta.url)('../packages/runtime/public-request.cjs');
+ assert.equal(canonicalRedirect({method:'GET',url:'/kayit?plan=team',headers:{host:'www.folloopy.com'}},origins.SITE_URL,true),'https://folloopy.com/kayit?plan=team');
+ for(const request of [{method:'POST',url:'/giris',headers:{host:'www.folloopy.com'}},{method:'GET',url:'/kayit',headers:{host:'attacker.folloopy.com'}},{method:'GET',url:'//evil.example',headers:{host:'www.folloopy.com'}}])assert.equal(canonicalRedirect(request,origins.SITE_URL,true),null);
+ assert.equal(canonicalRedirect({method:'GET',url:'/giris',headers:{host:'www.panel.folloopy.com'}},origins.APP_URL,false),null);
+});
