@@ -21,3 +21,9 @@ export async function savePost(_state:AdminFormState,form:FormData):Promise<Admi
  revalidatePath('/blog');revalidatePath('/blog/'+slug);revalidatePath('/admin');redirect('/admin?view=blog&id='+result.id+'&saved=1');
 }
 export async function updateLead(form:FormData){await requireAdmin();await adminApi('/enterprise/'+encodeURIComponent(String(form.get('id'))),{status:String(form.get('status'))});revalidatePath('/admin')}
+
+export async function loadMemberRecords(id:string,section:'activity'|'messages',offset:number){
+ await requireAdmin();
+ if(!/^[a-f0-9-]{36}$/.test(id)||!['activity','messages'].includes(section)||!Number.isInteger(offset)||offset<0||offset>100000)throw Error('INVALID_REQUEST');
+ return adminApi('/members/'+id+'/'+section+'?offset='+offset);
+}

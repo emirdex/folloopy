@@ -1,3 +1,4 @@
+import {recordMemberActivity} from './member-activity';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
 import type {DB} from '../../packages/database/index';
 import {emailChangeEmailHtml} from '../../packages/domain/security-email';
@@ -54,7 +55,7 @@ export class AccountDetails{
    if(!oldConfirmed||!newConfirmed){await tx.query('UPDATE account_email_changes SET old_confirmed=$1,new_confirmed=$2,old_token_hash=$3,new_token_hash=$4 WHERE user_id=$5',[oldConfirmed,newConfirmed,oldConfirmed?null:row.old_token_hash,newConfirmed?null:row.new_token_hash,row.user_id]);return {completed:false};}
    if((await tx.query('SELECT id FROM users WHERE email=$1 AND id<>$2',[row.new_email,row.user_id])).rows.length)throw Error('EMAIL_IN_USE');
    await tx.query("UPDATE bulk_campaigns SET status='paused',reason='ACCOUNT_SECURITY_CHANGED',updated_at=now() WHERE user_id=$1 AND status IN ('queued','running')",[row.user_id]);
-   await tx.query('UPDATE users SET email=$1,email_verified_at=now() WHERE id=$2',[row.new_email,row.user_id]);
+   await tx.query('UPDATE users SET email=$1,email_verified_at=now() WHERE id=$2',[row.new_email,row.user_id]);await recordMemberActivity(tx,row.user_id,'email_changed');
    await tx.query('DELETE FROM sessions WHERE user_id=$1',[row.user_id]);
    await tx.query('DELETE FROM account_tokens WHERE user_id=$1',[row.user_id]);
    await tx.query('DELETE FROM verification_codes WHERE user_id=$1',[row.user_id]);

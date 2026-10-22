@@ -1,3 +1,4 @@
+import {recordMemberActivity} from './member-activity';
 import {createHash,createHmac,randomInt,randomBytes,randomUUID,timingSafeEqual,scrypt as derive} from 'node:crypto';
 import {promisify} from 'node:util';
 import type {DB} from '../../packages/database/index';
@@ -38,7 +39,7 @@ export class AccountSecurity{
     await tx.query('UPDATE verification_codes SET attempts=attempts+1 WHERE user_id=$1',[userId]);
     return row.attempts===4?'VERIFICATION_LOCKED':'INVALID_VERIFICATION_CODE';
    }
-   await tx.query('UPDATE users SET email_verified_at=now() WHERE id=$1',[userId]);
+   await tx.query('UPDATE users SET email_verified_at=now() WHERE id=$1',[userId]);await recordMemberActivity(tx,userId,'email_verified');
    await tx.query('DELETE FROM verification_codes WHERE user_id=$1',[userId]);
    await tx.query("DELETE FROM account_tokens WHERE user_id=$1 AND purpose='verify'",[userId]);
    return 'ok';
@@ -76,6 +77,7 @@ export class AccountSecurity{
    if(!candidate||(expectedUserId&&candidate.user_id!==expectedUserId))throw Error('INVALID_ACCOUNT_TOKEN');
    await tx.query('SELECT id FROM users WHERE id=$1 FOR UPDATE',[candidate.user_id]);
    const row=(await tx.query<{user_id:string}>('DELETE FROM account_tokens WHERE token_hash=$1 AND purpose=$2 AND expires_at>now() RETURNING user_id',[digest(token),purpose])).rows[0];if(!row)throw new Error('INVALID_ACCOUNT_TOKEN');
+   await recordMemberActivity(tx,row.user_id,purpose==='verify'?'email_verified':'password_reset');
    if(purpose==='verify'){await tx.query('UPDATE users SET email_verified_at=now() WHERE id=$1',[row.user_id]);await tx.query('DELETE FROM verification_codes WHERE user_id=$1',[row.user_id]);}
    else{await tx.query("UPDATE bulk_campaigns SET status='paused',reason='ACCOUNT_SECURITY_CHANGED',updated_at=now() WHERE user_id=$1 AND status IN ('queued','running')",[row.user_id]);await tx.query('UPDATE users SET password_hash=$1 WHERE id=$2',[passwordHash,row.user_id]);await tx.query('DELETE FROM sessions WHERE user_id=$1',[row.user_id]);await tx.query('DELETE FROM oauth_states WHERE user_id=$1',[row.user_id]);await tx.query('DELETE FROM account_tokens WHERE user_id=$1',[row.user_id]);await tx.query('DELETE FROM account_email_changes WHERE user_id=$1',[row.user_id]);await tx.query('DELETE FROM verification_codes WHERE user_id=$1',[row.user_id])}
   });

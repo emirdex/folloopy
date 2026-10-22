@@ -18,7 +18,7 @@ export async function seedLocal(db:DB){
 }
 export class TrackingService {
  constructor(readonly db:DB,private provider:MailProvider,private origin:string,private from='local-test@example.invalid'){}
- async send(workspace:string,key:string,input:SendInput,reservation?:{recipientId:string;lease:string},authorize?:(tx:DB)=>Promise<void>){
+ async send(workspace:string,key:string,input:SendInput,reservation?:{recipientId:string;lease:string},authorize?:(tx:DB)=>Promise<void>,channel:'panel'|'extension'|'bulk'|'legacy'='legacy'){
   if(/[\r\n]/.test(this.from)||/[\r\n]/.test(input.to)||/[\r\n]/.test(input.subject))throw new Error('INVALID_MESSAGE');
   const hash=tokenHash(JSON.stringify(input));
   const prepared=await this.db.transaction(async tx=>{
@@ -31,8 +31,8 @@ export class TrackingService {
    if(!['active','local_test'].includes(entitlement.status)||(!reservation&&entitlement.used>=entitlement.message_limit)) throw new Error('LIMIT_REACHED');
    if(reservation){const reserved=(await tx.query(`SELECT r.id FROM bulk_recipients r JOIN bulk_campaigns c ON c.id=r.campaign_id JOIN users u ON u.id=c.user_id JOIN access_grants g ON g.workspace_id=c.workspace_id JOIN mail_connections mc ON mc.workspace_id=c.workspace_id WHERE r.id=$1 AND r.workspace_id=$2 AND r.claim_token=$3 AND r.state='sending' AND r.reserved=true AND r.message_id IS NULL AND c.status IN ('queued','running') AND g.plan IN ('team','business') AND u.email_verified_at IS NOT NULL AND lower(mc.email)=lower($4)`,[reservation.recipientId,workspace,reservation.lease,this.from])).rows.length;if(!reserved)throw Error('BULK_RESERVATION_INVALID')}
    const id=randomUUID(),submission=randomUUID(),secret=token(),rfc=`<${submission}@${new URL(this.origin).hostname}>`;
-   await tx.query(`INSERT INTO messages(id,workspace_id,submission_id,idempotency_key,payload_hash,subject,recipient_count,state,provider,rfc_message_id,tracking_enabled)
-    VALUES($1,$2,$3,$4,$5,$6,1,'sending',$7,$8,$9)`,[id,workspace,submission,key,hash,input.subject,this.provider.name,rfc,input.tracking]);
+   await tx.query(`INSERT INTO messages(id,workspace_id,submission_id,idempotency_key,payload_hash,subject,recipient_count,state,provider,rfc_message_id,tracking_enabled,send_channel)
+    VALUES($1,$2,$3,$4,$5,$6,1,'sending',$7,$8,$9,$10)`,[id,workspace,submission,key,hash,input.subject,this.provider.name,rfc,input.tracking,channel]);
    if(input.tracking) await tx.query('INSERT INTO tracking_tokens(hash,workspace_id,message_id) VALUES($1,$2,$3)',[tokenHash(secret),workspace,id]);
    if(reservation)await tx.query('UPDATE bulk_recipients SET message_id=$3,reserved=false WHERE id=$1 AND workspace_id=$2',[reservation.recipientId,workspace,id]);
    else await tx.query('UPDATE entitlements SET used=used+1 WHERE workspace_id=$1',[workspace]);

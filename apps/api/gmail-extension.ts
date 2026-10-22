@@ -1,3 +1,4 @@
+import {recordMemberActivity} from './member-activity';
 import {createHash,createPublicKey,randomBytes,randomUUID,verify} from 'node:crypto';
 import type {DB} from '../../packages/database';
 import type {Account} from './accounts';
@@ -49,7 +50,7 @@ export class GmailExtension{
    await tx.query('UPDATE extension_devices SET revoked=true WHERE user_id=$1',[u.id]);
    const id=randomUUID(),token=randomBytes(32).toString('base64url');
    await tx.query("INSERT INTO extension_devices(id,user_id,workspace_id,session_hash,token_hash,public_key,sender,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,now()+interval '7 days')",[id,u.id,u.workspace_id,pair.session_hash,hash(token),JSON.stringify(pair.public_key),pair.sender]);
-   await tx.query('UPDATE extension_pairs SET consumed=true WHERE id=$1',[pair.id]);return {deviceId:id,token,sender:pair.sender};
+   await tx.query('UPDATE extension_pairs SET consumed=true WHERE id=$1',[pair.id]);await recordMemberActivity(tx,u.id,'extension_connected');return {deviceId:id,token,sender:pair.sender};
   });
  }
  async authorize(e:ExtensionEnvelope,db=this.db){
@@ -63,14 +64,14 @@ export class GmailExtension{
   if(!verify('sha256',Buffer.from(extensionCanonical(e)),{key:createPublicKey({key:d.public_key,format:'jwk'}),dsaEncoding:'ieee-p1363'},Buffer.from(e.signature,'base64url')))throw Error('UNAUTHORIZED');
   const inserted=await this.db.query('INSERT INTO extension_nonces(device_id,nonce) VALUES($1,$2) ON CONFLICT DO NOTHING RETURNING nonce',[d.id,e.nonce]);if(!inserted.rows.length)throw Error('UNAUTHORIZED');
   if(!await allowRequest(this.db,'extension-device',d.id,120,60))throw Error('TOO_MANY_ATTEMPTS');
-  if(e.operation==='disconnect'){await this.db.query('UPDATE extension_devices SET revoked=true WHERE id=$1',[d.id]);return {ok:true}}
+  if(e.operation==='disconnect'){await this.db.query('UPDATE extension_devices SET revoked=true WHERE id=$1',[d.id]);await recordMemberActivity(this.db,d.user_id,'extension_disconnected');return {ok:true}}
   await this.db.query('UPDATE extension_devices SET last_seen_at=now() WHERE id=$1',[d.id]);
   if(e.operation==='status')return {connected:true,sender:d.sender};
   const p=e.payload,email=/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
   if(typeof p.from!=='string'||p.from.toLowerCase()!==d.sender||typeof p.to!=='string'||p.to.length>254||!email.test(p.to)||typeof p.subject!=='string'||p.subject.length<1||p.subject.length>200||/[\r\n]/.test(p.subject)||typeof p.text!=='string'||!p.text.trim()||p.text.length>10000||typeof p.tracking!=='boolean'||typeof p.idempotencyKey!=='string'||!/^[A-Za-z0-9_-]{16,128}$/.test(p.idempotencyKey))throw Error('INVALID_ACCOUNT');
   if(!await allowRequest(this.db,'single-mail-send',d.workspace_id,20,60))throw Error('TOO_MANY_ATTEMPTS');
   const connected=await this.gmail.provider(d.workspace_id);if(connected.from.toLowerCase()!==d.sender)fail();
-  return new TrackingService(this.db,connected.provider,this.origin,connected.from).send(d.workspace_id,'ext_'+p.idempotencyKey,{to:p.to,subject:p.subject,text:p.text,tracking:p.tracking},undefined,async tx=>{await this.authorize(e,tx)});
+  return new TrackingService(this.db,connected.provider,this.origin,connected.from).send(d.workspace_id,'ext_'+p.idempotencyKey,{to:p.to,subject:p.subject,text:p.text,tracking:p.tracking},undefined,async tx=>{await this.authorize(e,tx)},'extension');
  }
  async status(user:Account){return {allowed:!!(await this.db.query("SELECT 1 FROM users u JOIN access_grants g ON g.workspace_id=u.workspace_id JOIN entitlements e ON e.workspace_id=u.workspace_id WHERE u.id=$1 AND u.email_verified_at IS NOT NULL AND g.plan IN ('team','business') AND e.status='active'",[user.id])).rows.length,devices:(await this.db.query('SELECT id,sender,created_at,last_seen_at,expires_at FROM extension_devices d WHERE user_id=$1 AND revoked=false AND expires_at>now() AND EXISTS(SELECT 1 FROM sessions s WHERE s.token_hash=d.session_hash AND s.expires_at>now())',[user.id])).rows}}
  async revoke(user:Account){await this.db.query('UPDATE extension_devices SET revoked=true WHERE user_id=$1',[user.id]);return {ok:true}}

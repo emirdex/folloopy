@@ -1,3 +1,4 @@
+import {recordMemberActivity} from './member-activity';
 import {randomBytes,randomUUID,scrypt as derive,timingSafeEqual,createHash} from 'node:crypto';
 import {promisify} from 'node:util';
 import {validNewPassword} from '../../packages/domain/password-policy';
@@ -19,6 +20,7 @@ export class Accounts{
    await tx.query('INSERT INTO workspaces(id,name) VALUES($1,$2)',[workspace,name+' çalışma alanı']);
    await tx.query('INSERT INTO users(id,workspace_id,name,email,password_hash) VALUES($1,$2,$3,$4,$5)',[id,workspace,name,email.trim().toLowerCase(),salt+':'+hash]);
   })}catch(e){if((e as {code?:string}).code==='23505')throw new Error('ACCOUNT_EXISTS');throw e}
+  await recordMemberActivity(this.db,id,'account_registered');
   return this.createSession(id);
  }
  async login(email:string,password:string){
@@ -42,13 +44,14 @@ export class Accounts{
   const token=randomBytes(32).toString('base64url');
   await db.query("INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '7 days')",[digest(token),id]);
   await db.query('UPDATE users SET last_login_at=now() WHERE id=$1',[id]);
+  await recordMemberActivity(db,id,'login');
   return {token};
  }
  async current(token:string,db:DB=this.db):Promise<Account|null>{
   if(!/^[\w-]{43}$/.test(token))return null;
   return (await db.query<Account>(`SELECT u.id,u.workspace_id,u.name,u.email,u.role,u.email_verified_at,${this.production?'g.plan':'COALESCE(g.plan,p.plan)'} AS plan FROM sessions s JOIN users u ON u.id=s.user_id LEFT JOIN preview_purchases p ON p.workspace_id=u.workspace_id LEFT JOIN access_grants g ON g.workspace_id=u.workspace_id WHERE s.token_hash=$1 AND s.expires_at>now()`,[digest(token)])).rows[0]||null;
  }
- async logout(token:string){await this.db.query('DELETE FROM sessions WHERE token_hash=$1',[digest(token)])}
+ async logout(token:string){await this.db.transaction(async tx=>{const rows=(await tx.query<{user_id:string}>('DELETE FROM sessions WHERE token_hash=$1 RETURNING user_id',[digest(token)])).rows;if(rows[0])await recordMemberActivity(tx,rows[0].user_id,'logout')})}
  async grant(account:Account,plan:Plan){
   if(!Object.hasOwn(plans,plan))throw new Error('INVALID_PLAN');
   return this.db.transaction(async tx=>{

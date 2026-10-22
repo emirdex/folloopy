@@ -1,3 +1,5 @@
+import {AdminMemberInsights} from './admin-member-insights';
+import {memberAction,recordMemberActivity} from './member-activity';
 import {GmailExtension} from './gmail-extension';
 import {billingProfile} from '../../packages/domain/billing-profile';
 import {BulkMail} from './bulk-mail';
@@ -35,6 +37,10 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  const drafts=new MailDrafts(db,options.encryptionKey,production);
  const accountDetails=new AccountDetails(db,options.site||origin,options.encryptionKey);
  if(adminConfig)app.addHook('onReady',async()=>{await admin.init(adminConfig)});
+ // Keep an explicit allowlist of successful account actions; never log request bodies or tokens.
+ const activityContext=new WeakMap<object,{id:string;action:string}>();
+ app.addHook('preHandler',async req=>{const action=req.method==='POST'?memberAction(req.url.split('?')[0]):null;if(!action)return;const user=await accounts.current(String(req.headers['x-user-session']||''));if(user)activityContext.set(req,{id:user.id,action});});
+ app.addHook('onSend',async(req,reply,payload)=>{const context=activityContext.get(req);if(context&&reply.statusCode>=200&&reply.statusCode<300){try{await recordMemberActivity(db,context.id,context.action)}catch{req.log.error('Member activity could not be recorded')}}return payload;});
  const owner=(req:{headers:Record<string,unknown>})=>admin.owner(String(req.headers['x-user-session']||''));
  app.addHook('preValidation',async(req,reply)=>{if(req.url.startsWith('/api/admin/')){reply.header('Cache-Control','no-store');if(!['/api/admin/setup','/api/admin/setup-status'].includes(req.url.split('?')[0]))await owner(req)}});
  const workspace=async(req:{headers:Record<string,unknown>},queryDb:DB=db)=>{
@@ -128,6 +134,8 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  app.get('/api/admin/overview',()=>admin.overview());
  app.get('/api/admin/members',{schema:{querystring:listQuery}},req=>{const q=req.query as {q?:string;offset?:number};return admin.members(q.q,q.offset)});
  app.get('/api/admin/members/:id',{schema:{params:idParams}},async(req,reply)=>{const row=await admin.member((req.params as {id:string}).id);return row||reply.code(404).send({code:'NOT_FOUND'})});
+ const insightPageQuery={type:'object',additionalProperties:false,properties:{offset:{type:'integer',minimum:0,maximum:100000}}};
+ for(const section of ['activity','messages'] as const)app.get('/api/admin/members/:id/'+section,{schema:{params:idParams,querystring:insightPageQuery}},async(req,reply)=>{const id=(req.params as {id:string}).id;if(!(await db.query('SELECT id FROM users WHERE id=$1',[id])).rows.length)return reply.code(404).send({code:'NOT_FOUND'});return new AdminMemberInsights(db)[section](id,(req.query as {offset?:number}).offset||0)});
  app.get('/api/admin/purchases',{schema:{querystring:listQuery}},req=>{const q=req.query as {q?:string;offset?:number};return admin.purchases(q.q,q.offset)});
  app.get('/api/admin/purchases/:id',{schema:{params:idParams}},async(req,reply)=>{const row=await admin.purchase((req.params as {id:string}).id);return row||reply.code(404).send({code:'NOT_FOUND'})});
  app.get('/api/admin/enterprise',{schema:{querystring:listQuery}},req=>admin.leads((req.query as {offset?:number}).offset));
@@ -172,7 +180,7 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
    const current=await gmail.status(w,tx);
    if(!current.connected)throw Error('GMAIL_NOT_CONNECTED');
    if(current.email?.toLowerCase()!==connected.from.toLowerCase())throw Error('FORBIDDEN');
-  });
+  },'panel');
  });
  app.addContentTypeParser('application/octet-stream',{parseAs:'buffer',bodyLimit:BLOG_IMAGE_LIMIT},(_req,body,done)=>done(null,body));
  app.post('/api/admin/media',{bodyLimit:BLOG_IMAGE_LIMIT},async(req,reply)=>{const user=await owner(req),bytes=req.body as Buffer;if(!Buffer.isBuffer(bytes)||bytes.length>BLOG_IMAGE_LIMIT)return reply.code(413).send({code:'INVALID_IMAGE'});const type=blogImageType(bytes);if(!type)return reply.code(415).send({code:'INVALID_IMAGE'});const name=randomUUID()+'.'+type.ext;await db.query('INSERT INTO blog_media(name,mime,bytes,owner_id) VALUES($1,$2,$3,$4)',[name,type.mime,bytes,user.id]);return reply.code(201).send({url:'/blog/media/'+name})});
