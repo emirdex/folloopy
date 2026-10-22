@@ -1,3 +1,5 @@
 'use client';
 import {useLinkStatus} from 'next/link';
-export function NavigationHint(){const{pending}=useLinkStatus();return pending?<span className="navigation-feedback" role="status"><span className="navigation-feedback-bar"/><span className="navigation-feedback-label">Sayfa açılıyor…</span></span>:null}
+import {createPortal} from 'react-dom';
+import {FolloopyLoading} from './folloopy-loading';
+export function NavigationHint(){const{pending}=useLinkStatus();return pending&&typeof document!=='undefined'?createPortal(<FolloopyLoading/>,document.body):null}

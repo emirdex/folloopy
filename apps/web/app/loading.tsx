@@ -1,1 +1,2 @@
-export default function Loading(){return <div className="route-loading" role="status"><span>Sayfa açılıyor…</span></div>}
+import {FolloopyLoading} from './folloopy-loading';
+export default function Loading(){return <FolloopyLoading/>}
