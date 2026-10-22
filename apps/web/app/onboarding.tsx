@@ -1,4 +1,5 @@
 'use client';
+import {HomeLogoLink} from './home-logo-link';
 import {FolloopyLogo,FolloopyMark} from './folloopy-brand';
 
 import {useActionState,useState} from 'react';
@@ -13,7 +14,7 @@ import {commercialPlans,planPricing,formatPrice,billingPeriod,type BillingPeriod
 import {PlanSelection} from './plan-selection';
 import {FlowProgress} from './flow-progress';
 export const planCatalog=[...commercialPlans.map(p=>({id:p.id,name:p.name,eyebrow:p.eyebrow,description:p.headline,detail:p.description,monthlyPrice:p.monthlyPrice,icon:p.id==='individual'?Layers:Users})),{id:'business',name:'Enterprise',eyebrow:'KURUMUNUZA ÖZEL',description:'Kurumunuza özel bir takip çözümü.',detail:'Ekip yapınız, güvenlik ihtiyaçlarınız ve entegrasyonlarınız için birlikte planlayalım.',monthlyPrice:null,icon:Building2}];
-export function FlowBrand(){return <Link className="flow-brand" href="/"><FolloopyLogo/></Link>}
+export function FlowBrand(){return <HomeLogoLink className="flow-brand"><FolloopyLogo/></HomeLogoLink>}
 export function FlowHeader({user,step}:{user?:Account;step:number}){return <header className="flow-header"><FlowBrand/>{step>0?<FlowProgress step={step}/>:null}{user?<div className="flow-header-actions">{user.plan?<Link href="/panel" className="flow-quiet">Panelime Dön<ArrowUpRight size={14}/></Link>:null}<form action={logoutAccount}><button className="flow-quiet">Çıkış yap<ArrowUpRight size={14}/></button></form></div>:<Link href="/" className="flow-quiet flow-home">Web sitesine dön<ArrowUpRight size={14}/></Link>}</header>}
 export function AuthScreen({mode,preferredPlan='',preferredBilling='monthly'}:{mode:'register'|'login';preferredPlan?:string;preferredBilling?:BillingPeriod}){
  const signup=mode==='register';const[state,action,pending]=useActionState(signup?registerAccount:loginAccount,null);const[visible,setVisible]=useState(false);
