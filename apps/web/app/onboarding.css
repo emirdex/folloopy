@@ -93,3 +93,5 @@
 @media(max-width:650px){.auth-form-inner>.auth-recovery-link{margin-top:18px;font-size:14px}}
 
 .flow-header-actions{display:flex;align-items:center;gap:20px}.flow-header-actions form{margin:0}@media(max-width:650px){.flow-header-actions{gap:12px}.flow-header-actions .flow-quiet{font-size:10px;gap:4px}.flow-header-actions .flow-quiet svg{width:12px;height:12px}}
+
+.account-form .account-name-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start}.account-form .account-name-row>label{min-width:0;margin:0}.account-form .account-name-row input{min-width:0;width:100%}@media(max-width:480px){.account-form .account-name-row{gap:10px}}

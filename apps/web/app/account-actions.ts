@@ -8,11 +8,11 @@ import {validNewPassword,PASSWORD_HELP} from '../../../packages/domain/password-
 export type FormState={error:string}|null;
 const errors:Record<string,string>={ACCOUNT_EXISTS:'Bu e-posta ile bir hesap zaten var. Giriş yapabilirsiniz.',INVALID_LOGIN:'E-posta veya şifre hatalı.',TOO_MANY_ATTEMPTS:'Çok fazla deneme yapıldı. Lütfen 15 dakika sonra yeniden deneyin.'};
 async function authenticate(form:FormData,register:boolean):Promise<FormState>{
- const email=String(form.get('email')||'').trim(),password=String(form.get('password')||''),name=String(form.get('name')||'').trim();
+ const email=String(form.get('email')||'').trim(),password=String(form.get('password')||''),firstName=String(form.get('firstName')||'').trim(),lastName=String(form.get('lastName')||'').trim(),name=[firstName,lastName].filter(Boolean).join(' ');
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return {error:'Geçerli bir e-posta adresi girin.'};
  if(register&&!validNewPassword(password))return {error:PASSWORD_HELP};
  if(!password||password.length>128)return {error:'Şifrenizi girin (en fazla 128 karakter).'};
- if(register&&(name.length<2||name.length>80))return {error:'Adınızı 2–80 karakter olarak girin.'};
+ if(register&&(!firstName||!lastName||name.length>80||/[\r\n\t]/.test(name)))return {error:'Adınızı ve soyadınızı ayrı alanlara girin. Toplam uzunluk en fazla 80 karakter olabilir.'};
  try{
   const result=await accountApi(register?'/api/auth/register':'/api/auth/login',{email,password,...(register?{name}:{})});
   const store=await cookies();store.set('mt_session',result.token,{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',path:'/',maxAge:7*24*60*60});store.delete('mail_tracking_preview');
