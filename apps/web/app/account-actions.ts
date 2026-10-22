@@ -21,7 +21,7 @@ async function authenticate(form:FormData,register:boolean):Promise<FormState>{
  const user=await requireAccount();if(process.env.NODE_ENV==='production'&&!user.email_verified_at)redirect('/hesap/dogrula'+(['individual','team'].includes(preferredPlan)?'?plan='+preferredPlan:''));redirect(user.role==='owner'?'/admin':['individual','team','business'].includes(preferredPlan)?'/paketler?plan='+preferredPlan+'&billing='+billingPeriod(form.get('billing')):user.plan?'/panel':'/paketler');
 }
 export async function registerAccount(_state:FormState,form:FormData){return authenticate(form,true)}
-export async function loginAccount(_state:FormState,form:FormData){return authenticate(form,false)}
+export async function loginAccount(_state:FormState,form:FormData){const started=Date.now();try{return await authenticate(form,false)}finally{const remaining=2000-(Date.now()-started);if(remaining>0)await new Promise(resolve=>setTimeout(resolve,remaining))}}
 async function closeAccountSession(){await accountApi('/api/auth/logout',{});const store=await cookies();store.delete('mt_session');store.delete('mail_tracking_preview')}
 export async function logoutAccount(){await closeAccountSession();redirect('/')}
 export async function leaveVerification(){await closeAccountSession();redirect('/giris')}
