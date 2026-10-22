@@ -1,0 +1,15 @@
+'use client';
+import {useRef,useState,type ReactNode} from 'react';
+import {ArrowUpRight,Check,Layers3} from 'lucide-react';
+export function ProviderMark({provider}:{provider:'gmail'|'outlook'}){
+ return provider==='gmail'?<svg viewBox="0 0 40 32" fill="none" aria-hidden="true"><path d="M4 7v21h7V12" stroke="#4285F4" strokeWidth="6" strokeLinejoin="round"/><path d="M36 7v21h-7V12" stroke="#34A853" strokeWidth="6" strokeLinejoin="round"/><path d="m4 6 16 12L36 6" stroke="#EA4335" strokeWidth="6" strokeLinejoin="round"/><path d="M4 7v8" stroke="#C5221F" strokeWidth="6"/><path d="M36 7v8" stroke="#FBBC04" strokeWidth="6"/></svg>:<svg viewBox="0 0 40 36" fill="none" aria-hidden="true"><rect x="13" y="3" width="23" height="29" rx="3" fill="#1490DF"/><path d="m14 15 12 9 12-9v15a3 3 0 0 1-3 3H17a3 3 0 0 1-3-3Z" fill="#36ACEE"/><rect x="2" y="8" width="23" height="25" rx="3" fill="#0875C5"/><ellipse cx="13.5" cy="20.5" rx="5" ry="7" stroke="white" strokeWidth="2.8"/></svg>;
+}
+export function ExtensionWorkspace({gmail,outlook}:{gmail:ReactNode;outlook:ReactNode}){
+ const [provider,setProvider]=useState<'gmail'|'outlook'>('gmail');
+ const tabs=useRef<(HTMLButtonElement|null)[]>([]);
+ return <div className="ext-workspace">
+  <section className="ext-welcome"><div><span className="ext-kicker"><Layers3 size={14}/>FOLLOOPY EKLENTİLERİ</span><h2>E-postanızla birlikte çalışan<br/>bir takip deneyimi.</h2><p>Sağlayıcınızı seçin; eklentinizin durumunu inceleyin,<br className="ext-desktop-break"/> kurulum ve bağlantı işlemlerinizi yönetin.</p></div><div className="ext-welcome-art" aria-hidden="true"><span><ProviderMark provider="gmail"/></span><i/><b>f∞</b><i/><span><ProviderMark provider="outlook"/></span></div></section>
+  <div className="ext-provider-tabs" role="tablist" aria-label="E-posta sağlayıcısı">{(['gmail','outlook'] as const).map((item,index)=><button key={item} ref={el=>{tabs.current[index]=el}} type="button" role="tab" id={`ext-tab-${item}`} aria-controls={`ext-panel-${item}`} aria-selected={provider===item} tabIndex={provider===item?0:-1} className={`ext-provider-tab ${provider===item?'is-selected':''}`} onClick={()=>setProvider(item)} onKeyDown={event=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?1:1-index;setProvider(next===0?'gmail':'outlook');tabs.current[next]?.focus()}}}><span className="ext-brand"><ProviderMark provider={item}/></span><span className="ext-provider-name"><strong>{item==='gmail'?'Gmail':'Outlook'}</strong><small>{item==='gmail'?'Google Workspace':'Microsoft 365'}</small></span><span className={`ext-provider-label ${item==='gmail'?'is-available':''}`}>{item==='gmail'?'Kurulum açık':'Planlanıyor'}</span><span className="ext-tab-select">{provider===item?<Check size={15}/>:<ArrowUpRight size={15}/>}</span></button>)}</div>
+  <div key={provider} className="ext-provider-content" role="tabpanel" id={`ext-panel-${provider}`} aria-labelledby={`ext-tab-${provider}`} tabIndex={0}>{provider==='gmail'?gmail:outlook}</div>
+ </div>;
+}
