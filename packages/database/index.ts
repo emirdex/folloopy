@@ -23,8 +23,10 @@ export async function openDatabase(url?:string, directory?:string):Promise<DB>{
   transaction:<T>(fn:(db:DB)=>Promise<T>)=>client.transaction((tx:any)=>fn(wrap(tx))),close:()=>lite.close()});
  return wrap(lite);
 }
+export const databaseMigrations=[[1,'001_initial.sql'],[2,'002_accounts.sql'],[3,'003_enterprise_requests.sql'],[4,'004_admin_blog.sql'],[5,'005_blog_media_seo.sql'],[6,'006_product_copy.sql'],[7,'007_production.sql'],[8,'008_account_details.sql'],[9,'009_billing_profiles.sql'],[10,'010_verification_codes.sql'],[11,'011_mail_drafts.sql'],[12,'012_bulk_mail.sql'],[13,'013_gmail_extension.sql'],[14,'014_member_insights.sql']] as const;
+export const LATEST_SCHEMA_VERSION=databaseMigrations[databaseMigrations.length-1][0];
 export async function migrate(db:DB){
- for(const [version,file] of [[1,'001_initial.sql'],[2,'002_accounts.sql'],[3,'003_enterprise_requests.sql'],[4,'004_admin_blog.sql'],[5,'005_blog_media_seo.sql'],[6,'006_product_copy.sql'],[7,'007_production.sql'],[8,'008_account_details.sql'],[9,'009_billing_profiles.sql'],[10,'010_verification_codes.sql'],[11,'011_mail_drafts.sql'],[12,'012_bulk_mail.sql'],[13,'013_gmail_extension.sql'],[14,'014_member_insights.sql']] as const){
+ for(const [version,file] of databaseMigrations){
   const sql=await readFile(new URL('./migrations/'+file,import.meta.url),'utf8');
   await db.transaction(async tx=>{
    if(db.kind==='postgres')await tx.query('SELECT pg_advisory_xact_lock(731005827)');

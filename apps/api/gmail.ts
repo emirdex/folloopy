@@ -6,7 +6,7 @@ import {GmailProvider} from '../../packages/provider-adapters/index';
 const digest=(s:string)=>createHash('sha256').update(s).digest('hex');
 const sendScope='https://www.googleapis.com/auth/gmail.send';
 export class GmailConnections{
- constructor(private db:DB,private site:string,private key:string){}
+ constructor(private db:DB,private site:string,private key:string,private production=true){}
  get configured(){return !!(process.env.GOOGLE_CLIENT_ID&&process.env.GOOGLE_CLIENT_SECRET&&this.key)}
  private get redirect(){return this.site+'/baglantilar/google/callback'}
  async begin(user:Account,session:string){
@@ -33,6 +33,12 @@ export class GmailConnections{
    await tx.query('SELECT id FROM users WHERE id=$1 FOR UPDATE',[user.id]);
    const sessionActive=(await tx.query('SELECT user_id FROM sessions WHERE token_hash=$1 AND user_id=$2 AND expires_at>now()',[digest(session),user.id])).rows.length;
    if(!sessionActive)throw Error('UNAUTHORIZED');
+   // Google token exchange can outlive an account or package change.
+   await tx.query('SELECT workspace_id FROM entitlements WHERE workspace_id=$1 FOR UPDATE',[user.workspace_id]);
+   const authority=(await tx.query<{email_verified_at:string|null;plan:string|null;status:string|null}>(`SELECT u.email_verified_at,${this.production?'g.plan':'COALESCE(g.plan,p.plan)'} AS plan,e.status FROM users u LEFT JOIN access_grants g ON g.workspace_id=u.workspace_id LEFT JOIN preview_purchases p ON p.workspace_id=u.workspace_id LEFT JOIN entitlements e ON e.workspace_id=u.workspace_id WHERE u.id=$1 AND u.workspace_id=$2 FOR UPDATE OF u`,[user.id,user.workspace_id])).rows[0];
+   if(this.production&&!authority?.email_verified_at)throw Error('EMAIL_NOT_VERIFIED');
+   if(!authority?.plan)throw Error('PLAN_REQUIRED');
+   if(!(this.production?['active']:['active','local_test']).includes(authority.status||''))throw Error('FORBIDDEN');
    const consumed=(await tx.query('DELETE FROM oauth_states WHERE token_hash=$1 AND user_id=$2 AND session_hash=$3 AND expires_at>now() RETURNING user_id',[digest(state),user.id,digest(session)])).rows.length;
    if(!consumed)throw Error('INVALID_OAUTH_STATE');
    await tx.query('INSERT INTO mail_connections(workspace_id,email,refresh_token,scopes) VALUES($1,$2,$3,$4) ON CONFLICT(workspace_id) DO UPDATE SET email=excluded.email,refresh_token=excluded.refresh_token,scopes=excluded.scopes,updated_at=now()',[user.workspace_id,identity.email,seal(refreshToken,this.key),tokens.scope]);

@@ -26,7 +26,7 @@ const uuid={type:'string',pattern:'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]
 export function buildServer(db:DB,provider:MailProvider,key:string,origin:string,adminConfig?:AdminConfig,options:{production?:boolean;site?:string;encryptionKey?:string;billing?:string}={}){
  const production=options.production??process.env.NODE_ENV==='production';
  const security=options.encryptionKey?new AccountSecurity(db,options.site||origin,options.encryptionKey):null;
- const gmail=new GmailConnections(db,options.site||origin,options.encryptionKey||'');
+ const gmail=new GmailConnections(db,options.site||origin,options.encryptionKey||'',production);
  if(key.length<32) throw new Error('INTERNAL_API_KEY_REQUIRED');
  const app=Fastify({logger:false,bodyLimit:32768,trustProxy:false,ajv:{customOptions:{removeAdditional:false}}});
  const service=new TrackingService(db,provider,origin);
@@ -56,7 +56,7 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  const account=async(req:{headers:Record<string,unknown>})=>{const user=await accounts.current(String(req.headers['x-user-session']||''));if(!user)throw new Error('UNAUTHORIZED');return user};
  // Deny unverified accounts centrally, including owners and direct API requests.
  // Only login, recovery and verification are available before email ownership is proven.
- const onboardingRoutes=new Set(['/api/auth/register','/api/auth/login','/api/auth/me','/api/auth/logout','/api/auth/verify/request','/api/auth/verify/confirm','/api/auth/reset/request','/api/auth/reset/confirm','/api/auth/verify/code/status','/api/auth/verify/code/request','/api/auth/verify/code/confirm','/api/admin/setup','/api/admin/setup-status','/api/account/email/confirm','/api/enterprise-requests']);
+ const onboardingRoutes=new Set(['/api/auth/register','/api/auth/login','/api/auth/me','/api/auth/logout','/api/auth/verify/request','/api/auth/verify/confirm','/api/auth/reset/request','/api/auth/reset/confirm','/api/auth/verify/code/status','/api/auth/verify/code/request','/api/auth/verify/code/confirm','/api/admin/setup','/api/admin/setup-status','/api/account/email/confirm','/api/enterprise-requests','/api/contact/limit']);
  app.addHook('preValidation',async req=>{
   if(req.url==='/api/extension/transport')return;
   if(!production||!req.url.startsWith('/api/')||onboardingRoutes.has(req.url.split('?')[0]))return;
@@ -108,6 +108,12 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
   if(production&&!await allowRequest(db,'enterprise',body.email.trim().toLowerCase(),5,3600))return reply.code(429).send({code:'TOO_MANY_ATTEMPTS'});
   const company=body.company.trim();if(company.length<2)return reply.code(400).send({code:'INVALID_COMPANY'});
   await db.query('INSERT INTO enterprise_requests(id,email,company) VALUES($1,$2,$3) ON CONFLICT(email,company) DO NOTHING',[randomUUID(),body.email.trim().toLowerCase(),company]);
+  return {ok:true};
+ });
+ // Private transport only: a durable spam budget shared by public/panel workers.
+ app.post('/api/contact/limit',{schema:{body:{type:'object',additionalProperties:false,required:['email'],properties:{email:credentials.properties.email}}}},async(req,reply)=>{
+  const email=(req.body as {email:string}).email.trim().toLowerCase();
+  if(!await allowRequest(db,'contact-email',email,5)||!await allowRequest(db,'contact-global','all',50))return reply.code(429).send({code:'TOO_MANY_ATTEMPTS'});
   return {ok:true};
  });
  const listQuery={type:'object',additionalProperties:false,properties:{q:{type:'string',maxLength:200},offset:{type:'integer',minimum:0,maximum:100000}}};

@@ -180,3 +180,43 @@ test('Panel sends recheck session, verification, package and Gmail identity afte
   }
  }finally{release();globalThis.fetch=originalFetch;if(oldId===undefined)delete process.env.GOOGLE_CLIENT_ID;else process.env.GOOGLE_CLIENT_ID=oldId;if(oldSecret===undefined)delete process.env.GOOGLE_CLIENT_SECRET;else process.env.GOOGLE_CLIENT_SECRET=oldSecret;await s.app.close();await s.db.close()}
 });
+
+test('OAuth cannot store a Gmail connection when verification, access or entitlement is revoked during token exchange',async()=>{
+ const {GmailConnections}=await import('../apps/api/gmail');const s=await setup();
+ const originalFetch=globalThis.fetch,oldId=process.env.GOOGLE_CLIENT_ID,oldSecret=process.env.GOOGLE_CLIENT_SECRET;
+ process.env.GOOGLE_CLIENT_ID='synthetic-client';process.env.GOOGLE_CLIENT_SECRET='synthetic-secret';
+ try{
+  for(const scenario of ['verification','plan','suspension'] as const){
+   const a=await s.create('oauth-revoked-'+scenario+'@example.invalid',true);await s.accounts.grant(a.user,'team');
+   const gmail=new GmailConnections(s.db,'https://folloopy.example',key),state=new URL(await gmail.begin(a.user,a.token)).searchParams.get('state')!;
+   let entered!:()=>void,release!:()=>void;const reached=new Promise<void>(resolve=>{entered=resolve}),waiting=new Promise<void>(resolve=>{release=resolve});
+   globalThis.fetch=async input=>{if(String(input).includes('/token')){entered();await waiting;return Response.json({access_token:'synthetic-access',refresh_token:'synthetic-refresh',scope:'https://www.googleapis.com/auth/gmail.send'})}return Response.json({email:'sender@example.invalid',email_verified:true})};
+   const finishing=gmail.finish(a.user,a.token,state,'synthetic-code');
+   const outcome=finishing.then(()=>false,()=>true);
+   await reached;
+   if(scenario==='verification')await s.db.query('UPDATE users SET email_verified_at=NULL WHERE id=$1',[a.user.id]);
+   else if(scenario==='plan')await s.db.query('DELETE FROM access_grants WHERE workspace_id=$1',[a.user.workspace_id]);
+   else await s.db.query("UPDATE entitlements SET status='suspended' WHERE workspace_id=$1",[a.user.workspace_id]);
+   release();assert.equal(await outcome,true,scenario+': revoked authority accepted');
+   assert.equal((await s.db.query('SELECT email FROM mail_connections WHERE workspace_id=$1',[a.user.workspace_id])).rows.length,0);
+  }
+ }finally{globalThis.fetch=originalFetch;if(oldId===undefined)delete process.env.GOOGLE_CLIENT_ID;else process.env.GOOGLE_CLIENT_ID=oldId;if(oldSecret===undefined)delete process.env.GOOGLE_CLIENT_SECRET;else process.env.GOOGLE_CLIENT_SECRET=oldSecret;await s.app.close();await s.db.close()}
+});
+
+test('Development OAuth can use its explicit local preview while production rejects the same unverified preview account',async()=>{
+ const {GmailConnections}=await import('../apps/api/gmail');const s=await setup();
+ const originalFetch=globalThis.fetch,oldId=process.env.GOOGLE_CLIENT_ID,oldSecret=process.env.GOOGLE_CLIENT_SECRET;
+ process.env.GOOGLE_CLIENT_ID='synthetic-client';process.env.GOOGLE_CLIENT_SECRET='synthetic-secret';
+ globalThis.fetch=async input=>String(input).includes('/token')?Response.json({access_token:'synthetic-access',refresh_token:'synthetic-refresh',scope:'https://www.googleapis.com/auth/gmail.send'}):Response.json({email:'preview@example.invalid',email_verified:true});
+ try{
+  const local=new Accounts(s.db,false),session=await local.register('Local Preview','oauth-preview@example.invalid',password),user=(await local.current(session.token))!;
+  await local.purchase(user,'individual');
+  const dev=new GmailConnections(s.db,'https://folloopy.example',key,false),prod=new GmailConnections(s.db,'https://folloopy.example',key,true);
+  let state=new URL(await prod.begin(user,session.token)).searchParams.get('state')!;
+  await assert.rejects(prod.finish(user,session.token,state,'synthetic-code'),/EMAIL_NOT_VERIFIED/);
+  assert.equal((await s.db.query('SELECT email FROM mail_connections')).rows.length,0);
+  state=new URL(await dev.begin(user,session.token)).searchParams.get('state')!;
+  await dev.finish(user,session.token,state,'synthetic-code');
+  assert.equal((await dev.status(user.workspace_id)).connected,true);
+ }finally{globalThis.fetch=originalFetch;if(oldId===undefined)delete process.env.GOOGLE_CLIENT_ID;else process.env.GOOGLE_CLIENT_ID=oldId;if(oldSecret===undefined)delete process.env.GOOGLE_CLIENT_SECRET;else process.env.GOOGLE_CLIENT_SECRET=oldSecret;await s.app.close();await s.db.close()}
+});
