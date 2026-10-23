@@ -87,9 +87,12 @@ export default async function Page({searchParams}:{searchParams:Promise<Params>}
  if(p.view==='account'){await requireAccount();return <Shell active="account"><PageHeading title="Hesap Detayları" description={p.mode==='plan-already-active'?'Bu paket hesabınızda zaten etkin. Yeniden ödeme veya etkinleştirme yapmanız gerekmiyor.':'Profilinizi, paket kullanımınızı ve ödeme geçmişinizi yönetin.'}/><AccountDetails/></Shell>}
  if(p.view==='extensions'){const user=await currentAccount();return <Shell active="extensions"><PageHeading title="Eklentiler" description="Gmail ve Outlook eklentilerinin durumunu inceleyin, kurulum ve hesap bağlantılarınızı yönetin."/><ExtensionHub plan={user?.plan||null} pair={p.pair} mode={p.mode}/></Shell>}
  if(p.view==='guide'){await requireAccount();return <Shell active="guide"><MemberGuide/></Shell>}
- let messages:Message[]=[],online=true;
- try{messages=(await api('/api/messages')).messages}catch{online=false}
  const view=p.id?'detail':p.view==='compose'?'compose':p.view==='setup'?'setup':p.view==='activity'?'activity':p.view==='messages'||p.q||p.mode||p.filter?'messages':'overview';
+ let messages:Message[]=[],online=true;
+ // Connection, compose and detail screens do not use the mail list.
+ if(['overview','messages','activity'].includes(view)){
+  try{messages=(await api('/api/messages')).messages}catch{online=false}
+ }
  const active=['compose','detail'].includes(view)?'messages':view;
  if(view==='compose'){
   let draft:MailDraft|undefined,quota:{used:number;limit:number}|undefined;

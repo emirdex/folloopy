@@ -14,6 +14,7 @@ if(process.env.NODE_ENV!=='production')throw Error('Run this smoke test in produ
 process.env.INTERNAL_API_KEY='synthetic-web-security-smoke-key-2026';process.env.INTERNAL_API_URL='http://127.0.0.1:45998';process.env.BILLING_MODE='complimentary';process.env.APP_MODE='application';
 const db=await openDatabase();await migrate(db);const accounts=new Accounts(db,true);
 const {app:api}=buildServer(db,new UnavailableProvider(),process.env.INTERNAL_API_KEY,'https://folloopy.example',undefined,{production:true,encryptionKey:randomBytes(32).toString('base64'),billing:'complimentary'});
+const renderCalls:string[]=[];api.addHook('onRequest',async request=>{renderCalls.push(request.url.split('?')[0])});
 await api.ready();installLocalApi(api,process.env.INTERNAL_API_URL);
 const server=createServer();await new Promise<void>(resolve=>server.listen(0,'127.0.0.1',resolve));
 const address=server.address();if(!address||typeof address==='string')throw Error('SMOKE_SERVER_FAILED');const origin='http://127.0.0.1:'+address.port;
@@ -53,6 +54,15 @@ try{
  await expectRedirect('/panel','/paketler',member.token);await expectRedirect('/admin','/admin/erisim',member.token);await expectRedirect('/hesap/dogrula','/admin',owner.token);
  const account=(await accounts.current(member.token))!;for(const plan of ['individual','team'] as const){await accounts.grant(account,plan);const response=await fetch(origin+'/panel',{redirect:'manual',headers:{cookie:'mt_session='+member.token}});assert.equal(response.status,200,plan);const html=await response.text();assert.ok(html.includes('Genel Bakış'));checks++;
   const download=await fetch(origin+'/eklentiler/indir',{redirect:'manual',headers:{cookie:'mt_session='+member.token}});assert.equal(download.status,plan==='team'?200:403);if(plan==='team'){assert.equal(download.headers.get('content-type'),'application/zip');assert.ok(download.headers.get('cache-control')?.includes('no-store'));assert.equal(Buffer.from(await download.arrayBuffer()).readUInt32LE(0),0x04034b50)}checks++;
+ }
+ // Each server render must deduplicate session reads, and independent screens
+ // must not wait for a mail list they never display.
+ for(const view of ['setup','compose','drafts','guide']){
+  renderCalls.length=0;
+  const response=await fetch(origin+'/panel?view='+view,{headers:{cookie:'mt_session='+member.token}});
+  assert.equal(response.status,200);await response.text();
+  assert.equal(renderCalls.filter(path=>path==='/api/auth/me').length,1,view+': duplicate session lookup');
+  assert.ok(!renderCalls.includes('/api/messages'),view+': unrelated mail list');checks++;
  }
  // Browser cookies cannot substitute for signed extension credentials.
  process.env.DEPLOYMENT_ROLE='panel';

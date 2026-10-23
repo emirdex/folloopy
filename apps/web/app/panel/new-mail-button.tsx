@@ -1,5 +1,5 @@
 'use client';
-import Link from 'next/link';
+import Link from '../destination-link';
 import {useEffect,useState} from 'react';
 import {ArrowUpRight} from 'lucide-react';
 import './new-mail-button.css';

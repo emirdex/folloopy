@@ -1,6 +1,7 @@
 import {isMarketingMode} from '../../../packages/runtime/app-mode';
 import {internalApiFetch,internalApiUrl,internalApiKey} from './internal-api';
 import {cookies} from 'next/headers';
+import {cache} from 'react';
 import {redirect} from 'next/navigation';
 export type Account={id:string;workspace_id:string;name:string;email:string;plan:'individual'|'team'|'business'|null;role:'member'|'owner';email_verified_at?:string|null};
 export async function accountApi(path:string,body?:unknown){
@@ -15,12 +16,13 @@ export async function accountApi(path:string,body?:unknown){
  if(!response.ok)throw new Error(data.code||'SERVICE_ERROR');
  return data;
 }
-export async function currentAccount():Promise<Account|null>{
+// React cache is confined to one server render; never share sessions across requests.
+export const currentAccount=cache(async():Promise<Account|null>=>{
  const store=await cookies();
  if(isMarketingMode()||process.env.DEPLOYMENT_ROLE==='public')return null;
  if(!store.has('mt_session'))return null;
  try{return (await accountApi('/api/auth/me')).user}catch(e){if(e instanceof Error&&e.message==='UNAUTHORIZED')return null;throw e}
-}
+});
 export async function requireAccount(){const user=await currentAccount();if(!user)redirect('/giris');return user}
 export async function requireVerifiedAccount(){const user=await requireAccount();if(process.env.NODE_ENV==='production'&&!user.email_verified_at)redirect('/hesap/dogrula');return user}
 export async function requirePanel(){
