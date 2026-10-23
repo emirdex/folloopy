@@ -2,12 +2,14 @@
 
 import {useEffect,useRef,type ReactNode} from 'react';
 import {useFormStatus} from 'react-dom';
+import {useRouter} from 'next/navigation';
 import {ArrowRight,Check,CheckCheck,Mail,Monitor,ShieldCheck,X} from 'lucide-react';
 import './extension-pairing-dialog.css';
 
 export function ExtensionPairingDialog({state,sender,children}:{state:'request'|'success'|'error';sender?:string|null;children?:ReactNode}){
  const dialog=useRef<HTMLDialogElement>(null);
- const close=()=>{dialog.current?.close();window.location.replace('/panel?view=extensions')};
+ const router=useRouter();
+ const close=()=>{dialog.current?.close();window.dispatchEvent(new CustomEvent('folloopy:panel-navigate',{detail:{href:'/panel?view=extensions',replace:true}}));router.replace('/panel?view=extensions',{scroll:false})};
  useEffect(()=>{const node=dialog.current;if(node&&!node.open)node.showModal();return()=>{if(node?.open)node.close()}},[state]);
  const success=state==='success',error=state==='error';
  return <dialog ref={dialog} className={'extension-approval-dialog is-'+state} aria-labelledby="extension-approval-title" aria-describedby="extension-approval-copy" onCancel={event=>{event.preventDefault();close()}}>

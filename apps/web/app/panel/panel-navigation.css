@@ -1,0 +1,6 @@
+/* Keep incoming page surfaces visible immediately during in-panel navigation.
+   Icon, button, chart and tracking animations retain their existing behavior. */
+.member-panel-page.has-client-navigation .workspace-content,
+.member-panel-page.has-client-navigation .surface,
+.member-panel-page.has-client-navigation .metric,
+.member-panel-page.has-client-navigation .connection-card{animation:none}
