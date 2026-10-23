@@ -5,7 +5,7 @@ import {HomeLogoLink} from '../home-logo-link';
 import {FolloopyLogo} from '../folloopy-brand';
 import Link from '../destination-link';
 import './journal-header.css';
-const navigation=[['/#urun','Özellikler'],['/#nasil-calisir','Nasıl Çalışır?'],['/#planlar','Fiyatlandırma'],['/blog','Blog'],['/#sss','Sıkça Sorulan Sorular'],['/iletisim','İletişim']] as const;
+const navigation=[['/#urun','Özellikler'],['/#nasil-calisir','Nasıl Çalışır?'],['/#planlar','Fiyatlandırma'],['/#sss','Sıkça Sorulan Sorular'],['/blog','Blog'],['/iletisim','İletişim']] as const;
 export function JournalHeader({marketing}:{marketing:boolean}){
  const [open,setOpen]=useState(false),header=useRef<HTMLElement>(null),toggle=useRef<HTMLButtonElement>(null);
  useEffect(()=>{
