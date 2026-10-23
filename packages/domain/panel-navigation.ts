@@ -1,5 +1,5 @@
 type Destination={url:URL;replace:boolean};
-type Options={current:()=>string;recover:(href:string,replace:boolean)=>void;schedule:(run:()=>void,ms:number)=>unknown;cancel:(timer:unknown)=>void;timeoutMs?:number};
+type Options={current:()=>string;recover:(href:string,replace:boolean)=>void;schedule:(run:()=>void,ms:number)=>unknown;cancel:(timer:unknown)=>void;timeoutMs?:number;paths?:readonly ('/panel'|'/admin')[]};
 
 // A timeout belongs to the latest intent, not whichever response commits first.
 // Normal client transitions never reload a document; only an unresolved target
@@ -13,7 +13,7 @@ export function panelNavigationGuard(options:Options){
    clear();
    let current:URL,target:URL;
    try{current=new URL(options.current());target=new URL(href,current)}catch{return false}
-   if(target.origin!==current.origin||target.pathname!=='/panel'||target.username||target.password)return false;
+   if(target.origin!==current.origin||!(options.paths??['/panel']).includes(target.pathname as '/panel'|'/admin')||target.username||target.password)return false;
    if(key(target)===key(current))return false;
    const intent:Destination={url:target,replace};pending=intent;
    timer=options.schedule(()=>{

@@ -8,7 +8,7 @@ export function PanelNavigation(){
  const pathname=usePathname(),query=useSearchParams().toString();
  useEffect(()=>{window.dispatchEvent(new Event('folloopy:panel-committed'))},[pathname,query]);
  useEffect(()=>{
-  const guard=panelNavigationGuard({current:()=>window.location.href,recover:(href,replace)=>{if(replace)window.location.replace(href);else window.location.assign(href)},schedule:(run,ms)=>window.setTimeout(run,ms),cancel:timer=>window.clearTimeout(timer as number)});
+  const guard=panelNavigationGuard({paths:['/panel','/admin'],current:()=>window.location.href,recover:(href,replace)=>{if(replace)window.location.replace(href);else window.location.assign(href)},schedule:(run,ms)=>window.setTimeout(run,ms),cancel:timer=>window.clearTimeout(timer as number)});
   const navigate=(event:Event)=>{
    const detail=(event as CustomEvent<unknown>).detail;
    if(!detail||typeof detail!=='object'||!('href' in detail)||typeof detail.href!=='string')return;
