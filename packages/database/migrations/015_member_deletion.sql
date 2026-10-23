@@ -1,0 +1,11 @@
+ALTER TABLE purchases ALTER COLUMN user_id DROP NOT NULL;
+ALTER TABLE purchases ALTER COLUMN workspace_id DROP NOT NULL;
+ALTER TABLE purchases DROP CONSTRAINT purchases_user_id_fkey;
+ALTER TABLE purchases ADD CONSTRAINT purchases_user_id_fkey FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE purchases DROP CONSTRAINT purchases_workspace_id_fkey;
+ALTER TABLE purchases ADD CONSTRAINT purchases_workspace_id_fkey FOREIGN KEY(workspace_id) REFERENCES workspaces(id) ON DELETE SET NULL;
+ALTER TABLE admin_audit ALTER COLUMN actor_id DROP NOT NULL;
+ALTER TABLE admin_audit DROP CONSTRAINT admin_audit_actor_id_fkey;
+ALTER TABLE admin_audit ADD CONSTRAINT admin_audit_actor_id_fkey FOREIGN KEY(actor_id) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE blog_posts DROP CONSTRAINT blog_posts_author_id_fkey;
+ALTER TABLE blog_posts ADD CONSTRAINT blog_posts_author_id_fkey FOREIGN KEY(author_id) REFERENCES users(id) ON DELETE SET NULL;

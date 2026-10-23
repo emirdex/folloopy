@@ -17,6 +17,14 @@ export async function createMember(_state:AdminFormState,form:FormData):Promise<
  revalidatePath('/admin');
  redirect('/admin?view=members&id='+result.id);
 }
+export async function deleteMember(_state:AdminFormState,form:FormData):Promise<AdminFormState>{
+ const actor=await requireAdmin(),id=String(form.get('id')||''),email=String(form.get('email')||'');
+ if(!/^[a-f0-9-]{36}$/.test(id)||actor.id===id||form.get('confirm')!=='yes')return {error:'Üye silme onayı geçersiz.'};
+ try{await adminApi('/members/'+id+'/delete',{email,confirm:true})}
+ catch(error){const code=error instanceof Error?error.message:'';return {error:code==='MEMBER_BUSY'?'Bu üyenin devam eden bir gönderimi var. Gönderim tamamlandıktan sonra yeniden deneyin.':code==='MEMBER_CHANGED'?'Üyenin e-posta adresi değişmiş. Sayfayı yenileyerek yeniden deneyin.':code==='FORBIDDEN'?'Yönetici hesabı silinemez.':code==='NOT_FOUND'?'Bu üye zaten silinmiş. Sayfayı yenileyin.':'Üye silinemedi. Lütfen yeniden deneyin.'}}
+ revalidatePath('/admin');
+ return {ok:true,error:''};
+}
 export async function setupOwner(_state:AdminFormState,form:FormData):Promise<AdminFormState>{
  const issue=ownerSetupIssue(form);if(issue)return {error:issue.error};
  const token=String(form.get('token')||'').trim(),name=String(form.get('name')||'').trim(),password=String(form.get('password')||'');

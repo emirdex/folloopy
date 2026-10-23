@@ -60,8 +60,40 @@ export class AdminService{
    return {id,name,email,plan:input.plan};
   })}catch(error){if((error as {code?:string}).code==='23505')throw Error('ACCOUNT_EXISTS');throw error}
  }
- async purchases(q='',offset=0){const condition='u.email ILIKE $1 OR u.name ILIKE $1 OR p.id::text ILIKE $1';const total=(await this.db.query<{total:number}>(`SELECT count(*)::int AS total FROM purchases p JOIN users u ON u.id=p.user_id WHERE ${condition}`,[`%${q}%`])).rows[0].total;const rows=(await this.db.query(`SELECT p.*,u.name,u.email FROM purchases p JOIN users u ON u.id=p.user_id WHERE ${condition} ORDER BY p.created_at DESC,p.id LIMIT 50 OFFSET $2`,[`%${q}%`,offset])).rows;return {rows,total}}
- async purchase(id:string){return (await this.db.query('SELECT p.*,u.name,u.email,e.used AS current_used,e.message_limit AS current_limit FROM purchases p JOIN users u ON u.id=p.user_id LEFT JOIN entitlements e ON e.workspace_id=p.workspace_id WHERE p.id=$1',[id])).rows[0]||null}
+ async deleteMember(actor:Account,id:string,email:string){
+  if(actor.role!=='owner'||actor.id===id)throw Error('FORBIDDEN');
+  return this.db.transaction(async tx=>{
+   const owner=(await tx.query<{role:string;email_verified_at:string|null}>('SELECT role,email_verified_at FROM users WHERE id=$1 FOR SHARE',[actor.id])).rows[0];
+   if(owner?.role!=='owner')throw Error('FORBIDDEN');
+   if(!owner.email_verified_at)throw Error('EMAIL_NOT_VERIFIED');
+   const member=(await tx.query<{id:string;workspace_id:string;role:string;email:string}>('SELECT id,workspace_id,role,email FROM users WHERE id=$1 FOR UPDATE',[id])).rows[0];
+   if(!member)throw Error('NOT_FOUND');
+   if(member.role!=='member'||member.workspace_id===actor.workspace_id)throw Error('FORBIDDEN');
+   if(member.email.toLowerCase()!==email.trim().toLowerCase())throw Error('MEMBER_CHANGED');
+   const workspace=member.workspace_id;
+   // Match sender/worker lock order so no new send can start during removal.
+   await tx.query('SELECT workspace_id FROM entitlements WHERE workspace_id=$1 FOR UPDATE',[workspace]);
+   await tx.query('SELECT id FROM mail_outbox WHERE user_id=$1 FOR UPDATE',[id]);
+   const busy=(await tx.query(`SELECT 1 FROM messages WHERE workspace_id=$1 AND state='sending' UNION ALL SELECT 1 FROM bulk_recipients WHERE workspace_id=$1 AND state='sending' UNION ALL SELECT 1 FROM mail_outbox WHERE user_id=$2 AND state='sending' LIMIT 1`,[workspace,id])).rows.length;
+   if(busy)throw Error('MEMBER_BUSY');
+   await tx.query('DELETE FROM bulk_campaigns WHERE workspace_id=$1',[workspace]);
+   await tx.query('DELETE FROM mail_drafts WHERE workspace_id=$1',[workspace]);
+   await tx.query('DELETE FROM messages WHERE workspace_id=$1',[workspace]);
+   await tx.query('DELETE FROM sessions WHERE user_id=$1',[id]);
+   // Public media and financial/audit records survive without the deleted identity.
+   await tx.query('UPDATE blog_media SET owner_id=$2 WHERE owner_id=$1',[id,actor.id]);
+   await tx.query('DELETE FROM users WHERE id=$1',[id]);
+   await tx.query('DELETE FROM mail_connections WHERE workspace_id=$1',[workspace]);
+   await tx.query('DELETE FROM access_grants WHERE workspace_id=$1',[workspace]);
+   await tx.query('DELETE FROM preview_purchases WHERE workspace_id=$1',[workspace]);
+   await tx.query('DELETE FROM entitlements WHERE workspace_id=$1',[workspace]);
+   await tx.query('DELETE FROM workspaces WHERE id=$1',[workspace]);
+   await tx.query("INSERT INTO admin_audit(id,actor_id,action,target_id) VALUES($1,$2,'member_deleted',$3)",[randomUUID(),actor.id,id]);
+   return {deleted:true};
+  });
+ }
+ async purchases(q='',offset=0){const condition='u.email ILIKE $1 OR u.name ILIKE $1 OR p.id::text ILIKE $1';const total=(await this.db.query<{total:number}>(`SELECT count(*)::int AS total FROM purchases p LEFT JOIN users u ON u.id=p.user_id WHERE ${condition}`,[`%${q}%`])).rows[0].total;const rows=(await this.db.query(`SELECT p.*,COALESCE(u.name,'Silinen üye') AS name,COALESCE(u.email,'Silinen üye') AS email FROM purchases p LEFT JOIN users u ON u.id=p.user_id WHERE ${condition} ORDER BY p.created_at DESC,p.id LIMIT 50 OFFSET $2`,[`%${q}%`,offset])).rows;return {rows,total}}
+ async purchase(id:string){return (await this.db.query("SELECT p.*,COALESCE(u.name,'Silinen üye') AS name,COALESCE(u.email,'Silinen üye') AS email,e.used AS current_used,e.message_limit AS current_limit FROM purchases p LEFT JOIN users u ON u.id=p.user_id LEFT JOIN entitlements e ON e.workspace_id=p.workspace_id WHERE p.id=$1",[id])).rows[0]||null}
  async leads(offset=0){return {rows:(await this.db.query('SELECT id,email,company,status,created_at FROM enterprise_requests ORDER BY created_at DESC,id LIMIT 50 OFFSET $1',[offset])).rows,total:(await this.db.query<{total:number}>('SELECT count(*)::int AS total FROM enterprise_requests')).rows[0].total}}
  async markLead(actor:Account,id:string,status:string){await this.db.transaction(async tx=>{const result=await tx.query('UPDATE enterprise_requests SET status=$2 WHERE id=$1 RETURNING id',[id,status]);if(!result.rows.length)throw new Error('NOT_FOUND');await tx.query('INSERT INTO admin_audit(id,actor_id,action,target_id) VALUES($1,$2,$3,$4)',[randomUUID(),actor.id,'enterprise_'+status,id])})}
 }
