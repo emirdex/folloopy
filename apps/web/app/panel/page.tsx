@@ -29,7 +29,7 @@ export const dynamic='force-dynamic';
 type Message={id:string;subject:string;state:string;provider:string;sent_at:string|null;created_at:string;tracking_enabled:boolean;raw_count:number;unknown_count:number;activity_count:number;first_activity_at:string|null;last_activity_at:string|null};
 type Observation={id:string;occurred_at:string;kind:string;source:string|null;classifier_version:string|null};
 type Detail={message:Pick<Message,'id'|'subject'|'state'|'provider'|'sent_at'|'tracking_enabled'|'activity_count'|'first_activity_at'|'last_activity_at'>;events:Observation[];openings:{first_at:string;last_at:string}[]};
-type Params={q?:string;id?:string;filter?:string;view?:string;mode?:string;reason?:string;welcome?:string;draft?:string;campaign?:string;offset?:string;pair?:string};
+type Params={q?:string;id?:string;filter?:string;view?:string;mode?:string;reason?:string;welcome?:string;draft?:string;campaign?:string;offset?:string;range?:string;pair?:string};
 const states:Record<string,string>={sent:'Gönderim onaylandı',sending:'Gönderim kontrol ediliyor',unknown:'Gönderim kontrol ediliyor',failed:'Gönderilemedi',prepared:'Hazırlanıyor'};
 async function api(path:string,init?:RequestInit){
  await requirePanel();
@@ -91,7 +91,7 @@ export default async function Page({searchParams}:{searchParams:Promise<Params>}
  let messages:Message[]=[],online=true;
  // Connection, compose and detail screens do not use the mail list.
  if(['overview','messages','activity'].includes(view)){
-  try{messages=(await api('/api/messages')).messages}catch{online=false}
+  try{if(view!=='activity')messages=(await api('/api/messages')).messages}catch{online=false}
  }
  const active=view==='detail'?'messages':view;
  if(view==='compose'){
@@ -122,10 +122,12 @@ export default async function Page({searchParams}:{searchParams:Promise<Params>}
  if(view==='setup'){const status=await api('/api/status').catch(()=>({gmailConfigured:false,gmailConnected:false,gmailEmail:null}));return <Shell active={active} online={online}><PageHeading title="Bağlı Hesaplar" description="E-posta hesabınızın bağlantısını ve izinlerini yönetin."/><Link className="button button-outline" href="/panel?view=extensions" style={{marginBottom:20}}>Gmail Ve Outlook Eklentileri<Icon name="arrow" size={15}/></Link><GmailConnection connected={status.gmailConnected} configured={status.gmailConfigured} email={status.gmailEmail} mode={p.mode} reason={p.reason} connect={connectGmail} disconnect={disconnectGmail}/></Shell>}
 
  if(view==='activity'){
-  const selected=messages.slice(0,12);
-  const results=await Promise.allSettled(selected.map(m=>api(`/api/messages/${m.id}`) as Promise<Detail>));
-  const events=selected.flatMap((m,i)=>{const result=results[i];const openings=result.status==='fulfilled'?result.value.openings:[];return [...(m.sent_at?[{id:`send-${m.id}`,message:m,at:m.sent_at,type:'send',label:'Mail Gönderildi',description:'E-postanız başarıyla gönderildi.'}]:[]),...openings.map((opening,index)=>({id:`open-${m.id}-${opening.first_at}`,message:m,at:opening.first_at,type:'load',label:index===0?'Açılma Algılandı':`${index+1}. Açılma Algılandı`,description:index===0?'E-postanız için ilk açılma bilgisi alındı.':'E-postanız için yeni bir açılma bilgisi alındı.'}))]}).sort((a,b)=>new Date(b.at).getTime()-new Date(a.at).getTime());
-  return <Shell active={active} online={online}><PageHeading title="Etkinlik Akışı" description="İletişiminizin her adımı, tek bir zaman çizelgesinde." action={<Refresh/>}/><ActivityStream events={events} filter={p.filter} messageCount={selected.length} incomplete={results.some(r=>r.status==='rejected')}/></Shell>;
+  const filter=['send','load'].includes(p.filter||'')?p.filter!:'all',range=['7','30','90'].includes(p.range||'')?p.range!:'all',q=(p.q||'').slice(0,200);
+  const offset=Math.min(100000,Math.max(0,Number.isSafeInteger(Number(p.offset))?Number(p.offset):0));
+  const query=new URLSearchParams({filter,range,q,offset:String(offset)});
+  let feed:import('../../../../packages/domain/activity-feed').ActivityFeed|null=null;
+  try{feed=await api('/api/activity?'+query)}catch{}
+  return <Shell active={active} online={!!feed}><PageHeading title="Etkinlik Akışı" description="Gönderim ve açılma hareketlerinizi arayın, filtreleyin ve sayfa sayfa inceleyin." action={<Refresh/>}/>{feed?<ActivityStream feed={feed} filter={filter} query={q} range={range}/>:<section className="surface"><h2>Etkinlikler yüklenemedi</h2><p>Bağlantınızı kontrol edip Güncelle düğmesiyle yeniden deneyin.</p></section>}</Shell>;
  }
  if(view==='messages'){
   const filter=['active','stopped','observed'].includes(p.filter||'')?p.filter:'all';

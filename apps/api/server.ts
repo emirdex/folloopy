@@ -1,3 +1,4 @@
+import {activityFeed} from './activity-feed';
 import {MemberMailContent} from './member-mail-content';
 import {AdminMemberInsights} from './admin-member-insights';
 import {memberAction,recordMemberActivity} from './member-activity';
@@ -197,6 +198,7 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  app.addContentTypeParser('application/octet-stream',{parseAs:'buffer',bodyLimit:BLOG_IMAGE_LIMIT},(_req,body,done)=>done(null,body));
  app.post('/api/admin/media',{bodyLimit:BLOG_IMAGE_LIMIT},async(req,reply)=>{const user=await owner(req),bytes=req.body as Buffer;if(!Buffer.isBuffer(bytes)||bytes.length>BLOG_IMAGE_LIMIT)return reply.code(413).send({code:'INVALID_IMAGE'});const type=blogImageType(bytes);if(!type)return reply.code(415).send({code:'INVALID_IMAGE'});const name=randomUUID()+'.'+type.ext;await db.query('INSERT INTO blog_media(name,mime,bytes,owner_id) VALUES($1,$2,$3,$4)',[name,type.mime,bytes,user.id]);return reply.code(201).send({url:'/blog/media/'+name})});
  app.get('/public/media/:name',async(req,reply)=>{const name=(req.params as {name:string}).name;if(!isBlogImage('/blog/media/'+name))return reply.code(404).send();const row=(await db.query<{mime:string;bytes:Buffer}>('SELECT mime,bytes FROM blog_media WHERE name=$1',[name])).rows[0];if(!row)return reply.code(404).send();return reply.type(row.mime).header('Cache-Control','public, max-age=31536000, immutable').header('X-Content-Type-Options','nosniff').header('Content-Security-Policy',"default-src 'none'; sandbox").send(Buffer.from(row.bytes))});
+ app.get('/api/activity',{schema:{querystring:{type:'object',additionalProperties:false,properties:{q:{type:'string',maxLength:200},filter:{type:'string',enum:['all','send','load']},range:{type:'string',enum:['all','7','30','90']},offset:{type:'integer',minimum:0,maximum:100000}}}}},async req=>activityFeed(db,await workspace(req),req.query as import('../../packages/domain/activity-feed').ActivityQuery));
  app.get('/api/messages',{schema:{querystring:{type:'object',additionalProperties:false,properties:{q:{type:'string',maxLength:200},offset:{type:'integer',minimum:0,maximum:100000}}}}},async req=>{
   const q=req.query as {q?:string;offset?:number};return {messages:await service.list(await workspace(req),q.q,q.offset)};
  });
