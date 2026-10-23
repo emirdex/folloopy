@@ -1,0 +1,15 @@
+.compose-tracking .toggle{transition:background-color .35s ease,box-shadow .35s ease}
+.compose-tracking .toggle>span{transition:transform .42s cubic-bezier(.22,1,.36,1);will-change:transform}
+.compose-tracking .feature-icon{transition:background-color .35s ease,color .35s ease,opacity .35s ease}
+.compose-tracking[data-tracking=off] .feature-icon{background-color:#edf0f5;color:#8994a6;opacity:.7}
+.compose-tracking.has-toggled[data-tracking=on] .toggle>span{animation:compose-tracking-on .42s ease both}
+.compose-tracking.has-toggled[data-tracking=off] .toggle>span{animation:compose-tracking-off .42s ease both}
+.compose-tracking.has-toggled[data-tracking=on]>p{animation:compose-tracking-text-on .3s ease both}
+.compose-tracking.has-toggled[data-tracking=off]>p{animation:compose-tracking-text-off .3s ease both}
+.compose-tracking.has-toggled[data-tracking=on] .feature-icon>svg{animation:compose-tracking-pulse .5s ease both}
+@keyframes compose-tracking-on{0%,100%{scale:1}40%{scale:1.12 .84}}
+@keyframes compose-tracking-off{0%,100%{scale:1}40%{scale:1.12 .84}}
+@keyframes compose-tracking-text-on{from{opacity:.4;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+@keyframes compose-tracking-text-off{from{opacity:.4;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+@keyframes compose-tracking-pulse{0%,100%{transform:scale(1)}45%{transform:scale(1.14)}}
+@media(prefers-reduced-motion:reduce){.compose-tracking .toggle,.compose-tracking .toggle>span,.compose-tracking .feature-icon{transition:none}.compose-tracking.has-toggled .toggle>span,.compose-tracking.has-toggled>p,.compose-tracking.has-toggled .feature-icon>svg{animation:none}}
