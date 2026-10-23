@@ -8,12 +8,28 @@ import {samePageSectionId} from './section-navigation';
 function Brand(){return <FolloopyLogo/>}
 export function LandingShell({hasPreview,hasAccount,marketing=false,children}:{hasPreview:boolean;hasAccount:boolean;marketing?:boolean;children:ReactNode}){
  const root=useRef<HTMLDivElement>(null);const[scrolled,setScrolled]=useState(false),[menuOpen,setMenuOpen]=useState(false);
+ function prepareSection(target:HTMLElement){
+  const main=root.current?.querySelector('main');
+  if(!main||target===main)return;
+  // Resolve deferred section heights before calculating the scroll destination.
+  // Keep sections beyond the requested destination deferred as before.
+  for(const section of main.children){
+   if(section instanceof HTMLElement&&section.tagName==='SECTION')section.style.contentVisibility='visible';
+   if(section.contains(target))break;
+  }
+ }
  // Honor incoming section links, then keep the one-page address clean.
  useEffect(()=>{
-  const id=samePageSectionId(window.location.href,window.location.href),target=id?document.getElementById(id):null;
-  if(!target||!root.current?.contains(target))return;
-  target.scrollIntoView({behavior:'instant',block:'start'});
-  window.history.replaceState(window.history.state,'',window.location.pathname+window.location.search);
+  const cleanSectionAddress=()=>{
+   const id=samePageSectionId(window.location.href,window.location.href),target=id?document.getElementById(id):null;
+   if(!target||!root.current?.contains(target))return;
+   prepareSection(target);
+   target.scrollIntoView({behavior:'instant',block:'start'});
+   window.history.replaceState(window.history.state,'',window.location.pathname+window.location.search);
+  };
+  cleanSectionAddress();
+  window.addEventListener('hashchange',cleanSectionAddress);
+  return()=>window.removeEventListener('hashchange',cleanSectionAddress);
  },[]);
  function navigateSection(event:MouseEvent<HTMLDivElement>){
   if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
@@ -23,6 +39,7 @@ export function LandingShell({hasPreview,hasAccount,marketing=false,children}:{h
   if(!target||!root.current?.contains(target))return;
   event.preventDefault();
   setMenuOpen(false);
+  prepareSection(target);
   // Use the existing CSS scroll behavior, including reduced-motion preferences.
   target.scrollIntoView({block:'start'});
   if(link.classList.contains('site-skip')){target.tabIndex=-1;target.focus({preventScroll:true})}
