@@ -18,3 +18,4 @@ work/
 !extensions/gmail/icons/*.png
 
 apps/web/extension-release/
+apps/web/.deployment-id

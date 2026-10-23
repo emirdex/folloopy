@@ -1,6 +1,14 @@
 /** @type {import('next').NextConfig} */
 import {fileURLToPath} from 'node:url';
-const config={poweredByHeader:false,webpack(webpackConfig){
+import {readFileSync} from 'node:fs';
+function deploymentVersion(){
+ if(process.env.NEXT_DEPLOYMENT_ID)return process.env.NEXT_DEPLOYMENT_ID;
+ try{return readFileSync(new URL('./.deployment-id',import.meta.url),'utf8').trim()}catch{}
+ // Some hosts omit generated dotfiles from the runtime package. Next's build
+ // manifest still carries the exact version compiled into the client bundles.
+ if(process.env.NODE_ENV==='production')try{return JSON.parse(readFileSync(new URL('./.next/required-server-files.json',import.meta.url),'utf8')).config.deploymentId}catch{}
+}
+const config={deploymentId:deploymentVersion(),poweredByHeader:false,webpack(webpackConfig){
  // Both hosts share this source. Only the public host can omit private UI CSS;
  // panel builds keep the original sheets and cascade byte-for-byte.
  if(process.env.DEPLOYMENT_ROLE==='public')webpackConfig.module.rules.push({

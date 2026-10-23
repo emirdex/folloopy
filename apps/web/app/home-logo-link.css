@@ -1,4 +1,4 @@
-.home-return-overlay{position:fixed;inset:0;z-index:2147483001;display:grid;place-items:center;background:radial-gradient(ellipse at center,#f2f6fff7,#f8faffed);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);cursor:wait;animation:home-return-appear .2s ease both;isolation:isolate}
+.home-return-overlay{pointer-events:none;position:fixed;inset:0;z-index:2147483001;display:grid;place-items:center;background:radial-gradient(ellipse at center,#f2f6fff7,#f8faffed);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);cursor:wait;animation:home-return-appear .2s ease both;isolation:isolate}
 .home-return-scene{position:relative;display:grid;place-items:center;width:230px;height:190px;isolation:isolate}
 .home-return-aura{position:absolute;inset:-30px;border-radius:50%;background:radial-gradient(circle,#cbd9ff80,transparent 65%);animation:home-return-glow 2s ease-in-out both}
 .home-return-sweep{position:absolute;inset:15px -40px;border-radius:50%;overflow:hidden;background:linear-gradient(110deg,transparent 35%,#b2caff00 42%,#a4beff45 50%,#e3dcff30 58%,transparent 65%);filter:blur(12px);animation:home-return-sweep 1.8s ease-in-out both}
