@@ -17,12 +17,12 @@ test('a stalled logo navigation cannot retain its overlay; later actions cancel 
  transition.start('/');transition.dispose();c.advance(9000);assert.equal(navigations.length,1);
 });
 
-function recovery(storage=new Map<string,string>()){
+function recovery(storage=new Map<string,string>(),resources:Record<string,unknown>[]=[]){
  const c=clock(),listeners=new Map<string,((event:any)=>void)[]>();let reloads=0;
  const location={href:'https://folloopy.example/blog',pathname:'/blog',origin:'https://folloopy.example',replace:(href:string)=>{assert.equal(href,location.href);reloads++}};
  class Element{constructor(public link=false){}closest(){return this.link?{}:null}}
  const sessionStorage={getItem:(key:string)=>storage.get(key)||null,setItem:(key:string,value:string)=>storage.set(key,value)};
- vm.runInNewContext(assetRecoveryScript,{window:{addEventListener:(name:string,fn:(event:any)=>void)=>listeners.set(name,[...(listeners.get(name)||[]),fn])},location,sessionStorage,URL,Element,Date:{now:c.now},setTimeout:c.schedule,clearTimeout:c.clear});
+ vm.runInNewContext(assetRecoveryScript,{performance:{getEntriesByType:()=>resources},window:{addEventListener:(name:string,fn:(event:any)=>void)=>listeners.set(name,[...(listeners.get(name)||[]),fn])},location,sessionStorage,URL,Element,Date:{now:c.now},setTimeout:c.schedule,clearTimeout:c.clear});
  const emit=(name:string,event:any={})=>listeners.get(name)?.forEach(fn=>fn(event));
  return {emit,advance:c.advance,reloads:()=>reloads,Element,storage,chunk:()=>emit('error',{target:{tagName:'SCRIPT',src:'https://folloopy.example/_next/static/chunks/missing.js?dpl=old'}})};
 }
@@ -40,4 +40,8 @@ test('ordinary application, image and third-party errors do not trigger a docume
  for(const src of ['https://third-party.example/_next/static/broken.js','https://folloopy.example/other.js'])f.emit('error',{target:{tagName:'SCRIPT',src}});
  f.emit('error',{target:{tagName:'IMG',src:'https://folloopy.example/_next/static/photo.js'}});
  f.emit('unhandledrejection',{reason:Error('mail send failed')});f.advance(1500);assert.equal(f.reloads(),0);
+});
+
+test('resource failures completed before the nonblocking module starts still recover',()=>{
+ const f=recovery(new Map(),[{name:'https://folloopy.example/_next/static/chunks/webpack-old.js',initiatorType:'link',responseStatus:404}]);f.advance(1500);assert.equal(f.reloads(),1);
 });

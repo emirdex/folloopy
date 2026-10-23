@@ -1,5 +1,6 @@
-// Runs in the head, before React: missing hydration chunks can prevent React
-// effects (including error boundaries) from ever attaching their handlers.
+// Independent of React: missing hydration chunks can prevent React effects
+// (including error boundaries) from ever attaching their handlers. The module
+// script never blocks HTML parsing while a stylesheet is delayed.
 export const assetRecoveryScript=String.raw`(function(){
  let pending,edited=false;
  const cancel=()=>{if(pending!==undefined)clearTimeout(pending);pending=undefined};
@@ -28,6 +29,11 @@ export const assetRecoveryScript=String.raw`(function(){
   const reason=event.reason;
   if(reason?.name==='ChunkLoadError'||/Loading chunk \S+ failed/.test(String(reason?.message||'')))failed();
  });
+ // A module runs after HTML parsing. Catch script HTTP failures that finished
+ // before its listeners attached as well as subsequent resource error events.
+ for(const entry of performance.getEntriesByType('resource')){
+  try{const url=new URL(entry.name,location.href);if(entry.responseStatus>=400&&url.origin===location.origin&&url.pathname.startsWith('/_next/static/')&&url.pathname.endsWith('.js')){failed();break}}catch{}
+ }
  window.addEventListener('folloopy:asset-failure',failed);
  window.addEventListener('pagehide',cancel);
  window.addEventListener('beforeinput',edit,true);
