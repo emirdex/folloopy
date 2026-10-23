@@ -6,6 +6,7 @@ import {sendContact} from './actions';
 export function ContactForm(){
  const[state,action,pending]=useActionState(sendContact,null);
  const[values,setValues]=useState({firstName:'',lastName:'',email:'',phone:'',subject:'',message:''});
+ const[kvkkAcknowledged,setKvkkAcknowledged]=useState(false);
  const update=(key:keyof typeof values,value:string)=>setValues(previous=>({...previous,[key]:value}));
  return <form action={action} className="contact-form" aria-label="İletişim formu" aria-busy={pending}>
   <div className="contact-form-fields"><label>Ad<input name="firstName" autoComplete="given-name" placeholder="Adınız" required maxLength={50} value={values.firstName} onChange={e=>update('firstName',e.target.value)}/></label><label>Soyad<input name="lastName" autoComplete="family-name" placeholder="Soyadınız" required maxLength={50} value={values.lastName} onChange={e=>update('lastName',e.target.value)}/></label></div>
@@ -13,6 +14,7 @@ export function ContactForm(){
   <label>Konu<input name="subject" placeholder="Size nasıl yardımcı olabiliriz?" required minLength={3} maxLength={160} value={values.subject} onChange={e=>update('subject',e.target.value)}/></label>
   <label>Mesajınız<textarea name="message" rows={6} placeholder="Sorunuzu veya talebinizi bizimle paylaşın." required minLength={10} maxLength={5000} value={values.message} onChange={e=>update('message',e.target.value)}/></label>
   <div className="contact-form-trap" aria-hidden="true"><label>Web sitesi<input name="website" tabIndex={-1} autoComplete="off"/></label></div>
+  <label className="contact-kvkk"><input type="checkbox" name="kvkkAcknowledged" value="on" required checked={kvkkAcknowledged} onChange={event=>setKvkkAcknowledged(event.target.checked)}/><span>ArcByte Yazılım Teknolojileri Limited Şirketi tarafından kişisel verilerimin işlenmesine ilişkin <Link href="/yasal/kvkk-aydinlatma-metni" target="_blank" rel="noopener noreferrer">KVKK Aydınlatma Metni</Link>’ni okudum ve bilgilendirildim.</span></label>
   <p className="contact-privacy">Bilgileriniz yalnızca mesajınızı yanıtlamak için kullanılır. <Link href="/yasal/gizlilik-politikasi">Gizlilik politikası</Link></p>
   {state?.ok?<p className="contact-success" role="status"><CheckCircle2 size={19}/>Mesajınız alındı. En kısa sürede sizinle iletişime geçeceğiz.</p>:state?.error?<p className="contact-error" role="alert">{state.error}</p>:null}
   <button type="submit" disabled={pending||state?.ok===true} className="contact-submit">{pending?'Gönderiliyor…':state?.ok?'Mesajınız gönderildi':'Mesajı gönder'}<ArrowUpRight size={18}/></button>

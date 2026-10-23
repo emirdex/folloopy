@@ -9,7 +9,7 @@ const throttle=new ContactThrottle();
 export async function sendContact(_previous:ContactState,form:FormData):Promise<ContactState>{
  const read=(key:string)=>typeof form.get(key)==='string'?String(form.get(key)).trim():'';
  if(read('website'))return {ok:false,error:'Mesajınız gönderilemedi. Lütfen tekrar deneyin.'};
- const input={firstName:read('firstName'),lastName:read('lastName'),email:read('email'),phone:read('phone'),subject:read('subject'),message:read('message')};
+ const input={kvkkAcknowledged:read('kvkkAcknowledged')==='on',firstName:read('firstName'),lastName:read('lastName'),email:read('email'),phone:read('phone'),subject:read('subject'),message:read('message')};
  const error=validateContact(input);if(error)return {ok:false,error};
  const apiKey=process.env.RESEND_API_KEY||'',from=process.env.MAIL_FROM||'';
  if(!apiKey||!from)return {ok:false,error:'Mesajınız şu anda gönderilemiyor. Lütfen info@folloopy.com adresine e-posta gönderin.'};
