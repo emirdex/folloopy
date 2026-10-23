@@ -4,7 +4,19 @@ import {redirect} from 'next/navigation';
 import {revalidatePath} from 'next/cache';
 import {accountApi,adminApi,requireAdmin} from '../account-api';
 import {ownerSetupIssue} from '../../../../packages/domain/owner-setup';
+import {PASSWORD_HELP,validNewPassword} from '../../../../packages/domain/password-policy';
 export type AdminFormState={error:string;ok?:boolean}|null;
+export async function createMember(_state:AdminFormState,form:FormData):Promise<AdminFormState>{
+ await requireAdmin();
+ const password=String(form.get('password')||'');
+ if(!validNewPassword(password))return {error:PASSWORD_HELP};
+ if(password!==String(form.get('passwordConfirmation')||''))return {error:'Şifreler eşleşmiyor.'};
+ let result:{id:string};
+ try{result=await adminApi('/members',{name:String(form.get('name')||'').trim(),email:String(form.get('email')||'').trim(),password,plan:String(form.get('plan')||'')})}
+ catch(error){return {error:error instanceof Error&&error.message==='ACCOUNT_EXISTS'?'Bu e-posta adresi zaten kayıtlı. Mevcut hesap değiştirilmedi.':'Üye oluşturulamadı. Bilgileri kontrol edip yeniden deneyin.'}}
+ revalidatePath('/admin');
+ redirect('/admin?view=members&id='+result.id);
+}
 export async function setupOwner(_state:AdminFormState,form:FormData):Promise<AdminFormState>{
  const issue=ownerSetupIssue(form);if(issue)return {error:issue.error};
  const token=String(form.get('token')||'').trim(),name=String(form.get('name')||'').trim(),password=String(form.get('password')||'');
