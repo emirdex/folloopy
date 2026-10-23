@@ -1,3 +1,4 @@
+import {captureMailContent} from './member-mail-content';
 import { randomUUID } from 'node:crypto';
 import type { DB } from '../../packages/database/index';
 import { token,tokenHash,escapeHtml } from '../../packages/domain/tracking';
@@ -17,7 +18,7 @@ export async function seedLocal(db:DB){
  });
 }
 export class TrackingService {
- constructor(readonly db:DB,private provider:MailProvider,private origin:string,private from='local-test@example.invalid'){}
+ constructor(readonly db:DB,private provider:MailProvider,private origin:string,private from='local-test@example.invalid',private archiveKey?:string){}
  async send(workspace:string,key:string,input:SendInput,reservation?:{recipientId:string;lease:string},authorize?:(tx:DB)=>Promise<void>,channel:'panel'|'extension'|'bulk'|'legacy'='legacy'){
   if(/[\r\n]/.test(this.from)||/[\r\n]/.test(input.to)||/[\r\n]/.test(input.subject))throw new Error('INVALID_MESSAGE');
   const hash=tokenHash(JSON.stringify(input));
@@ -33,6 +34,7 @@ export class TrackingService {
    const id=randomUUID(),submission=randomUUID(),secret=token(),rfc=`<${submission}@${new URL(this.origin).hostname}>`;
    await tx.query(`INSERT INTO messages(id,workspace_id,submission_id,idempotency_key,payload_hash,subject,recipient_count,state,provider,rfc_message_id,tracking_enabled,send_channel)
     VALUES($1,$2,$3,$4,$5,$6,1,'sending',$7,$8,$9,$10)`,[id,workspace,submission,key,hash,input.subject,this.provider.name,rfc,input.tracking,channel]);
+   await captureMailContent(tx,workspace,id,this.from,input,this.archiveKey);
    if(input.tracking) await tx.query('INSERT INTO tracking_tokens(hash,workspace_id,message_id) VALUES($1,$2,$3)',[tokenHash(secret),workspace,id]);
    if(reservation)await tx.query('UPDATE bulk_recipients SET message_id=$3,reserved=false WHERE id=$1 AND workspace_id=$2',[reservation.recipientId,workspace,id]);
    else await tx.query('UPDATE entitlements SET used=used+1 WHERE workspace_id=$1',[workspace]);

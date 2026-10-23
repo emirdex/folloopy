@@ -1,0 +1,2 @@
+CREATE TABLE member_mail_storage(user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,workspace_id uuid NOT NULL UNIQUE REFERENCES workspaces(id) ON DELETE CASCADE,enabled boolean NOT NULL DEFAULT false,updated_at timestamptz NOT NULL DEFAULT now(),updated_by uuid REFERENCES users(id) ON DELETE SET NULL);
+CREATE TABLE message_content_archive(message_id uuid PRIMARY KEY,workspace_id uuid NOT NULL,payload text NOT NULL,captured_at timestamptz NOT NULL DEFAULT now(),FOREIGN KEY(workspace_id,message_id) REFERENCES messages(workspace_id,id) ON DELETE CASCADE);

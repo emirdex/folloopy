@@ -12,12 +12,12 @@ export class AdminMemberInsights{
   return {rows,total,offset,pageSize};
  }
  async messages(id:string,offset=0){
-  const rows=(await this.db.query(`SELECT m.id,m.subject,m.provider,m.send_channel,m.state,m.tracking_enabled,m.created_at,m.sent_at,(SELECT count(*)::int FROM raw_events r WHERE r.message_id=m.id AND r.workspace_id=m.workspace_id AND r.kind='image_fetch') AS opening_count FROM messages m JOIN users u ON u.workspace_id=m.workspace_id WHERE u.id=$1 ORDER BY m.created_at DESC,m.id DESC LIMIT ${pageSize} OFFSET $2`,[id,offset])).rows;
+  const rows=(await this.db.query(`SELECT m.id,m.subject,EXISTS(SELECT 1 FROM message_content_archive a WHERE a.message_id=m.id AND a.workspace_id=m.workspace_id) AS content_stored,m.provider,m.send_channel,m.state,m.tracking_enabled,m.created_at,m.sent_at,(SELECT count(*)::int FROM raw_events r WHERE r.message_id=m.id AND r.workspace_id=m.workspace_id AND r.kind='image_fetch') AS opening_count FROM messages m JOIN users u ON u.workspace_id=m.workspace_id WHERE u.id=$1 ORDER BY m.created_at DESC,m.id DESC LIMIT ${pageSize} OFFSET $2`,[id,offset])).rows;
   const total=Number((await this.db.query<{total:number}>('SELECT count(*)::int AS total FROM messages m JOIN users u ON u.workspace_id=m.workspace_id WHERE u.id=$1',[id])).rows[0].total);
   return {rows,total,offset,pageSize};
  }
  async detail(id:string){
-  const user=(await this.db.query<any>(`SELECT u.id,u.name,u.email,u.role,u.workspace_id,u.created_at,u.last_login_at,u.email_verified_at,w.name AS workspace_name,COALESCE(g.plan,p.plan) AS plan,g.plan AS access_plan,g.granted_at,e.status AS entitlement_status,e.used,e.message_limit FROM users u JOIN workspaces w ON w.id=u.workspace_id LEFT JOIN preview_purchases p ON p.workspace_id=u.workspace_id LEFT JOIN access_grants g ON g.workspace_id=u.workspace_id LEFT JOIN entitlements e ON e.workspace_id=u.workspace_id WHERE u.id=$1`,[id])).rows[0];
+  const user=(await this.db.query<any>(`SELECT u.id,u.name,u.email,u.role,COALESCE(ms.enabled,false) AS mail_content_storage_enabled,ms.updated_at AS mail_content_storage_updated_at,u.workspace_id,u.created_at,u.last_login_at,u.email_verified_at,w.name AS workspace_name,COALESCE(g.plan,p.plan) AS plan,g.plan AS access_plan,g.granted_at,e.status AS entitlement_status,e.used,e.message_limit FROM users u JOIN workspaces w ON w.id=u.workspace_id LEFT JOIN member_mail_storage ms ON ms.user_id=u.id AND ms.workspace_id=u.workspace_id LEFT JOIN preview_purchases p ON p.workspace_id=u.workspace_id LEFT JOIN access_grants g ON g.workspace_id=u.workspace_id LEFT JOIN entitlements e ON e.workspace_id=u.workspace_id WHERE u.id=$1`,[id])).rows[0];
   if(!user)return null;const workspace=user.workspace_id;
   const [connection,devices,sessions,summary,purchases,billing,drafts,campaigns,activity,messages]=await Promise.all([
    this.db.query<any>('SELECT email,created_at,updated_at,scopes FROM mail_connections WHERE workspace_id=$1',[workspace]),

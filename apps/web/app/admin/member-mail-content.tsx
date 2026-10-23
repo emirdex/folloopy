@@ -1,0 +1,19 @@
+'use client';
+import {useEffect,useId,useState,useTransition} from 'react';
+import {Archive,ArrowLeft,ArrowUpRight,Check,LoaderCircle,Mail,ShieldCheck} from 'lucide-react';
+import {loadMemberMailContent,setMemberMailStorage} from './actions';
+
+export function MemberMailStorage({id,enabled:initial}:{id:string;enabled:boolean}){
+ const [enabled,setEnabled]=useState(initial),[error,setError]=useState(''),[pending,startTransition]=useTransition();const labelId=useId(),helpId=useId();
+ useEffect(()=>{setEnabled(initial)},[initial]);
+ function toggle(){if(pending)return;setError('');startTransition(async()=>{try{const result=await setMemberMailStorage(id,!enabled);if(!result.ok){setError(result.error);return}setEnabled(result.enabled)}catch{setError('Depolama tercihi güncellenemedi. Yeniden deneyin.')}})}
+ return <section className={'mi-mail-storage'+(enabled?' is-enabled':'')}><span className="mi-mail-storage-icon"><Archive size={21}/></span><div><strong id={labelId}>Mail içeriklerini depola</strong><p id={helpId}>Yalnızca açıldıktan sonra Folloopy üzerinden gönderilen mailler kaydedilir. Geçmiş mailler eklenmez.</p><span className="mi-mail-storage-status"><i/>{pending?'Güncelleniyor…':enabled?'Yeni maillerin içerikleri kaydediliyor':'Kapalı · İçerik kaydı tutulmuyor'}</span>{enabled?<small>Kapatmak yeni kayıtları durdurur; önceden kaydedilen içerikler korunur.</small>:null}{error?<p className="mi-mail-storage-error" role="alert">{error}</p>:null}</div><button type="button" role="switch" aria-checked={enabled} aria-labelledby={labelId} aria-describedby={helpId} aria-busy={pending} disabled={pending} className="mi-mail-storage-switch" onClick={toggle}><span>{pending?<LoaderCircle size={12}/>:enabled?<Check size={12}/>:null}</span></button></section>;
+}
+type StoredMail={id:string;subject:string;from:string;to:string;text:string;state:string;sent_at:string|null;created_at:string;captured_at:string};
+function date(value:string){return new Intl.DateTimeFormat('tr-TR',{dateStyle:'medium',timeStyle:'short',timeZone:'Europe/Istanbul'}).format(new Date(value))}
+export function MemberMailPreview({userId,messageId,onBack}:{userId:string;messageId:string;onBack:()=>void}){
+ const [content,setContent]=useState<StoredMail|null>(null),[error,setError]=useState('');
+ useEffect(()=>{let active=true;setContent(null);setError('');loadMemberMailContent(userId,messageId).then(result=>{if(!active)return;if(result.ok)setContent(result.content);else setError(result.error)}).catch(()=>{if(active)setError('Mail içeriği açılamadı. Yeniden deneyin.')});return()=>{active=false}},[userId,messageId]);
+ return <section className="mi-mail-preview"><header><button type="button" onClick={onBack}><ArrowLeft size={15}/>Gönderimlere dön</button><span><ShieldCheck size={13}/>Kaydedilmiş içerik</span></header>{error?<div className="mi-mail-preview-error" role="alert"><Mail size={23}/><p>{error}</p></div>:!content?<div className="mi-mail-preview-loading" role="status"><LoaderCircle size={22}/><span>Mail içeriği alınıyor…</span></div>:<><div className="mi-mail-preview-heading"><span className="mi-mail-preview-mark"><Mail size={21}/></span><div><h3>{content.subject}</h3><time>{date(content.sent_at||content.created_at)}</time></div></div><dl><div><dt>Gönderen</dt><dd>{content.from}</dd></div><div><dt>Alıcı</dt><dd>{content.to}</dd></div></dl>{content.state!=='sent'?<p className="mi-mail-preview-notice">Bu kayıt için gönderimin başarıyla tamamlandığı doğrulanmamış.</p>:null}<div className="mi-mail-preview-body">{content.text}</div><footer><Archive size={13}/>İçerik, gönderim sırasında şifrelenerek kaydedildi.</footer></>}</section>;
+}
+export function StoredMailTitle({subject,onClick}:{subject:string;onClick:()=>void}){return <button type="button" className="mi-mail-subject" onClick={onClick} aria-label={subject+' · Mail içeriğini görüntüle'}><strong>{subject}</strong><ArrowUpRight size={13}/></button>}

@@ -47,3 +47,16 @@ export async function loadMemberRecords(id:string,section:'activity'|'messages',
  if(!/^[a-f0-9-]{36}$/.test(id)||!['activity','messages'].includes(section)||!Number.isInteger(offset)||offset<0||offset>100000)throw Error('INVALID_REQUEST');
  return adminApi('/members/'+id+'/'+section+'?offset='+offset);
 }
+
+export async function setMemberMailStorage(id:string,enabled:boolean){
+ await requireAdmin();
+ if(!/^[a-f0-9-]{36}$/.test(id)||typeof enabled!=='boolean')return {ok:false as const,error:'Geçersiz depolama tercihi.'};
+ try{const result=await adminApi('/members/'+id+'/mail-storage',{enabled});revalidatePath('/admin');return {ok:true as const,enabled:Boolean(result.enabled)}}
+ catch(error){return {ok:false as const,error:error instanceof Error&&error.message==='MAIL_CONTENT_UNAVAILABLE'?'Şifreli içerik deposu şu anda kullanılamıyor.':'Depolama tercihi güncellenemedi. Yeniden deneyin.'}}
+}
+export async function loadMemberMailContent(id:string,messageId:string){
+ await requireAdmin();
+ if(![id,messageId].every(value=>/^[a-f0-9-]{36}$/.test(value)))return {ok:false as const,error:'Geçersiz mail kaydı.'};
+ try{return {ok:true as const,content:await adminApi('/members/'+id+'/messages/'+messageId+'/content')}}
+ catch(error){return {ok:false as const,error:error instanceof Error&&error.message==='MAIL_CONTENT_NOT_STORED'?'Bu mail gönderildiğinde içerik depolama açık değildi. Geçmiş mail içeriği alınamaz.':'Mail içeriği açılamadı. Yeniden deneyin.'}}
+}

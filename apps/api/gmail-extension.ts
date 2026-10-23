@@ -12,7 +12,7 @@ export type ExtensionEnvelope={deviceId:string;token:string;nonce:string;issuedA
 export function extensionCanonical(e:Omit<ExtensionEnvelope,'signature'>){return JSON.stringify([e.deviceId,e.token,e.nonce,e.issuedAt,e.operation,e.payload])}
 export class GmailExtension{
  private cleanupAt=0;
- constructor(private db:DB,private gmail:GmailConnections,private origin:string){}
+ constructor(private db:DB,private gmail:GmailConnections,private origin:string,private archiveKey?:string){}
  async eligible(userId:string,sessionHash:string,db=this.db){
   const u=(await db.query<{id:string;workspace_id:string;sender:string}>(`SELECT u.id,u.workspace_id,mc.email AS sender FROM users u JOIN sessions s ON s.user_id=u.id JOIN access_grants g ON g.workspace_id=u.workspace_id JOIN entitlements e ON e.workspace_id=u.workspace_id JOIN mail_connections mc ON mc.workspace_id=u.workspace_id WHERE u.id=$1 AND s.token_hash=$2 AND s.expires_at>now() AND u.email_verified_at IS NOT NULL AND g.plan IN ('team','business') AND e.status='active'`,[userId,sessionHash])).rows[0];
   if(!u)fail();return u!;
@@ -71,7 +71,7 @@ export class GmailExtension{
   if(typeof p.from!=='string'||p.from.toLowerCase()!==d.sender||typeof p.to!=='string'||p.to.length>254||!email.test(p.to)||typeof p.subject!=='string'||p.subject.length<1||p.subject.length>200||/[\r\n]/.test(p.subject)||typeof p.text!=='string'||!p.text.trim()||p.text.length>10000||typeof p.tracking!=='boolean'||typeof p.idempotencyKey!=='string'||!/^[A-Za-z0-9_-]{16,128}$/.test(p.idempotencyKey))throw Error('INVALID_ACCOUNT');
   if(!await allowRequest(this.db,'single-mail-send',d.workspace_id,20,60))throw Error('TOO_MANY_ATTEMPTS');
   const connected=await this.gmail.provider(d.workspace_id);if(connected.from.toLowerCase()!==d.sender)fail();
-  return new TrackingService(this.db,connected.provider,this.origin,connected.from).send(d.workspace_id,'ext_'+p.idempotencyKey,{to:p.to,subject:p.subject,text:p.text,tracking:p.tracking},undefined,async tx=>{await this.authorize(e,tx)},'extension');
+  return new TrackingService(this.db,connected.provider,this.origin,connected.from,this.archiveKey).send(d.workspace_id,'ext_'+p.idempotencyKey,{to:p.to,subject:p.subject,text:p.text,tracking:p.tracking},undefined,async tx=>{await this.authorize(e,tx)},'extension');
  }
  async status(user:Account){return {allowed:!!(await this.db.query("SELECT 1 FROM users u JOIN access_grants g ON g.workspace_id=u.workspace_id JOIN entitlements e ON e.workspace_id=u.workspace_id WHERE u.id=$1 AND u.email_verified_at IS NOT NULL AND g.plan IN ('team','business') AND e.status='active'",[user.id])).rows.length,devices:(await this.db.query('SELECT id,sender,created_at,last_seen_at,expires_at FROM extension_devices d WHERE user_id=$1 AND revoked=false AND expires_at>now() AND EXISTS(SELECT 1 FROM sessions s WHERE s.token_hash=d.session_hash AND s.expires_at>now())',[user.id])).rows}}
  async revoke(user:Account){await this.db.query('UPDATE extension_devices SET revoked=true WHERE user_id=$1',[user.id]);return {ok:true}}
