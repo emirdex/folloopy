@@ -13,6 +13,8 @@ async function authenticate(form:FormData,register:boolean):Promise<FormState>{
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return {error:'Geçerli bir e-posta adresi girin.'};
  if(register&&!validNewPassword(password))return {error:PASSWORD_HELP};
  if(!password||password.length>128)return {error:'Şifrenizi girin (en fazla 128 karakter).'};
+ if(register&&!form.get('passwordConfirmation'))return {error:'Şifrenizi tekrar girin.'};
+ if(register&&password!==String(form.get('passwordConfirmation')||''))return {error:'Şifreler eşleşmiyor. Lütfen aynı şifreyi tekrar girin.'};
  if(register&&(!firstName||!lastName||name.length>80||/[\r\n\t]/.test(name)))return {error:'Adınızı ve soyadınızı ayrı alanlara girin. Toplam uzunluk en fazla 80 karakter olabilir.'};
  try{
   const result=await accountApi(register?'/api/auth/register':'/api/auth/login',{email,password,...(register?{name}:{})});
