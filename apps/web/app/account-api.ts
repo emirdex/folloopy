@@ -18,8 +18,9 @@ export async function accountApi(path:string,body?:unknown){
 }
 // React cache is confined to one server render; never share sessions across requests.
 export const currentAccount=cache(async():Promise<Account|null>=>{
+ if(process.env.DEPLOYMENT_ROLE==='public')return null;
  const store=await cookies();
- if(isMarketingMode()||process.env.DEPLOYMENT_ROLE==='public')return null;
+ if(isMarketingMode())return null;
  if(!store.has('mt_session'))return null;
  try{return (await accountApi('/api/auth/me')).user}catch(e){if(e instanceof Error&&e.message==='UNAUTHORIZED')return null;throw e}
 });

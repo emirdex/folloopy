@@ -26,6 +26,12 @@ export async function openDatabase(url?:string, directory?:string):Promise<DB>{
 export const databaseMigrations=[[1,'001_initial.sql'],[2,'002_accounts.sql'],[3,'003_enterprise_requests.sql'],[4,'004_admin_blog.sql'],[5,'005_blog_media_seo.sql'],[6,'006_product_copy.sql'],[7,'007_production.sql'],[8,'008_account_details.sql'],[9,'009_billing_profiles.sql'],[10,'010_verification_codes.sql'],[11,'011_mail_drafts.sql'],[12,'012_bulk_mail.sql'],[13,'013_gmail_extension.sql'],[14,'014_member_insights.sql']] as const;
 export const LATEST_SCHEMA_VERSION=databaseMigrations[databaseMigrations.length-1][0];
 export async function migrate(db:DB){
+ // Most starts use an already current database. Avoid taking schema locks and
+ // opening one transaction per historical migration on every worker startup.
+ try{
+  const installed=new Set((await db.query<{version:number}>('SELECT version FROM schema_migrations')).rows.map(row=>Number(row.version)));
+  if(databaseMigrations.every(([version])=>installed.has(version)))return;
+ }catch(error){if((error as {code?:string}).code!=='42P01')throw error}
  for(const [version,file] of databaseMigrations){
   const sql=await readFile(new URL('./migrations/'+file,import.meta.url),'utf8');
   await db.transaction(async tx=>{

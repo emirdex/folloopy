@@ -8,6 +8,7 @@ export function proxy(request:NextRequest){
   const onPanel=process.env.DEPLOYMENT_ROLE==='panel'||request.nextUrl.host===new URL(appOrigin).host;
   let target:string|undefined;
   if(!onPanel&&isAccountPath(path))target=appOrigin+path+request.nextUrl.search;
+  else if(!onPanel&&path==='/'&&['view','id','filter','mode','q'].some(key=>request.nextUrl.searchParams.has(key)))target=appOrigin+'/panel'+request.nextUrl.search;
   else if(onPanel&&path==='/')target=appOrigin+'/panel'+request.nextUrl.search;
   else if(onPanel&&isPublicPath(path))target=publicOrigin+path+request.nextUrl.search;
   else if(onPanel&&path==='/sitemap.xml')target=publicOrigin+path;

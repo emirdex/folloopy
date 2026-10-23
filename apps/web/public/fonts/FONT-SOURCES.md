@@ -7,3 +7,5 @@ The reference site https://e9e.io/en was inspected on 2026-10-19. Its computed s
 - Lucide React icons: installed from the lucide-react npm package; its license is distributed in the dependency.
 
 Fonts are served locally. The application does not fetch third-party font resources at runtime. No e9e logo, mascot, copy or proprietary artwork is included.
+
+- Gabarito WOFF2 files are local compressed versions of the original Medium and SemiBold TTFs, with the full character map retained. The same OFL license applies.

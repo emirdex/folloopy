@@ -19,6 +19,8 @@ test('Split hosts redirect safe navigation, preserve query, reject cross-host re
    assert.equal(proxy(new NextRequest(origins.SITE_URL+path,{method:'POST',body:'private password'})).status,409);
   }
   assert.equal(proxy(new NextRequest(origins.APP_URL+'/')).headers.get('location'),origins.APP_URL+'/panel');
+  assert.equal(proxy(new NextRequest(origins.SITE_URL+'/?view=messages&q=example')).headers.get('location'),origins.APP_URL+'/panel?view=messages&q=example');
+  assert.equal(proxy(new NextRequest(origins.SITE_URL+'/?utm_source=example')).headers.get('location'),null);
   assert.equal(proxy(new NextRequest(origins.APP_URL+'/blog?tag=a')).headers.get('location'),origins.SITE_URL+'/blog?tag=a');
   assert.equal(proxy(new NextRequest(origins.APP_URL+'/panel')).headers.get('x-robots-tag'),'noindex, nofollow');
   for(const path of ['/t/o/existing.gif','/health','/blog'])assert.equal(proxy(new NextRequest(origins.SITE_URL+path)).headers.get('location'),null);
