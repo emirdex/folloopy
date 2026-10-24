@@ -4,6 +4,7 @@ const {createServer}=require('node:http');
 const path=require('node:path');
 const next=require('next');
 const {installLocalApi}=require('./packages/runtime/private-api.cjs');
+const {observeHttp}=require('./packages/runtime/http-diagnostics.cjs');
 const {publicOrigin,guardPublicRequest,canonicalRedirect}=require('./packages/runtime/public-request.cjs');
 const trustedOrigin=publicOrigin(process.env);
 process.env.__NEXT_PRIVATE_ORIGIN=trustedOrigin;
@@ -29,6 +30,7 @@ async function start(){
  // Hostinger requires listen() before asynchronous database/API initialization.
  // Queue cold-start requests until both the private API and Next are ready.
  server=createServer((req,res)=>{
+  observeHttp(req,res,{phase:handle?'ready':'startup'});
   const serve=async()=>{
    const canonical=canonicalRedirect(req,trustedOrigin,process.env.DEPLOYMENT_ROLE!=='panel');
    if(canonical){res.writeHead(308,{'Location':canonical,'Cache-Control':'no-store'});res.end();return;}

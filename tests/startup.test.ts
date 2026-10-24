@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import path from 'node:path';
 import {createRequire} from 'node:module';
+import {EventEmitter} from 'node:events';
 
 const source=readFileSync(new URL('../server.cjs',import.meta.url),'utf8');
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
@@ -16,6 +17,7 @@ function startup(){
  const server={on(){},listen(){events.push('listen')},close(done:()=>void){events.push('close');done()}};
  const app={prepare:()=>{events.push('prepare');return prepared},getRequestHandler:()=> (req:any,res:any)=>{forwarded.push(req);res.writeHead(200);res.end('ready')},close:async()=>{}};
  const deps:Record<string,any>={
+  './packages/runtime/http-diagnostics.cjs':{observeHttp:(req:any,res:any,options:any)=>createRequire(import.meta.url)('../packages/runtime/http-diagnostics.cjs').observeHttp(req,res,{...options,log(){}})},
   './packages/runtime/public-request.cjs':createRequire(import.meta.url)('../packages/runtime/public-request.cjs'),
   'node:http':{createServer:(handler:any)=>{request=handler;return server}},
   './apps/api/runtime.ts':{startApi:()=>{events.push('api-start');return initialized}},
@@ -26,7 +28,7 @@ function startup(){
   './packages/runtime/config.ts':{productionConfig:()=>({apiPort:4000,apiUrl:'http://127.0.0.1:4000'})},
  };
  runInNewContext(source,{require:(name:string)=>{assert.ok(name in deps,name);return deps[name]},__dirname:process.cwd(),process:{env:{APP_MODE:'application',PORT:'3000',SITE_URL:'https://folloopy.example'},on(){},exit:(code:number)=>exits.push(code)},console:{log(){},error(){}},fetch:()=>health,AbortSignal,setTimeout,clearTimeout});
- const response=(req:any={method:'GET',url:'/'})=>{const result:any={status:0,headers:{},body:''};request({...req,headers:{host:'folloopy.example',...(req.method==='POST'?{origin:'https://folloopy.example'}:{}),...req.headers}}, {headersSent:false,writeHead:(status:number,headers:any={})=>{result.status=status;result.headers=headers},end:(body:string)=>{result.body=body}});return result};
+ const response=(req:any={method:'GET',url:'/'})=>{const result:any={status:0,headers:{},body:''};const res:any=Object.assign(new EventEmitter(),{headersSent:false,statusCode:200,writableFinished:false,writeHead:(status:number,headers:any={})=>{result.status=status;result.headers=headers;res.statusCode=status;res.headersSent=true},end:(body:string)=>{result.body=body;res.writableFinished=true;res.emit('finish')}});request({...req,headers:{host:'folloopy.example',...(req.method==='POST'?{origin:'https://folloopy.example'}:{}),...req.headers}},res);return result};
  return {events,exits,forwarded,response,healthReady,apiReady:()=>apiReady({app:{},close:async()=>{events.push('api-close')}}),apiFailed,nextReady,nextFailed};
 }
 
