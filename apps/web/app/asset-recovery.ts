@@ -1,3 +1,4 @@
+import {interactionTraceScript} from './interaction-trace';
 // Independent of React: missing hydration chunks can prevent React effects
 // (including error boundaries) from ever attaching their handlers. The module
 // script never blocks HTML parsing while a stylesheet is delayed.
@@ -41,4 +42,4 @@ export const assetRecoveryScript=String.raw`(function(){
  window.addEventListener('submit',edit,true);
  // A newer navigation must not be replaced by an older recovery timeout.
  window.addEventListener('click',event=>{if(event.target instanceof Element&&event.target.closest('a[href]'))cancel()},true);
-})();`;
+})();`+'\n'+interactionTraceScript;

@@ -5,10 +5,13 @@ import {FolloopyLogo} from './folloopy-brand';
 import Link from './destination-link';
 import {Icon} from './icons';
 import {samePageSectionId} from './section-navigation';
+import {traceSection} from './interaction-trace';
 function Brand(){return <FolloopyLogo/>}
 export function LandingShell({hasPreview,hasAccount,marketing=false,children}:{hasPreview:boolean;hasAccount:boolean;marketing?:boolean;children:ReactNode}){
  const root=useRef<HTMLDivElement>(null);const[scrolled,setScrolled]=useState(false),[menuOpen,setMenuOpen]=useState(false);
  function prepareSection(target:HTMLElement){
+  const started=performance.now();traceSection('section:prepare:start');
+  try{
   const main=root.current?.querySelector('main');
   if(!main||target===main)return;
   // Resolve deferred section heights before calculating the scroll destination.
@@ -17,14 +20,21 @@ export function LandingShell({hasPreview,hasAccount,marketing=false,children}:{h
    if(section instanceof HTMLElement&&section.tagName==='SECTION')section.style.contentVisibility='visible';
    if(section.contains(target))break;
   }
+  }finally{traceSection('section:prepare:end',performance.now()-started)}
+ }
+ function scrollToSection(target:HTMLElement,instant=false){
+  const started=performance.now();traceSection('section:scroll:start');
+  try{target.scrollIntoView(instant?{behavior:'instant',block:'start'}:{block:'start'})}
+  finally{traceSection('section:scroll:end',performance.now()-started)}
  }
  // Honor incoming section links, then keep the one-page address clean.
  useEffect(()=>{
+  traceSection('landing:mount');
   const cleanSectionAddress=()=>{
    const id=samePageSectionId(window.location.href,window.location.href),target=id?document.getElementById(id):null;
    if(!target||!root.current?.contains(target))return;
    prepareSection(target);
-   target.scrollIntoView({behavior:'instant',block:'start'});
+   scrollToSection(target,true);
    window.history.replaceState(window.history.state,'',window.location.pathname+window.location.search);
   };
   cleanSectionAddress();
@@ -41,7 +51,7 @@ export function LandingShell({hasPreview,hasAccount,marketing=false,children}:{h
   setMenuOpen(false);
   prepareSection(target);
   // Use the existing CSS scroll behavior, including reduced-motion preferences.
-  target.scrollIntoView({block:'start'});
+  scrollToSection(target);
   if(link.classList.contains('site-skip')){target.tabIndex=-1;target.focus({preventScroll:true})}
  }
  useEffect(()=>{const check=()=>setScrolled(window.scrollY>45);check();window.addEventListener('scroll',check,{passive:true});const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;let observer:IntersectionObserver|undefined;if(!reduce){root.current?.classList.add('motion-ready');observer=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('revealed');observer?.unobserve(e.target)}}),{threshold:.1});root.current?.querySelectorAll('[data-reveal]').forEach(el=>observer?.observe(el))}return()=>{window.removeEventListener('scroll',check);observer?.disconnect()}},[]);
