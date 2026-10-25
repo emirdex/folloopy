@@ -17,12 +17,12 @@ test('a stalled logo navigation cannot retain its overlay; later actions cancel 
  transition.start('/');transition.dispose();c.advance(9000);assert.equal(navigations.length,1);
 });
 
-function recovery(storage=new Map<string,string>(),resources:Record<string,unknown>[]=[],styles:Record<string,unknown>[]=[]){
+function recovery(storage=new Map<string,string>(),resources:Record<string,unknown>[]=[],styles:Record<string,unknown>[]=[],scripts:Record<string,unknown>[]=[]){
  const c=clock(),listeners=new Map<string,((event:any)=>void)[]>();let reloads=0;
  const location={href:'https://folloopy.example/blog',pathname:'/blog',origin:'https://folloopy.example',replace:(href:string)=>{assert.equal(href,location.href);reloads++}};
  class Element{constructor(public link=false){}closest(){return this.link?{}:null}}
  const sessionStorage={getItem:(key:string)=>storage.get(key)||null,setItem:(key:string,value:string)=>storage.set(key,value)};
- vm.runInNewContext(assetRecoveryScript,{document:{querySelectorAll:()=>styles},performance:{getEntriesByType:()=>resources},window:{addEventListener:(name:string,fn:(event:any)=>void)=>listeners.set(name,[...(listeners.get(name)||[]),fn])},location,sessionStorage,URL,Element,Date:{now:c.now},setTimeout:c.schedule,clearTimeout:c.clear});
+ vm.runInNewContext(assetRecoveryScript,{document:{querySelectorAll:()=>styles,scripts},performance:{getEntriesByType:()=>resources},window:{addEventListener:(name:string,fn:(event:any)=>void)=>listeners.set(name,[...(listeners.get(name)||[]),fn])},location,sessionStorage,URL,Element,Date:{now:c.now},setTimeout:c.schedule,clearTimeout:c.clear});
  const emit=(name:string,event:any={})=>listeners.get(name)?.forEach(fn=>fn(event));
  return {emit,advance:c.advance,reloads:()=>reloads,Element,storage,chunk:()=>emit('error',{target:{tagName:'SCRIPT',src:'https://folloopy.example/_next/static/chunks/missing.js?dpl=old'}})};
 }
@@ -56,4 +56,14 @@ test('failed or stalled own stylesheets recover once without replacing edits or 
  const navigating=recovery(new Map(),[],[{href,sheet:null}]);navigating.emit('click',{target:new navigating.Element(true)});navigating.advance(20000);navigating.advance(1500);assert.equal(navigating.reloads(),0);
  const loaded=recovery(new Map(),[],[{href,sheet:{}}]);loaded.advance(20000);loaded.advance(1500);assert.equal(loaded.reloads(),0);
  const external=recovery(new Map(),[],[{href:'https://third-party.example/_next/static/layout.css',sheet:null}]);external.advance(20000);external.advance(1500);assert.equal(external.reloads(),0);
+});
+
+
+test('stalled bootstrap scripts recover; completed or skipped scripts and edited forms do not',()=>{
+ const src='https://folloopy.example/_next/static/chunks/bootstrap.js?dpl=current';
+ const f=recovery(new Map(),[],[],[{src}]);f.advance(20000);f.advance(1500);assert.equal(f.reloads(),1);
+ const loaded=recovery(new Map(),[{name:src,responseStatus:200}],[],[{src}]);loaded.advance(20000);loaded.advance(1500);assert.equal(loaded.reloads(),0);
+ const skipped=recovery(new Map(),[],[],[{src,noModule:true}]);skipped.advance(20000);skipped.advance(1500);assert.equal(skipped.reloads(),0);
+ const edited=recovery(new Map(),[],[],[{src}]);edited.emit('beforeinput');edited.advance(20000);edited.advance(1500);assert.equal(edited.reloads(),0);
+ const next=recovery(new Map(),[],[],[{src}]);next.emit('click',{target:new next.Element(true)});next.advance(20000);next.advance(1500);assert.equal(next.reloads(),0);
 });

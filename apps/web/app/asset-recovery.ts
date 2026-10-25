@@ -35,10 +35,15 @@ export const assetRecoveryScript=String.raw`(function(){
  for(const entry of performance.getEntriesByType('resource')){
   if(entry.responseStatus>=400&&ownAsset(entry.name)){failed();break}
  }
- // A stalled stylesheet can hold React's streamed content and hydration behind
- // the loading screen without ever firing an error. Retry once, with the same
- // edit/navigation protections and five-minute loop guard as failed scripts.
- watchdog=setTimeout(()=>{watchdog=undefined;if([...document.querySelectorAll('link[rel="stylesheet"]')].some(link=>ownAsset(link.href)&&!link.sheet))failed()},20000);
+ // Stalled styles or bootstrap scripts can leave content/hydration pending
+ // without an error event. Ignore intentionally skipped nomodule scripts.
+ // Keep the same edit/navigation protections and five-minute loop guard.
+ watchdog=setTimeout(()=>{
+  watchdog=undefined;
+  const completed=new Set(performance.getEntriesByType('resource').map(entry=>entry.name));
+  const pendingScript=[...document.scripts].some(script=>script.src&&!script.noModule&&ownAsset(script.src)&&!completed.has(script.src));
+  if(pendingScript||[...document.querySelectorAll('link[rel="stylesheet"]')].some(link=>ownAsset(link.href)&&!link.sheet))failed();
+ },20000);
  window.addEventListener('folloopy:asset-failure',failed);
  window.addEventListener('pagehide',cancel);
  window.addEventListener('beforeinput',edit,true);
