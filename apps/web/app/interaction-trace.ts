@@ -9,6 +9,14 @@ export const interactionTraceScript=String.raw`(function(){
  const roots=new Set(['panel','admin','blog','iletisim','hakkimizda','giris','kayit','paketler','odeme','yasal','hesap','baglantilar','t','sifremi-unuttum','sifre-yenile']);
  const route=path=>path==='/'?'/':roots.has(path.split('/')[1])?'/'+path.split('/')[1]:'/other';
  const trace=(stage,data={})=>console.warn('FOLLOOPY_UI_TRACE',JSON.stringify({stage,path:route(location.pathname),...data}));
+ const asset=name=>{try{const url=new URL(name,location.href);return url.origin===location.origin&&url.pathname.startsWith('/_next/static/')?url.pathname.split('/').pop():''}catch{return ''}};
+ const resources=()=>{
+  try{for(const entry of performance.getEntriesByType('resource')){const file=asset(entry.name);if(file)trace('asset',{file,status:entry.responseStatus||0,ms:Math.round(entry.duration),bytes:entry.decodedBodySize||0})}}catch{}
+ };
+ window.addEventListener('error',event=>{const file=asset(event.target?.src||event.filename);trace('error',{file,kind:event.target?.tagName==='SCRIPT'?'script':'runtime'})},true);
+ window.addEventListener('unhandledrejection',event=>trace('rejection',{kind:event.reason?.name==='ChunkLoadError'?'chunk':'other'}));
+ window.addEventListener('load',resources);
+ setTimeout(resources,5000);
  document.addEventListener('pointerdown',()=>trace('pointerdown'),true);
  document.addEventListener('click',event=>{
   const anchor=event.target instanceof Element?event.target.closest('a[href]'):null;
