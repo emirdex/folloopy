@@ -1,10 +1,11 @@
 import {interactionTraceScript} from './interaction-trace';
 // Independent of React: missing hydration chunks can prevent React effects
 // (including error boundaries) from ever attaching their handlers. The module
-// script never blocks HTML parsing while a stylesheet is delayed.
+// is async so it can also run while a stylesheet is delayed.
 export const assetRecoveryScript=String.raw`(function(){
- let pending,edited=false;
- const cancel=()=>{if(pending!==undefined)clearTimeout(pending);pending=undefined};
+ let pending,watchdog,edited=false;
+ const cancel=()=>{if(pending!==undefined)clearTimeout(pending);pending=undefined;if(watchdog!==undefined)clearTimeout(watchdog);watchdog=undefined};
+ const ownAsset=value=>{try{const url=new URL(value,location.href);return url.origin===location.origin&&url.pathname.startsWith('/_next/static/')&&/\.(js|css)$/.test(url.pathname)}catch{return false}};
  const edit=()=>{edited=true;cancel()};
  const failed=()=>{
   if(edited||pending!==undefined)return;
@@ -23,18 +24,21 @@ export const assetRecoveryScript=String.raw`(function(){
  };
  window.addEventListener('error',event=>{
   const target=event.target;
-  if(target?.tagName!=='SCRIPT'||!target.src)return;
-  try{const url=new URL(target.src,location.href);if(url.origin===location.origin&&url.pathname.startsWith('/_next/static/')&&url.pathname.endsWith('.js'))failed()}catch{}
+  const source=target?.tagName==='SCRIPT'?target.src:target?.tagName==='LINK'&&target.rel==='stylesheet'?target.href:'';
+  if(source&&ownAsset(source))failed();
  },true);
  window.addEventListener('unhandledrejection',event=>{
   const reason=event.reason;
   if(reason?.name==='ChunkLoadError'||/Loading chunk \S+ failed/.test(String(reason?.message||'')))failed();
  });
- // A module runs after HTML parsing. Catch script HTTP failures that finished
- // before its listeners attached as well as subsequent resource error events.
+ // Catch completed failures as well as subsequent resource error events.
  for(const entry of performance.getEntriesByType('resource')){
-  try{const url=new URL(entry.name,location.href);if(entry.responseStatus>=400&&url.origin===location.origin&&url.pathname.startsWith('/_next/static/')&&url.pathname.endsWith('.js')){failed();break}}catch{}
+  if(entry.responseStatus>=400&&ownAsset(entry.name)){failed();break}
  }
+ // A stalled stylesheet can hold React's streamed content and hydration behind
+ // the loading screen without ever firing an error. Retry once, with the same
+ // edit/navigation protections and five-minute loop guard as failed scripts.
+ watchdog=setTimeout(()=>{watchdog=undefined;if([...document.querySelectorAll('link[rel="stylesheet"]')].some(link=>ownAsset(link.href)&&!link.sheet))failed()},20000);
  window.addEventListener('folloopy:asset-failure',failed);
  window.addEventListener('pagehide',cancel);
  window.addEventListener('beforeinput',edit,true);
