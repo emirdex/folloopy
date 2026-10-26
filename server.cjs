@@ -14,10 +14,12 @@ process.env.APP_MODE=mode;
 const port=Number(process.env.PORT||3000);
 if(!Number.isInteger(port)||port<1||port>65535)throw new Error('CONFIG_PORT_INVALID');
 let apiRuntime,app,server,handle,stopping=false;
+let connections=0,requests=0,heartbeat;
 let releaseStartup;
 const startupReady=new Promise(resolve=>{releaseStartup=resolve});
 async function stop(code=0){
  if(stopping)return;stopping=true;
+ clearInterval(heartbeat);
  releaseStartup();
  const force=setTimeout(()=>process.exit(code),25000);force.unref();
  if(server)await new Promise(resolve=>server.close(resolve));
@@ -30,6 +32,7 @@ async function start(){
  // Hostinger requires listen() before asynchronous database/API initialization.
  // Queue cold-start requests until both the private API and Next are ready.
  server=createServer((req,res)=>{
+  requests++;
   observeHttp(req,res,{phase:handle?'ready':'startup'});
   const serve=async()=>{
    const canonical=canonicalRedirect(req,trustedOrigin,process.env.DEPLOYMENT_ROLE!=='panel');
@@ -45,7 +48,12 @@ async function start(){
   serve().catch(()=>{if(!res.headersSent)res.writeHead(500,{'Content-Type':'text/plain; charset=utf-8'});res.end('İşlem tamamlanamadı.')});
  });
  server.on('error',error=>{console.error('FOLLOOPY_HTTP_START_FAILED',error.code||'UNKNOWN');stop(1)});
- server.listen(port,'0.0.0.0');
+ server.on('connection',socket=>{connections++;socket.once('close',()=>connections--)});
+ server.listen(port,'0.0.0.0',()=>{
+  const address=server.address();
+  console.log('FOLLOOPY_LISTENER_READY',JSON.stringify({pid:process.pid,transport:typeof address==='string'?'unix':'tcp',port:typeof address==='object'&&address?address.port:null}));
+ });
+ heartbeat=setInterval(()=>console.log('FOLLOOPY_RUNTIME_STATUS',JSON.stringify({pid:process.pid,ready:!!handle,listening:server.listening,connections,requests,rssMiB:Math.round(process.memoryUsage().rss/1048576)})),30000);heartbeat.unref();
  if(mode==='application'){
   // Keep the private API in this process: managed hosts can restrict child workers.
   require('tsx/cjs');
