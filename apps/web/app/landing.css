@@ -98,3 +98,8 @@ html:has(.landing-page){scroll-behavior:smooth;scroll-padding-top:105px}.landing
 
 .feature-mini-note{max-width:none}
 .feature-mini-note>svg{flex-shrink:0}
+
+.honesty-section>.discovery-light-button{color:#408368;border-color:#8bc5aa80;background:linear-gradient(135deg,#f5fffbc9,#d9f2e680);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:inset 0 1px 0 #ffffffd9,0 4px 18px #559b780f}
+.honesty-section>.discovery-light-button:hover{color:#326f55;border-color:#77b797a6;background:linear-gradient(135deg,#f5fffbe6,#ceecddad);box-shadow:inset 0 1px 0 #fff,0 5px 22px #559b7821}
+.honesty-section>.discovery-light-button::before{background:conic-gradient(from var(--hero-border-angle),transparent 0deg 250deg,#a9dfc440 285deg,#85c6a6e0 320deg,#fff 345deg,transparent 360deg);filter:drop-shadow(0 0 3px #85c6a690)}
+.honesty-section>.discovery-light-button:focus-visible{outline-color:#6aab89}
