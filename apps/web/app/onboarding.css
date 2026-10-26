@@ -131,3 +131,8 @@
 .auth-form-inner>.flow-back:is(:hover,:focus-visible){color:#31568f;text-decoration-color:currentColor}
 .auth-form-inner>.flow-back:hover>svg{transform:translateX(-3px)}
 @media(prefers-reduced-motion:reduce){.auth-form-inner>.flow-back>svg{transition:none}.auth-form-inner>.flow-back:hover>svg{transform:none}}
+
+.account-form:has(.account-name-row){row-gap:17px}
+.account-form .account-name-row{column-gap:12px}
+@media(max-width:720px){.account-form:has(.account-name-row){row-gap:19px}}
+@media(max-width:480px){.account-form .account-name-row{column-gap:9px}}
