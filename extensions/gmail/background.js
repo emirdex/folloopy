@@ -9,7 +9,8 @@ async function signed(operation,payload={}){const {device}=await chrome.storage.
 let pairing=false;
 chrome.runtime.onMessage.addListener((message,sender,reply)=>{
  const gmail=sender.tab&&/^https:\/\/mail\.google\.com\//.test(sender.url||'');
- const popup=!sender.tab&&sender.id===chrome.runtime.id&&sender.url===chrome.runtime.getURL('popup.html');
+ // The trusted popup may also be opened as a Chrome extension tab.
+ const popup=sender.id===chrome.runtime.id&&sender.url===chrome.runtime.getURL('popup.html');
  if(!gmail&&!popup)return;
  (async()=>{
   await storageReady;

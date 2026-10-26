@@ -28,7 +28,7 @@ Paket yetkileri `packages/domain/plan-policy.ts` üzerinden sunucuda uygulanır.
 
 Bildirimler, isteğe bağlı haftalık özet, zamanlama, CSV/hesap verisi dışa aktarımı, bağlantı ve güvenli dosya paylaşım analitiği eklenmiştir. Free yalnızca ilk açılmayı kaydeder. Sonucu belirsiz gönderimler tekrar edilmez. Yeni kayıtlar paket saklama süresinin sonunda temizlenir; eski, süre bilgisi bulunmayan kayıtlar otomatik silinmez. Tekrar gönderimi önleyen asgari işlem anahtarları içerik taşımadan korunur.
 
-Gmail eklentisi 1.1.0 tüm üç pakette çalışır; yetki her istekte sunucudan kontrol edilir. Yeni ileti, zengin metin, Folloopy'nin kendi CC/BCC ve normal ek alanları, takipli dosya bağlantıları ve paket kapsamındaki araçları destekler. Gmail'in yerel ek alanı veya doğrulanamayan yanıt zinciri sessizce aktarılmaz: gönderim durdurulur ve açıklama gösterilir. Mevcut manuel kurulumlar yeni ZIP ile güncellenmelidir. Mağaza yayını ve gerçek Gmail uçtan uca denemesi, sentetik testlerden ayrı doğrulanır.
+Gmail eklentisi 1.1.1 tüm üç pakette çalışır; yetki her istekte sunucudan kontrol edilir. Yeni ileti, zengin metin, Folloopy'nin kendi CC/BCC ve normal ek alanları, takipli dosya bağlantıları ve paket kapsamındaki araçları destekler. Gmail'in yerel ek alanı veya doğrulanamayan yanıt zinciri sessizce aktarılmaz: gönderim durdurulur ve açıklama gösterilir. Mevcut manuel kurulumlar yeni ZIP ile güncellenmelidir. Mağaza yayını ve gerçek Gmail uçtan uca denemesi, sentetik testlerden ayrı doğrulanır.
 
 BILLING_MODE=disabled varsayılandır. complimentary tahsilatsız yönetici erişimidir. Microsoft Entra ve ödeme sağlayıcısı hazır olmadığı için Outlook kurulumu ve gerçek tahsilat kapalıdır. Outlook MIME adaptörü ve abonelik fiyat farkı hesaplaması hazırlıktır; sağlayıcı/webhook ve mağaza doğrulaması yerine geçmez. Otomatik yanıt takibi ve yerel mobil eklentiler aktif özellik değildir.
 
@@ -57,3 +57,11 @@ Eski docs/ altındaki tasarım/geliştirme notları tarihsel referanstır. Günc
 ### İletişim formu
 
 `/iletisim` üzerindeki form, her iki yayın modunda da mesajları sabit `info@folloopy.com` adresine gönderir. Hostinger ortam değişkenlerine `RESEND_API_KEY` ve doğrulanmış gönderici olan `MAIL_FROM` eklenmelidir; bu değerler GitHub’a yüklenmez. Gönderim servisi ayarlı değilse form başarılı gönderim bildirmez ve doğrudan e-posta adresini gösterir. Yanıt adresi ziyaretçinin adresidir. Formda sunucu doğrulaması, bot alanı ve her sunucu sürecinde IP başına 15 dakikada 5 deneme sınırı bulunur; bu sınır yeniden başlatmada sıfırlanır. Testler sahte e-posta servisi kullanır; gerçek teslimat ayrıca posta kutusunda doğrulanmalıdır.
+
+## İleri işlevsel testler
+
+`tests/adversarial-flows.test.ts` iki bağımsız oturumla kota yarışlarını, aynı gönderimin tekrarını, taslak sürüm çakışmasını, zamanlama işçilerini, kampanya iptal/iadesini ve üyeler arası veri ayrımını sınar. `TEST_DATABASE_URL` verilirse her test kendi geçici PostgreSQL şemasını oluşturup sonunda kaldırır. SQL DATE değerleri saat dilimi taşımayan takvim metni olarak okunur.
+
+Üretim derlemesinden sonra `scripts/adversarial-web-smoke.ts`, `scripts/package-web-smoke.ts`, `scripts/file-sharing-web-smoke.ts`, `scripts/pricing-web-smoke.ts` ve `scripts/security-web-smoke.ts` yalnızca sentetik hesaplarla çalıştırılır. Browser betikleri için Playwright kurulumuna işaret eden `WORKSPACE_NODE_MODULES` gerekir. `SMOKE_BROWSER=chromium` veya `webkit` seçilebilir; araç başlatma hatası başarılı site testi sayılmaz.
+
+`scripts/extension-installed-smoke.ts` gerçek yayın ZIP'ini geçici kalıcı Chromium profiline yükler. Gerçek Chrome depolaması, anahtar üretimi, imza ve içerik betikleri çalışır; ağ istekleri izole test API'sine yönlendirilir ve DNS ek koruma olarak localhost'a sabitlenir. Bu senaryo gerçek Gmail posta kutusu veya gerçek e-posta teslimatını doğrulamaz. Test çıktısı `realEmailSent:false` bilgisini taşır.

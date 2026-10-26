@@ -174,7 +174,7 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  app.get('/api/member-tools',async req=>{await workspace(req);return tools.overview(await account(req))});
  app.post('/api/member-tools/settings',async req=>{await workspace(req);return tools.settings(await account(req),req.body as any)});
  app.post('/api/member-tools/notifications/:id/read',async req=>{await workspace(req);return tools.markRead(await account(req),(req.params as {id:string}).id)});
- app.post('/api/member-tools/reminders',async req=>{await workspace(req);const b=req.body as {messageId:string;dueAt:string};return tools.remind(await account(req),b.messageId,b.dueAt)});
+ app.post('/api/member-tools/reminders',async req=>{await workspace(req);const b=req.body as {messageId:string;dueAt:string};if(!b||typeof b!=='object'||Array.isArray(b))throw Error('INVALID_REQUEST');return tools.remind(await account(req),b.messageId,b.dueAt)});
  app.post('/api/member-tools/reminders/:id/cancel',async req=>{await workspace(req);return tools.cancelReminder(await account(req),(req.params as {id:string}).id)});
  app.post('/api/member-tools/schedules',{bodyLimit:15*1024*1024},async req=>{await workspace(req);const b=req.body as {message:any;dueAt:string;requestId:string};if(!b||!b.message||typeof b.message.tracking!=='boolean'||Object.keys(b.message).some(k=>!['to','subject','text','html','cc','bcc','attachments','tracking','linkTracking','threadId','inReplyTo','references'].includes(k)))throw Error('INVALID_REQUEST');return tools.schedule(await account(req),b.message,b.dueAt,b.requestId)});
  app.post('/api/member-tools/schedules/:id/cancel',async req=>{await workspace(req);return tools.cancelSchedule(await account(req),(req.params as {id:string}).id)});

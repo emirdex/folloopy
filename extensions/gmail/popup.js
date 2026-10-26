@@ -16,7 +16,8 @@ async function run(operation){
   try{
     const response=await chrome.runtime.sendMessage({operation});
     if(!response?.ok){const error=new Error(messages[response?.error]||'Servise ulaşılamadı. İnternet bağlantınızı kontrol edin.');error.code=response?.error;throw error;}
-    const result=response.result;
+    let result=response.result;
+    if(operation==='exchange'&&!result?.pending&&result?.sender){const status=await chrome.runtime.sendMessage({operation:'status'});if(!status?.ok){const error=new Error(messages[status?.error]||'Bağlantı bilgileri doğrulanamadı.');error.code=status?.error;throw error;}result=status.result;}
     if(operation==='disconnect'){sender='';render('unpaired');}
     else if(result?.pending)render('pending');
     else if(result?.sender){sender=result.sender;render('connected');if(result.policy&&ui.usage)ui.usage.textContent=result.policy.name+' · '+(result.usage?.message_limit?`${result.usage.used} / ${result.usage.message_limit} bugün`:'Tekli takip kotası yok');}

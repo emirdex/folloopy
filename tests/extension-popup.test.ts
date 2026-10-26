@@ -17,10 +17,10 @@ test('validated account shows one primary action and safely renders the address'
  assert.equal(e.popup.dataset.state,'connected');assert.equal(e.sender.textContent,'<img src=x>@example.com');assert.equal(e.panel.hidden,false);assert.equal(e.pair.hidden,true);assert.equal(e.check.hidden,true);assert.equal(e.account.hidden,false);
 });
 test('unpaired account starts pairing and only shows confirmation action while pending',async()=>{
- const p=await popup([fail('NOT_PAIRED'),ok({pending:true}),ok({sender:'member@example.com'})]);
+ const p=await popup([fail('NOT_PAIRED'),ok({pending:true}),ok({sender:'member@example.com'}),ok({sender:'member@example.com',policy:{name:'Free'},usage:{used:0,message_limit:3}})]);
  assert.equal(p.elements.pair.hidden,false);assert.equal(p.elements.notice.hidden,true);
  await p.click('pair');assert.equal(p.elements.popup.dataset.state,'pending');assert.equal(p.elements.pair.hidden,true);assert.equal(p.elements.check.hidden,false);
- await p.click('check');assert.equal(p.elements.popup.dataset.state,'connected');assert.deepEqual(p.calls,['status','pair','exchange']);
+ await p.click('check');assert.equal(p.elements.popup.dataset.state,'connected');assert.deepEqual(p.calls,['status','pair','exchange','status']);assert.match(p.elements.usage.textContent,/Free.*0 \/ 3/);
 });
 test('reopened popup resumes an unexpired pairing without exposing its secret',async()=>{
  const p=await popup([fail('NOT_PAIRED')],{expires:Date.now()+60000,secret:'PRIVATE'});
