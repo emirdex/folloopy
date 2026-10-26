@@ -91,3 +91,7 @@ html:has(.landing-page){scroll-behavior:smooth;scroll-padding-top:105px}.landing
 
 /* The first heading and introduction are readable on the first paint. */
 .hero-copy h1,.hero-copy>p{animation:none}
+
+.purchase-card>.purchase-button{color:#3f8062;background:linear-gradient(130deg,#effbf5e6,#d5efdfbf);box-shadow:inset 0 1px 0 #fff,inset 0 0 0 1px #8bc5aa80,0 4px 16px #559b7814;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.purchase-card>.purchase-button:hover{color:#30694f;background:linear-gradient(130deg,#e6f8ed,#c9e9d7e6);box-shadow:inset 0 1px 0 #fff,inset 0 0 0 1px #77b797a6,0 7px 20px #559b7824}
+.purchase-card>.purchase-button:focus-visible{outline:2px solid #6aab89;outline-offset:4px}
