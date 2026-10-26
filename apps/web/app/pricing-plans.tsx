@@ -2,7 +2,7 @@
 import {useState} from 'react';
 import {BillingToggle} from './billing-toggle';
 import Link from './destination-link';
-import {ArrowUpRight,Mail,Check,Minus,Gem,Sprout,ShieldCheck,ArrowRight} from 'lucide-react';
+import {ArrowUpRight,Mail,Check,Minus,Gem,Sprout,ShieldCheck} from 'lucide-react';
 import {commercialPlans,freePlan,planPricing,formatPrice,type BillingPeriod} from '../../../packages/domain/commercial-plans';
 import {filePolicy,fileSize} from '../../../packages/domain/file-sharing';
 import './pricing-plans.css';
@@ -29,5 +29,5 @@ export function PricingPlans({hasAccount,marketing=false}:{hasAccount:boolean;ma
    <div className="pricing-choice-features"><span>{'PAKETİNİZDE NELER VAR?'}</span><ul aria-label={tier.name+' özellikleri'}>{tier.features.map(item=><li key={item.label} className={item.included?'is-included':'is-excluded'}><span className="pricing-feature-icon" aria-hidden="true">{item.included?<Check size={14}/>:<Minus size={14}/>}</span><div><div className="pricing-feature-title"><h4>{item.label}</h4><span className="pricing-feature-value">{item.value}</span></div><p>{item.detail}</p></div></li>)}</ul></div>
    <footer className="pricing-choice-footer"><ShieldCheck size={16} aria-hidden="true"/><p>{free?'Günlük 3 mail hakkınız otomatik yenilenir. Taslak kaydetmek gönderim hakkınızı tüketmez.':premium?'Her kampanya alıcısı kampanya kotasından 1 hak kullanır. Tekli takip kotasıyla karışmaz.':'PDF görüntüleme ve indirme hareketlerini inceleyin. Taslak kaydetmek mail hakkınızı tüketmez.'}</p></footer>
   </article>
- })}</div><div className="pricing-shared-note"><ShieldCheck size={18} aria-hidden="true"/><p>Gmail’in kendi gönderim sınırları bütün paketlerde geçerlidir. Gönderimler bağlı hesabınızdan yapılır. Açılma ve dosya hareketleri kesin okuma kanıtı değildir. Outlook ve mobil uygulama içi eklentiler henüz açık değildir. Office önizlemeleri metin içeriğini gösterir.</p><Link href="/iletisim">Kararsız mı kaldınız?<ArrowRight size={14}/></Link></div></div>;
+ })}</div></div>;
 }
