@@ -2,7 +2,7 @@
 import {useState} from 'react';
 import {BillingToggle} from './billing-toggle';
 import Link from './destination-link';
-import {ArrowUpRight,Mail,Check,Minus,Gem,Sprout,ShieldCheck} from 'lucide-react';
+import {ArrowUpRight,Mail,Check,Minus,Gem,Sprout,ShieldCheck,ChevronDown} from 'lucide-react';
 import {commercialPlans,freePlan,planPricing,formatPrice,type BillingPeriod} from '../../../packages/domain/commercial-plans';
 import {filePolicy,fileSize} from '../../../packages/domain/file-sharing';
 import './pricing-plans.css';
@@ -17,7 +17,8 @@ const tiers=[
 ] as const;
 export function PricingPlans({hasAccount,marketing=false}:{hasAccount:boolean;marketing?:boolean}){
  const[period,setPeriod]=useState<BillingPeriod>('monthly');
- return <div className="pricing-section-content pricing-redesign" data-reveal><BillingToggle period={period} onChange={setPeriod}/><div className="pricing-choice-grid">{tiers.map(tier=>{
+ const[showDetails,setShowDetails]=useState(false);
+ return <div className={'pricing-section-content pricing-redesign'+(showDetails?' show-feature-details':'')} data-reveal><BillingToggle period={period} onChange={setPeriod}/><div className="pricing-choice-grid">{tiers.map(tier=>{
   const free=tier.id==='free',premium=tier.id==='team',plan=free?undefined:commercialPlans.find(p=>p.id===tier.id),price=plan?planPricing(plan,period):{monthly:0,total:0,annualSavings:0};
   const href=free?(hasAccount?'/paketler?plan=free':'/kayit?plan=free'):(marketing?'/iletisim':hasAccount?'/paketler':'/kayit')+'?plan='+tier.id+'&billing='+period;
   return <article className={'pricing-choice pricing-choice-'+tier.id} key={tier.id} aria-labelledby={'pricing-plan-'+tier.id}>
@@ -26,8 +27,8 @@ export function PricingPlans({hasAccount,marketing=false}:{hasAccount:boolean;ma
    <div className="pricing-choice-price" aria-live="polite" aria-atomic="true"><strong>{formatPrice(price.monthly)}</strong><span>TL<small>{free?'ücretsiz':period==='yearly'?'/ ay karşılığı':'/ ay'}</small></span></div>
    <Link href={href} className={'pricing-choice-cta'+(premium?' is-primary':'')}>{free?'Ücretsiz başla':marketing?tier.name+' Hakkında Bilgi Al':tier.name+' ile Başla'}<ArrowUpRight size={18}/></Link>
    <div className="pricing-choice-use"><span aria-hidden="true"><tier.Icon size={15}/></span><p>{tier.use}</p></div>
-   <div className="pricing-choice-features"><span>{'PAKETİNİZDE NELER VAR?'}</span><ul aria-label={tier.name+' özellikleri'}>{tier.features.map(item=><li key={item.label} className={item.included?'is-included':'is-excluded'}><span className="pricing-feature-icon" aria-hidden="true">{item.included?<Check size={14}/>:<Minus size={14}/>}</span><div><div className="pricing-feature-title"><h4>{item.label}</h4><span className="pricing-feature-value">{item.value}</span></div><p>{item.detail}</p></div></li>)}</ul></div>
+   <div className="pricing-choice-features"><span>{'PAKETİNİZDE NELER VAR?'}</span><ul aria-label={tier.name+' özellikleri'}>{tier.features.map(item=><li key={item.label} className={item.included?'is-included':'is-excluded'}><span className="pricing-feature-icon" aria-hidden="true">{item.included?<Check size={14}/>:<Minus size={14}/>}</span><div><div className="pricing-feature-title"><h4>{item.label}</h4><span className="pricing-feature-value">{item.value}</span></div><p hidden={!showDetails}>{item.detail}</p></div></li>)}</ul></div>
    <footer className="pricing-choice-footer"><ShieldCheck size={16} aria-hidden="true"/><p>{free?'Günlük 3 mail hakkınız otomatik yenilenir. Taslak kaydetmek gönderim hakkınızı tüketmez.':premium?'Her kampanya alıcısı kampanya kotasından 1 hak kullanır. Tekli takip kotasıyla karışmaz.':'PDF görüntüleme ve indirme hareketlerini inceleyin. Taslak kaydetmek mail hakkınızı tüketmez.'}</p></footer>
   </article>
- })}</div></div>;
+ })}</div><button type="button" className="pricing-details-toggle" aria-expanded={showDetails} onClick={()=>setShowDetails(value=>!value)}>{showDetails?'Özellik açıklamalarını gizle':'Özellikleri ayrıntılı incele'}<ChevronDown size={16} aria-hidden="true"/></button></div>;
 }
