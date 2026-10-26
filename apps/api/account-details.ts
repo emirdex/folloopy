@@ -1,3 +1,4 @@
+import {freeUsage} from './free-usage';
 import {recordMemberActivity} from './member-activity';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
 import type {DB} from '../../packages/database/index';
@@ -10,7 +11,8 @@ export class AccountDetails{
  constructor(private db:DB,private site:string,private encryptionKey?:string){}
  async details(user:Account){
   const profile=(await this.db.query('SELECT name,email,created_at,email_verified_at FROM users WHERE id=$1',[user.id])).rows[0];
-  const usage=(await this.db.query('SELECT status,used,message_limit FROM entitlements WHERE workspace_id=$1',[user.workspace_id])).rows[0]||null;
+  let usage:Record<string,unknown>|null=(await this.db.query('SELECT status,used,message_limit FROM entitlements WHERE workspace_id=$1',[user.workspace_id])).rows[0]||null;
+  if(user.plan==='free')usage={...usage,...await freeUsage(this.db,user.workspace_id)};
   const purchases=(await this.db.query('SELECT id,plan,mode,status,amount_minor,currency,created_at,completed_at FROM purchases WHERE user_id=$1 AND workspace_id=$2 ORDER BY created_at DESC,id LIMIT 50',[user.id,user.workspace_id])).rows;
   const lastPayment=(await this.db.query("SELECT amount_minor,currency,completed_at FROM purchases WHERE user_id=$1 AND workspace_id=$2 AND mode='live' AND status='paid' AND amount_minor IS NOT NULL AND currency IS NOT NULL AND completed_at IS NOT NULL ORDER BY completed_at DESC,id LIMIT 1",[user.id,user.workspace_id])).rows[0]||null;
   const pendingEmail=(await this.db.query('SELECT new_email,expires_at,old_confirmed,new_confirmed FROM account_email_changes WHERE user_id=$1 AND expires_at>now()',[user.id])).rows[0]||null;

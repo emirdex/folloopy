@@ -1,0 +1,29 @@
+// Disposable browser checks: no production accounts, email delivery or payment.
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {createServer} from 'node:http';
+import {randomBytes} from 'node:crypto';
+import next from 'next';
+import {openDatabase,migrate} from '../packages/database';
+import {Accounts} from '../apps/api/accounts';
+import {buildServer} from '../apps/api/server';
+import {UnavailableProvider} from '../packages/provider-adapters';
+import {installLocalApi} from '../packages/runtime/private-api.cjs';
+const runtime=process.env.WORKSPACE_NODE_MODULES;if(!runtime)throw Error('WORKSPACE_NODE_MODULES required');
+const {chromium}=createRequire(runtime+'/package.json')('playwright');
+process.env.APP_MODE='application';process.env.DEPLOYMENT_ROLE='panel';process.env.INTERNAL_API_KEY='synthetic-pricing-browser-test-key-2026';process.env.INTERNAL_API_URL='http://127.0.0.1:45995';
+const db=await openDatabase();await migrate(db);const accounts=new Accounts(db,true),server=createServer();await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));const address=server.address();if(!address||typeof address==='string')throw Error('SERVER_FAILED');const origin='http://127.0.0.1:'+address.port;process.env.APP_URL=origin;process.env.SITE_URL=origin;
+const {app:api}=buildServer(db,new UnavailableProvider(),process.env.INTERNAL_API_KEY,origin,undefined,{production:true,site:origin,encryptionKey:randomBytes(32).toString('base64')});await api.ready();installLocalApi(api,process.env.INTERNAL_API_URL);
+const web=next({dev:false,dir:'./apps/web',hostname:'127.0.0.1',port:address.port});await web.prepare();server.on('request',web.getRequestHandler());
+let browser:any,checks=0;const errors:string[]=[];const screenshots=new URL('../../',import.meta.url).pathname;
+try{browser=await chromium.launch({headless:true,executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});const context=await browser.newContext({viewport:{width:1440,height:1100}}),page=await context.newPage();page.on('pageerror',(e:Error)=>errors.push(e.message));await page.goto(origin);await page.locator('.site-nav a[href="#planlar"]').click();await page.getByRole('heading',{name:'Signature',exact:true}).waitFor();await page.evaluate(()=>document.fonts.ready);assert.equal(await page.locator('.pricing-choice').count(),3);checks++;
+ for(const [name,price] of [['free','0'],['individual','319'],['team','549']]){assert.equal(await page.locator('.pricing-choice-'+name+' .pricing-choice-price strong').textContent(),price);checks++}
+ assert.match(await page.locator('.pricing-choice-free .pricing-choice-cta').getAttribute('href'),/\/kayit\?plan=free$/);checks++;
+ await page.locator('.section-heading').last().count();await page.locator('#planlar').evaluate((e:HTMLElement)=>{for(const x of e.querySelectorAll('[data-reveal]'))x.classList.add('revealed')});await page.locator('.pricing-redesign').screenshot({path:screenshots+'folloopy-pricing-desktop.png',animations:'disabled',style:'header.site-header{visibility:hidden}'});await page.getByRole('button',{name:/Yıllık/}).click();assert.equal(await page.locator('.pricing-choice-individual .pricing-choice-price strong').textContent(),'259');assert.equal(await page.locator('.pricing-choice-team .pricing-choice-price strong').textContent(),'400');assert.equal(await page.locator('.pricing-choice-free .pricing-choice-price strong').textContent(),'0');assert.match(await page.locator('.pricing-choice-team .pricing-choice-billing').innerText(),/4\.800/);checks+=4;
+ for(const width of [320,390,768]){await page.setViewportSize({width,height:844});await page.locator('#planlar').scrollIntoViewIfNeeded();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));for(const card of await page.locator('.pricing-choice').all()){const box=await card.boundingBox();assert.ok(box&&box.x>=0&&box.x+box.width<=width+1)}checks++;if(width===390)await page.locator('#planlar').screenshot({path:screenshots+'folloopy-pricing-mobile.png',animations:'disabled'})}
+ await page.locator('.pricing-choice-free .pricing-choice-cta').click();await page.waitForURL(/\/kayit/);await page.locator('input[name=password]').waitFor();checks++;await context.close();
+ for(const plan of ['free','individual','team'] as const){const email='pricing-'+plan+'@example.invalid',registered=await accounts.register('Synthetic Member',email,'Synthetic-password-2026!',{free:true});await db.query('UPDATE users SET email_verified_at=now() WHERE email=$1',[email]);let user=(await accounts.current(registered.token))!;if(plan!=='free')await accounts.grant(user,plan);const ctx=await browser.newContext({viewport:{width:1440,height:1000}});await ctx.addCookies([{name:'mt_session',value:registered.token,url:origin}]);const p=await ctx.newPage();p.on('pageerror',(e:Error)=>errors.push(e.message));await p.goto(origin+'/panel?view=account');await p.getByRole('heading',{name:'Hesap Detayları',exact:true}).waitFor();assert.equal(await p.locator('.account-summary .admin-plan-badge').first().innerText(),plan==='free'?'Free':plan==='individual'?'Essential':'Signature');checks++;
+ if(plan==='free'){assert.match(await p.locator('.account-summary').first().innerText(),/Bugün 0 \/ 3/);await p.goto(origin+'/panel?view=compose');await p.getByLabel('Free günlük gönderim hakkı').waitFor();checks++}
+ await p.goto(origin+'/paketler');if(plan==='free')await p.getByRole('link',{name:'Free ile devam et'}).waitFor();else{await p.getByText('Mevcut paketiniz',{exact:true}).first().waitFor()}checks++;await ctx.close()}
+ assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'PASS',checks,widths:[1440,768,390,320],plans:['Free','Essential','Signature'],syntheticOnly:true}));
+}finally{await browser?.close();await new Promise<void>(r=>server.close(()=>r()));await web.close();await api.close();await db.close()}

@@ -1,3 +1,4 @@
+import {commercialPlans,freePlan} from '../../packages/domain/commercial-plans';
 import {recordMemberActivity} from './member-activity';
 import {randomBytes,randomUUID,scrypt as derive,timingSafeEqual,createHash} from 'node:crypto';
 import {promisify} from 'node:util';
@@ -5,12 +6,12 @@ import {validNewPassword} from '../../packages/domain/password-policy';
 import type {DB} from '../../packages/database/index';
 const scrypt=promisify(derive);
 const digest=(value:string)=>createHash('sha256').update(value).digest('hex');
-export const plans={individual:{name:'Essential',limit:100},team:{name:'Signature',limit:500},business:{name:'Enterprise',limit:1000}} as const;
+export const plans={free:{name:'Free',limit:freePlan.dailyMessageLimit},individual:{name:'Essential',limit:commercialPlans[0].messageLimit},team:{name:'Signature',limit:commercialPlans[1].messageLimit},business:{name:'Enterprise',limit:1000}} as const;
 export type Plan=keyof typeof plans;
 export type Account={id:string;workspace_id:string;name:string;email:string;plan:Plan|null;role:'member'|'owner';email_verified_at?:string|null};
 export class Accounts{
  constructor(private db:DB,private production=false){}
- async register(name:string,email:string,password:string){
+ async register(name:string,email:string,password:string,options:{free?:boolean}={}){
   if(!validNewPassword(password))throw new Error('INVALID_PASSWORD');
   if(name.trim().length<2||name.length>80)throw new Error('INVALID_ACCOUNT');
   const salt=randomBytes(16).toString('hex');
@@ -19,6 +20,10 @@ export class Accounts{
   try{await this.db.transaction(async tx=>{
    await tx.query('INSERT INTO workspaces(id,name) VALUES($1,$2)',[workspace,name+' çalışma alanı']);
    await tx.query('INSERT INTO users(id,workspace_id,name,email,password_hash) VALUES($1,$2,$3,$4,$5)',[id,workspace,name,email.trim().toLowerCase(),salt+':'+hash]);
+   if(options.free){
+    await tx.query("INSERT INTO access_grants(workspace_id,plan,mode) VALUES($1,'free','complimentary')",[workspace]);
+    await tx.query("INSERT INTO entitlements(workspace_id,status,message_limit) VALUES($1,'active',$2)",[workspace,freePlan.dailyMessageLimit]);
+   }
   })}catch(e){if((e as {code?:string}).code==='23505')throw new Error('ACCOUNT_EXISTS');throw e}
   await recordMemberActivity(this.db,id,'account_registered');
   return this.createSession(id);
@@ -62,6 +67,8 @@ export class Accounts{
    const entitlement=(await tx.query<{status:string}>('SELECT status FROM entitlements WHERE workspace_id=$1 FOR UPDATE',[account.workspace_id])).rows[0];
    if(entitlement&&(entitlement.status==='suspended'||(this.production&&entitlement.status!=='active')))throw Error('FORBIDDEN');
    const existing=(await tx.query<{plan:string}>('SELECT plan FROM access_grants WHERE workspace_id=$1',[account.workspace_id])).rows[0];
+   // Free activation is never a public downgrade of an existing paid account.
+   if(plan==='free'&&(existing?.plan&&existing.plan!=='free'||!this.production&&(await tx.query('SELECT 1 FROM preview_purchases WHERE workspace_id=$1',[account.workspace_id])).rows.length))return {changed:false};
    if(entitlement?.status==='active'&&existing?.plan===plan)return {changed:false};
    await tx.query("INSERT INTO access_grants(workspace_id,plan,mode) VALUES($1,$2,'complimentary') ON CONFLICT(workspace_id) DO UPDATE SET plan=excluded.plan",[account.workspace_id,plan]);
    await tx.query("INSERT INTO entitlements(workspace_id,status,message_limit) VALUES($1,'active',$2) ON CONFLICT(workspace_id) DO UPDATE SET status='active',message_limit=excluded.message_limit",[account.workspace_id,plans[plan].limit]);
@@ -70,7 +77,7 @@ export class Accounts{
  }
 
  async purchase(account:Account,plan:Plan,idempotencyKey:string=randomUUID()){
-  if(!Object.hasOwn(plans,plan))throw new Error('INVALID_PLAN');
+  if(!Object.hasOwn(plans,plan)||plan==='free')throw new Error('INVALID_PLAN');
   if(this.production)throw Error('FORBIDDEN');
   // Local preview only. This must never confirm a real paid subscription.
   await this.db.transaction(async tx=>{
@@ -78,6 +85,7 @@ export class Accounts{
    const prior=(await tx.query<{plan:string}>('SELECT plan FROM purchases WHERE workspace_id=$1 AND idempotency_key=$2',[account.workspace_id,idempotencyKey])).rows[0];
    if(prior){if(prior.plan!==plan)throw new Error('IDEMPOTENCY_CONFLICT');return}
    await tx.query("INSERT INTO purchases(id,user_id,workspace_id,plan,mode,status,amount_minor,message_limit,idempotency_key,source,completed_at) VALUES($1,$2,$3,$4,'simulation','simulated',0,$5,$6,'checkout',now())",[randomUUID(),account.id,account.workspace_id,plan,plans[plan].limit,idempotencyKey]);
+   await tx.query("DELETE FROM access_grants WHERE workspace_id=$1 AND plan='free'",[account.workspace_id]);
    await tx.query('INSERT INTO preview_purchases(workspace_id,plan) VALUES($1,$2) ON CONFLICT(workspace_id) DO UPDATE SET plan=excluded.plan',[account.workspace_id,plan]);
    await tx.query("INSERT INTO entitlements(workspace_id,status,message_limit) VALUES($1,'local_test',$2) ON CONFLICT(workspace_id) DO UPDATE SET message_limit=excluded.message_limit",[account.workspace_id,plans[plan].limit]);
   });

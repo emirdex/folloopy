@@ -36,7 +36,7 @@ async function api(path:string,init?:RequestInit){
  await requirePanel();
  const session=(await cookies()).get('mt_session')?.value;
  const res=await internalApiFetch(`${internalApiUrl()}${path}`,{...init,headers:{Authorization:`Bearer ${internalApiKey()}`,...(session?{'x-user-session':session}:{}),...(init?.body?{'Content-Type':'application/json'}:{}),...init?.headers},cache:'no-store',signal:AbortSignal.timeout(25000)});
- if(!res.ok)throw new Error(res.status===429?'Çok sık gönderim denemesi yaptınız. Bir dakika bekleyip yeniden deneyin.':res.status===402?'Kullanım limitinize ulaştınız.':res.status===400?'Konu ve mesaj alanlarını kontrol edin.':'Servise ulaşılamadı. Yeniden deneyin.');
+ if(!res.ok){const error=await res.json().catch(()=>({}));if(error.code==='FREE_DAILY_LIMIT')throw Error('Bugünkü 3 mail hakkınızı kullandınız. Hakkınız Türkiye saatiyle 00.00’da yenilenir; daha fazla gönderim için paketinizi yükseltebilirsiniz.');throw new Error(res.status===429?'Çok sık gönderim denemesi yaptınız. Bir dakika bekleyip yeniden deneyin.':res.status===402?'Kullanım limitinize ulaştınız.':res.status===400?'Konu ve mesaj alanlarını kontrol edin.':'Servise ulaşılamadı. Yeniden deneyin.');}
  return res.json();
 }
 async function submit(_previous:{error:string}|null,form:FormData):Promise<{error:string}|null>{
@@ -100,7 +100,8 @@ export default async function Page({searchParams}:{searchParams:Promise<Params>}
   let draft:MailDraft|undefined,quota:{used:number;limit:number}|undefined;
   if(p.draft){try{if(!/^[a-f0-9-]{36}$/.test(p.draft))throw Error('NOT_FOUND');draft=await accountApi('/api/drafts/'+p.draft)}catch{return <Shell active="drafts"><PageHeading title="Taslak Açılamadı" description="Taslak silinmiş veya mevcut paketinizin sınırı dışında olabilir."/><Link className="button button-outline" href="/panel?view=drafts">Taslaklara Dön</Link></Shell>}}
   try{const data=await accountApi('/api/drafts') as MailDraftList;quota={used:data.used,limit:data.limit}}catch{}
-  return <Shell active={active} online={online}><PageHeading title={draft?'Mail Taslağı':'Yeni Mail'} description="Mailinizi gönderin veya daha sonra kullanmak için taslak olarak kaydedin." action={<Link className="button button-outline" href={p.draft?'/panel?view=drafts':'/panel?view=messages'}>Vazgeç</Link>}/><MailForm key={p.draft||'new'} action={submit} idempotencyKey={randomUUID()} draft={draft} quota={quota}/></Shell>;
+  const user=await currentAccount();const usage=user?.plan==='free'?await accountApi('/api/usage') as {used:number;message_limit:number}:null;
+  return <Shell active={active} online={online}>{usage?<section className="surface" style={{padding:'18px 24px',marginBottom:20}} aria-label="Free günlük gönderim hakkı"><strong>Free · Bugün {usage.used} / {usage.message_limit} mail</strong><p>Gönderim hakkınız Türkiye saatiyle 00.00’da yenilenir. <Link href="/paketler">Paketi yükselt →</Link></p></section>:null}<PageHeading title={draft?'Mail Taslağı':'Yeni Mail'} description="Mailinizi gönderin veya daha sonra kullanmak için taslak olarak kaydedin." action={<Link className="button button-outline" href={p.draft?'/panel?view=drafts':'/panel?view=messages'}>Vazgeç</Link>}/><MailForm key={p.draft||'new'} action={submit} idempotencyKey={randomUUID()} draft={draft} quota={quota}/></Shell>;
  }
  if(view==='detail'){
   let detail:Detail|null=null;try{if(p.id&&/^[a-f0-9-]{36}$/.test(p.id))detail=await api(`/api/messages/${p.id}`)}catch{}

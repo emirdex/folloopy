@@ -3,7 +3,7 @@ import {internalApiFetch,internalApiUrl,internalApiKey} from './internal-api';
 import {cookies} from 'next/headers';
 import {cache} from 'react';
 import {redirect} from 'next/navigation';
-export type Account={id:string;workspace_id:string;name:string;email:string;plan:'individual'|'team'|'business'|null;role:'member'|'owner';email_verified_at?:string|null};
+export type Account={id:string;workspace_id:string;name:string;email:string;plan:'free'|'individual'|'team'|'business'|null;role:'member'|'owner';email_verified_at?:string|null};
 export async function accountApi(path:string,body?:unknown){
  // This helper is request-bound even when the public deployment rejects it.
  const store=await cookies();

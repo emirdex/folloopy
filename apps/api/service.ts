@@ -1,3 +1,4 @@
+import {consumeFreeSend} from './free-usage';
 import {fileMailHtml} from '../../packages/domain/file-mail';
 import {captureMailContent} from './member-mail-content';
 import { randomUUID } from 'node:crypto';
@@ -30,8 +31,10 @@ export class TrackingService {
    if(authorize)await authorize(tx);
    const existing=(await tx.query<{id:string;state:string;payload_hash:string}>('SELECT id,state,payload_hash FROM messages WHERE workspace_id=$1 AND idempotency_key=$2',[workspace,key])).rows[0];
    if(existing){if(existing.payload_hash!==hash) throw new Error('IDEMPOTENCY_CONFLICT');return {id:existing.id,state:existing.state,replay:true};}
-   if(!['active','local_test'].includes(entitlement.status)||(!reservation&&entitlement.used>=entitlement.message_limit)) throw new Error('LIMIT_REACHED');
+   const free=(await tx.query<{plan:string}>('SELECT plan FROM access_grants WHERE workspace_id=$1',[workspace])).rows[0]?.plan==='free';
+   if(!['active','local_test'].includes(entitlement.status)||(!free&&!reservation&&entitlement.used>=entitlement.message_limit)) throw new Error('LIMIT_REACHED');
    if(reservation){const reserved=(await tx.query(`SELECT r.id FROM bulk_recipients r JOIN bulk_campaigns c ON c.id=r.campaign_id JOIN users u ON u.id=c.user_id JOIN access_grants g ON g.workspace_id=c.workspace_id JOIN mail_connections mc ON mc.workspace_id=c.workspace_id WHERE r.id=$1 AND r.workspace_id=$2 AND r.claim_token=$3 AND r.state='sending' AND r.reserved=true AND r.message_id IS NULL AND c.status IN ('queued','running') AND g.plan IN ('team','business') AND u.email_verified_at IS NOT NULL AND lower(mc.email)=lower($4)`,[reservation.recipientId,workspace,reservation.lease,this.from])).rows.length;if(!reserved)throw Error('BULK_RESERVATION_INVALID')}
+   if(free){if(reservation)throw Error('BULK_PLAN_REQUIRED');await consumeFreeSend(tx,workspace)}
    const id=randomUUID(),submission=randomUUID(),secret=token(),rfc=`<${submission}@${new URL(this.origin).hostname}>`;
    await tx.query(`INSERT INTO messages(id,workspace_id,submission_id,idempotency_key,payload_hash,subject,recipient_count,state,provider,rfc_message_id,tracking_enabled,send_channel)
     VALUES($1,$2,$3,$4,$5,$6,1,'sending',$7,$8,$9,$10)`,[id,workspace,submission,key,hash,input.subject,this.provider.name,rfc,input.tracking,channel]);

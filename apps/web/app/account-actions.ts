@@ -45,3 +45,5 @@ export async function completePurchase(_state:FormState,form:FormData):Promise<F
 function entryQuery(form:FormData){const plan=String(form.get('preferredPlan')||'');return ['individual','team'].includes(plan)?'?plan='+plan+'&billing='+billingPeriod(form.get('billing')):''}
 export async function switchToLogin(form:FormData){await closeAccountSession();redirect('/giris'+entryQuery(form))}
 export async function switchToRegistration(form:FormData){await closeAccountSession();redirect('/kayit'+entryQuery(form))}
+
+export async function activateFree(){await requireVerifiedAccount();await accountApi('/api/access/free',{});redirect('/panel')}

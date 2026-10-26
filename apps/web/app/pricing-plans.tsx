@@ -1,38 +1,35 @@
 'use client';
 import {useState} from 'react';
-import {SignatureBadge} from './signature-badge';
 import {BillingToggle} from './billing-toggle';
 import Link from './destination-link';
-import {ArrowUpRight,Mail,Check,Minus,Users,Info} from 'lucide-react';
-import {commercialPlans,planPricing,formatPrice,type BillingPeriod} from '../../../packages/domain/commercial-plans';
-import {BULK_MAX_RECIPIENTS} from '../../../packages/domain/bulk-mail';
+import {ArrowUpRight,Mail,Check,Minus,Gem,Sprout,ShieldCheck,ArrowRight} from 'lucide-react';
+import {commercialPlans,freePlan,planPricing,formatPrice,type BillingPeriod} from '../../../packages/domain/commercial-plans';
+import {filePolicy,fileSize} from '../../../packages/domain/file-sharing';
 import './pricing-plans.css';
-const features=[
- {label:'Panelden tekli mail gönderimi',detail:'Bağlı Gmail hesabınızdan kendi adınıza gönderin.',values:[true,true]},
- {label:'Açılma ve tekrar açılma takibi',detail:'İlk açılmayı ve sonraki hareketleri inceleyin.',values:[true,true]},
- {label:'Mail arama ve etkinlik geçmişi',detail:'Yazışmalarınızı bulun, takip geçmişini görüntüleyin.',values:[true,true]},
- {label:'Kayıtlı mail taslağı',detail:'İçeriklerinizi kaydedin ve yeniden kullanın.',values:[commercialPlans[0].draftLimit+' taslak',commercialPlans[1].draftLimit+' taslak'],difference:true},
- {label:'Gmail için Chrome eklentisi',detail:'Gmail’den tek alıcılı metin gönderimi. Manuel kurulum.',values:[false,true],difference:true},
- {label:'CSV ile alıcı içe aktarma',detail:'Adresleri ve tekrar eden kayıtları kontrol edin.',values:[false,true],difference:true},
- {label:'Kişiselleştirilmiş toplu gönderim',detail:'Ad ve şirket bilgileriyle alıcıya özel mesajlar hazırlayın.',values:[false,true],difference:true},
- {label:'Toplu gönderim yönetimi',detail:'Gönderimleri duraklatın, sonuçları indirin.',values:[false,true],difference:true}
-];
+const essential=commercialPlans[0],signature=commercialPlans[1];
+const essentialFiles=filePolicy(essential.id),signatureFiles=filePolicy(signature.id);
+type Feature={label:string;value:string;detail:string;included:boolean};
+const feature=(label:string,value:string,detail:string,included=true):Feature=>({label,value,detail,included});
+const tiers=[
+ {id:'free',name:'Free',audience:'ÖNCE DENEYİN',description:'Küçük başlayın. Mail takibini keşfedin.',use:'Günlük birkaç maille denemek isteyenlere.',Icon:Sprout,features:[feature('Günlük gönderim',freePlan.dailyMessageLimit+' mail / gün','Her gün yenilenen küçük bir başlangıç hakkı.'),feature('Açılma takibi','Açılma bilgisi','Mailinizin açılma hareketlerini panelden görün.'),feature('Kayıtlı mail taslağı','1 taslak','Tekrar kullanacağınız bir mesajı saklayın.'),feature('Gmail içinden kullanım','Dahil değil','Başlangıç kullanımı Folloopy paneli üzerinden.',false),feature('Takipli dosya paylaşımı','Dahil değil','PDF ve dosya paylaşımı için ücretli paket gerekir.',false),feature('Gelişmiş dosya analizi','Dahil değil','Sayfa ve süre bilgileri Signature kapsamındadır.',false),feature('Toplu mail gönderimi','Dahil değil','Başlangıç paketi birebir gönderim içindir.',false)]},
+ {id:essential.id,name:essential.name,audience:'BİREBİR YAZIŞMALAR İÇİN',description:'Mailinizi gönderin. Takibi sizde kalsın.',use:'Teklifler ve günlük müşteri yazışmaları için.',Icon:Mail,features:[feature('Gönderim hakkı',essential.messageLimit+' mail','Paketinize tanımlanan toplam gönderim hakkı.'),feature('Açılma takibi','İlk + tekrar açılma','Açılma zamanlarını ve mailin geçmişini inceleyin.'),feature('Kayıtlı mail taslağı',essential.draftLimit+' taslak','Mesajınızı kaydedin, düzenleyin ve tekrar kullanın.'),feature('Gmail içinden kullanım','Dahil değil','Gönderimlerinizi Folloopy panelinden yapın.',false),feature('Takipli dosya paylaşımı',essentialFiles.files+' PDF',`PDF başına ${fileSize(essentialFiles.fileBytes)} · toplam ${fileSize(essentialFiles.storageBytes)} depolama.`),feature('Gelişmiş dosya analizi','Dahil değil','PDF sayfaları, süre ve şifreli paylaşım Signature’da.',false),feature('Toplu mail gönderimi','Dahil değil','Alıcı listeleriyle gönderim Signature’da.',false)]},
+ {id:signature.id,name:signature.name,audience:'DAHA FAZLA ETKİLEŞİM İÇİN',description:'Mail, dosya ve alıcı listeniz bir arada.',use:'Teklif dosyaları ve kişiselleştirilmiş listeler için.',Icon:Gem,features:[feature('Gönderim hakkı',signature.messageLimit+' mail','Tekli ve toplu gönderimler aynı haktan kullanır.'),feature('Açılma takibi','İlk + tekrar açılma','Gönderimleri ve açılma geçmişini birlikte takip edin.'),feature('Kayıtlı mail taslağı',signature.draftLimit+' taslak','Farklı yazışmalar için hazır mesajlar oluşturun.'),feature('Gmail içinden kullanım','Chrome eklentisi','Tek alıcılı metin gönderimi. Manuel kurulum gerekir.'),feature('Takipli dosya paylaşımı',signatureFiles.files+' dosya',`Dosya başına ${fileSize(signatureFiles.fileBytes)} · toplam 2 GB. PDF, görsel, Office ve ZIP.`),feature('Gelişmiş dosya analizi','Dahil','PDF sayfaları, yaklaşık aktif süre, şifre ve son erişim tarihi.'),feature('Toplu mail gönderimi','CSV alıcı listesi','Alıcı bilgileriyle kişiselleştirin, duraklatın ve rapor alın.')]}
+] as const;
 export function PricingPlans({hasAccount,marketing=false}:{hasAccount:boolean;marketing?:boolean}){
  const[period,setPeriod]=useState<BillingPeriod>('monthly');
- return <div className="pricing-section-content pricing-redesign" data-reveal><BillingToggle period={period} onChange={setPeriod}/><div className="pricing-choice-grid">{commercialPlans.map((plan,index)=>{
-  const signature=plan.bulkMail,price=planPricing(plan,period);
-  return <article className={'pricing-choice '+(signature?'pricing-choice-signature':'')} key={plan.id} aria-labelledby={'pricing-plan-'+plan.id}>
-   <header><span className="pricing-choice-audience">{signature?'ALICI LİSTESİYLE ÇALIŞANLARA':'BİREBİR YAZIŞMALAR İÇİN'}</span>{signature?<SignatureBadge/>:<span className="pricing-choice-icon"><Mail size={19}/></span>}</header>
-   <h3 id={'pricing-plan-'+plan.id}>{plan.name}</h3><p className="pricing-choice-description">{signature?'Bir listeye ulaşın. Her alıcıya özel gönderin.':'Mailinizi gönderin. Sonrasını takip edin.'}</p>
-   <div className="pricing-choice-price" aria-live="polite" aria-atomic="true"><strong>{formatPrice(price.monthly)}</strong><span>TL<small>/ ay{period==='yearly'?' karşılığı':''}</small></span></div>
-   <p className="pricing-choice-billing">{period==='yearly'?`${formatPrice(price.total)} TL / yıl · 12 ay peşin`:`Her ay ${formatPrice(price.total)} TL`}<span>E-posta hesabı başına</span></p>
-   <Link href={(marketing?'/iletisim':hasAccount?'/paketler':'/kayit')+'?plan='+plan.id+'&billing='+period} className={'pricing-choice-cta '+(signature?'is-primary':'')}>{marketing?plan.name+' Hakkında Bilgi Al':plan.name+' ile Başla'}<ArrowUpRight size={17}/></Link>
-   <div className="pricing-choice-use"><span>{signature?<Users size={15}/>:<Mail size={15}/>}</span><p>{signature?'Alıcı listeleri ve kişiselleştirilmiş gönderimler için.':'Teklifler ve birebir müşteri yazışmaları için.'}</p></div>
-   <div className="pricing-choice-features"><span>KAPSAM VE PAKET FARKLARI</span><ul aria-label={plan.name+' özellikleri'}>{features.map(feature=>{
-    const value=feature.values[index],included=value!==false;
-    return <li key={feature.label} className={(feature.difference?'is-difference ':'')+(included?'is-included':'is-excluded')}><span className="pricing-feature-icon" aria-hidden="true">{included?<Check size={15}/>:<Minus size={15}/>}</span><div><div className="pricing-feature-title"><h4>{feature.label}</h4><span className="pricing-feature-value">{typeof value==='string'?value:value?'Dahil':'Dahil değil'}</span></div><p>{feature.detail}</p></div></li>
-   })}</ul></div>
-   <footer className="pricing-choice-footer"><Info size={15} aria-hidden="true"/><p>{signature?<>İşlem başına en fazla <strong>{BULK_MAX_RECIPIENTS} alıcı</strong>. Her alıcı 1 gönderim hakkı kullanır; toplam kullanım paketinizdeki haklarla sınırlıdır.</>:<>Tekli gönderimler paketinizdeki kullanım hakkından düşer. Taslağınızı kaydetmek gönderim hakkı kullanmaz.</>}</p></footer>
+ return <div className="pricing-section-content pricing-redesign" data-reveal><BillingToggle period={period} onChange={setPeriod}/><div className="pricing-choice-grid">{tiers.map(tier=>{
+  const free=tier.id==='free',premium=tier.id==='team',plan=free?undefined:commercialPlans.find(p=>p.id===tier.id),price=plan?planPricing(plan,period):{monthly:0,total:0,annualSavings:0};
+  const href=free?(hasAccount?'/paketler?plan=free':'/kayit?plan=free'):(marketing?'/iletisim':hasAccount?'/paketler':'/kayit')+'?plan='+tier.id+'&billing='+period;
+  return <article className={'pricing-choice pricing-choice-'+tier.id} key={tier.id} aria-labelledby={'pricing-plan-'+tier.id}>
+   <div className="pricing-choice-top"><span className="pricing-choice-icon" aria-hidden="true"><tier.Icon size={21}/></span><span className="pricing-choice-tag">{free?'Her zaman ücretsiz':premium?'En kapsamlı paket':'Günlük kullanım'}</span></div>
+   <header><span className="pricing-choice-audience">{tier.audience}</span><h3 id={'pricing-plan-'+tier.id}>{tier.name}</h3><p className="pricing-choice-description">{tier.description}</p></header>
+   <div className="pricing-choice-price" aria-live="polite" aria-atomic="true"><strong>{formatPrice(price.monthly)}</strong><span>TL<small>{free?'ücretsiz':period==='yearly'?'/ ay karşılığı':'/ ay'}</small></span></div>
+   <p className="pricing-choice-billing">{free?'Kredi kartı gerekmez':period==='yearly'?`${formatPrice(price.total)} TL / yıl · 12 ay peşin`:`Her ay ${formatPrice(price.total)} TL`}<span>{free?'Günlük haklar her gece yenilenir.':'E-posta hesabı başına'}</span></p>
+   <div className="pricing-choice-savings">{!free&&period==='yearly'?<span><Check size={12}/>{formatPrice(price.annualSavings)} TL yıllık tasarruf</span>:<span>{free?'Türkiye saatiyle 00.00’da yenilenir.':'Yıllık ödemede daha avantajlı.'}</span>}</div>
+   <Link href={href} className={'pricing-choice-cta'+(premium?' is-primary':'')}>{free?'Ücretsiz başla':marketing?tier.name+' Hakkında Bilgi Al':tier.name+' ile Başla'}<ArrowUpRight size={18}/></Link>
+   <div className="pricing-choice-use"><span aria-hidden="true"><tier.Icon size={15}/></span><p>{tier.use}</p></div>
+   <div className="pricing-choice-features"><span>{'PAKETİNİZDE NELER VAR?'}</span><ul aria-label={tier.name+' özellikleri'}>{tier.features.map(item=><li key={item.label} className={item.included?'is-included':'is-excluded'}><span className="pricing-feature-icon" aria-hidden="true">{item.included?<Check size={14}/>:<Minus size={14}/>}</span><div><div className="pricing-feature-title"><h4>{item.label}</h4><span className="pricing-feature-value">{item.value}</span></div><p>{item.detail}</p></div></li>)}</ul></div>
+   <footer className="pricing-choice-footer"><ShieldCheck size={16} aria-hidden="true"/><p>{free?'Günlük 3 mail hakkınız otomatik yenilenir. Taslak kaydetmek gönderim hakkınızı tüketmez.':premium?'Her toplu gönderim alıcısı 1 mail hakkı kullanır. Gönderim hakkınız ve dosya kotanız ayrı hesaplanır.':'PDF görüntüleme ve indirme hareketlerini inceleyin. Taslak kaydetmek mail hakkınızı tüketmez.'}</p></footer>
   </article>
- })}</div></div>;
+ })}</div><div className="pricing-shared-note"><ShieldCheck size={18} aria-hidden="true"/><p>Gönderimler bağlı Gmail hesabınızdan yapılır. Açılma ve dosya hareketleri kesin okuma kanıtı değildir. Office önizlemeleri metin içeriğini gösterir.</p><Link href="/iletisim">Kararsız mı kaldınız?<ArrowRight size={14}/></Link></div></div>;
 }

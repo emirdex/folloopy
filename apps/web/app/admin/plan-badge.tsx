@@ -1,5 +1,5 @@
 import {CircleDot,Sparkles,Building2,Minus} from 'lucide-react';
-const plans={individual:{name:'Essential',Icon:CircleDot},team:{name:'Signature',Icon:Sparkles},business:{name:'Enterprise',Icon:Building2}} as const;
+const plans={free:{name:'Free',Icon:CircleDot},individual:{name:'Essential',Icon:CircleDot},team:{name:'Signature',Icon:Sparkles},business:{name:'Enterprise',Icon:Building2}} as const;
 export function PlanBadge({plan}:{plan?:string|null}){
  const key=plan==='Essential'?'individual':plan==='Signature'?'team':plan==='Enterprise'?'business':plan;
  const definition=key&&Object.hasOwn(plans,key)?plans[key as keyof typeof plans]:null;

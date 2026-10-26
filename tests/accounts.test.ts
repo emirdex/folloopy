@@ -18,8 +18,8 @@ test('Kalıcı hesap, hash, doğrulama, paket kapısı, oturum iptali ve süre',
   assert.equal((await call('/api/auth/register',credentials)).statusCode,409);
   assert.equal((await call('/api/auth/login',{email:credentials.email,password:'wrong-but-long-password'})).statusCode,401);
   assert.equal((await call('/api/auth/me',undefined,'x'.repeat(43))).statusCode,401);
-  const me=(await call('/api/auth/me',undefined,token)).json().user;assert.equal(me.plan,null);assert.equal(me.password_hash,undefined);
-  assert.equal((await call('/api/messages',undefined,token)).statusCode,402);
+  const me=(await call('/api/auth/me',undefined,token)).json().user;assert.equal(me.plan,'free');assert.equal(me.password_hash,undefined);
+  assert.equal((await call('/api/messages',undefined,token)).statusCode,200);
   assert.equal((await call('/api/purchase-preview',{plan:'untrusted'},token)).statusCode,400);
   assert.equal((await call('/api/purchase-preview',{plan:'team'},token)).statusCode,200);
   assert.equal((await call('/api/auth/me',undefined,token)).json().user.plan,'team');
