@@ -13,7 +13,7 @@
     "worker": "node --import tsx apps/worker/main.ts",
     "test": "node --import tsx --test --test-concurrency=4 tests/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "build": "node scripts/build/prepare-deployment.mjs && node scripts/build-file-viewer.mjs && node scripts/build-extension.mjs && next build apps/web --webpack && node scripts/build/clean-cache.mjs",
+    "build": "node scripts/build/prepare-deployment.mjs && node scripts/build-api-runtime.mjs && node scripts/build-file-viewer.mjs && node scripts/build-extension.mjs && next build apps/web --webpack && node scripts/build/clean-cache.mjs",
     "db:migrate": "node --import tsx scripts/migrate.ts",
     "smoke": "node --import tsx scripts/smoke.ts",
     "start": "node server.cjs",
@@ -39,6 +39,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@types/sanitize-html": "2.16.2",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "esbuild": "0.28.2"
   }
 }

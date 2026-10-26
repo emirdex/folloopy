@@ -1,5 +1,8 @@
 // Hostinger/Passenger must see the public HTTP server in this entry process.
 process.env.NODE_ENV='production';
+// Shared hosting has a strict per-account process/thread limit. Set before any
+// async filesystem/crypto work initializes libuv; explicit host overrides win.
+process.env.UV_THREADPOOL_SIZE||='1';
 const {createServer}=require('node:http');
 const path=require('node:path');
 const next=require('next');
@@ -56,11 +59,9 @@ async function start(){
  heartbeat=setInterval(()=>console.log('FOLLOOPY_RUNTIME_STATUS',JSON.stringify({pid:process.pid,ready:!!handle,listening:server.listening,connections,requests,rssMiB:Math.round(process.memoryUsage().rss/1048576)})),30000);heartbeat.unref();
  if(mode==='application'){
   // Keep the private API in this process: managed hosts can restrict child workers.
-  require('tsx/cjs');
-  const {productionConfig}=require('./packages/runtime/config.ts');
+  const {productionConfig,startApi}=await import('./runtime-build/application.mjs');
   const config=productionConfig();
   process.env.INTERNAL_API_URL=config.apiUrl;
-  const {startApi}=require('./apps/api/runtime.ts');
   apiRuntime=await startApi(config);
   if(stopping){await apiRuntime.close();return;}
   const requestApi=installLocalApi(apiRuntime.app,config.apiUrl);

@@ -71,3 +71,13 @@ In hPanel, use `.env.production.example` as the variable-name template and provi
 Application mode restores the login/register links, account recovery, package selection, Enterprise request form, private user panel, admin, database-backed blog/media and tracking routes. Changing the flag alone does not configure external services. Deploy after all required variables are present; startup validates configuration and migrates the database before opening the public listener.
 
 Acceptance: `/health` succeeds; signup email arrives and verifies the account; login and password reset work; a package can be activated with no paid purchase recorded; an Enterprise request reaches admin; a blog image survives redeployment; Gmail OAuth connects the real sender and a tracked test message can be sent to an address the operator controls. These provider checks must be carried out in the live environment. Signature document/link analytics and reminders remain unfinished and are not enabled by this mode switch.
+
+## Shared-host thread exhaustion (2026-10-26)
+
+The live visitor-facing process reported `pthread_create: Resource temporarily unavailable` while a deployment-probe process was already healthy. Build success alone did not prove that the separate serving process could initialize. The per-account thread/process budget includes other apps and runtime transpiler helpers.
+
+`npm run build` now creates `runtime-build/application.mjs` and copies the exact SQL migrations to `runtime-build/migrations/`. Application-mode `server.cjs` imports this precompiled API. Do not add `tsx/cjs`, `tsx` loaders or runtime esbuild to the production startup: they spawn helper processes/threads for each application instance. Local development and TypeScript test commands remain unchanged. Keep `runtime-build/` in the deployment package even though it is ignored by Git.
+
+The entry point defaults libuv's worker pool to 1 before loading Next; an explicit `UV_THREADPOOL_SIZE` environment setting overrides it. Build helper `GOMAXPROCS` defaults to 2 to limit build-time contention. No TLS, origin, session, authorization or package checks were relaxed.
+
+`FOLLOOPY_LISTENER_READY` identifies TCP versus managed Unix transport. `FOLLOOPY_RUNTIME_STATUS` reports only process ID, readiness, listener state, aggregate connections/requests and resident memory. No URLs, cookies, credentials, member identifiers or message contents are logged. Check the serving process as well as the deployment probe and verify repeated real `/health`, `/giris` and authenticated panel navigation after release.

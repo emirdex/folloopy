@@ -23,18 +23,17 @@ function startup(){
   './apps/api/runtime.ts':{startApi:()=>{events.push('api-start');return initialized}},
   'node:path':path,
   next:()=>app,
-  'tsx/cjs':{},
   './packages/runtime/private-api.cjs':{installLocalApi:()=>{events.push('private-api-installed');return ()=>health}},
   './packages/runtime/config.ts':{productionConfig:()=>({apiPort:4000,apiUrl:'http://127.0.0.1:4000'})},
  };
- runInNewContext(source,{require:(name:string)=>{assert.ok(name in deps,name);return deps[name]},__dirname:process.cwd(),process:{env:{APP_MODE:'application',PORT:'3000',SITE_URL:'https://folloopy.example'},on(){},exit:(code:number)=>exits.push(code)},console:{log(){},error(){}},fetch:()=>health,AbortSignal,setTimeout,clearTimeout,setInterval:()=>({unref(){}}),clearInterval(){}});
+ runInNewContext(source.replace("await import('./runtime-build/application.mjs')",'await __loadRuntime()'),{__loadRuntime:async()=>({...deps['./packages/runtime/config.ts'],...deps['./apps/api/runtime.ts']}),require:(name:string)=>{assert.ok(name in deps,name);return deps[name]},__dirname:process.cwd(),process:{env:{APP_MODE:'application',PORT:'3000',SITE_URL:'https://folloopy.example'},on(){},exit:(code:number)=>exits.push(code)},console:{log(){},error(){}},fetch:()=>health,AbortSignal,setTimeout,clearTimeout,setInterval:()=>({unref(){}}),clearInterval(){}});
  const response=(req:any={method:'GET',url:'/'})=>{const result:any={status:0,headers:{},body:''};const res:any=Object.assign(new EventEmitter(),{headersSent:false,statusCode:200,writableFinished:false,writeHead:(status:number,headers:any={})=>{result.status=status;result.headers=headers;res.statusCode=status;res.headersSent=true},end:(body:string)=>{result.body=body;res.writableFinished=true;res.emit('finish')}});request({...req,headers:{host:'folloopy.example',...(req.method==='POST'?{origin:'https://folloopy.example'}:{}),...req.headers}},res);return result};
  return {events,exits,forwarded,response,healthReady,apiReady:()=>apiReady({app:{},close:async()=>{events.push('api-close')}}),apiFailed,nextReady,nextFailed};
 }
 
 test('Cold-start GET and login POST wait for API and web readiness instead of receiving a transient 503',async()=>{
  const boot=startup();
- assert.deepEqual(boot.events,['listen','api-start']);
+ await tick();assert.deepEqual(boot.events,['listen','api-start']);
  const get=boot.response();
  const postRequest={method:'POST',url:'/giris',body:'untouched-request-stream'};
  const post=boot.response(postRequest);
