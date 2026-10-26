@@ -61,13 +61,13 @@ test('Package changes preserve consumption, downgrade enforces lower quota and s
   const sender=new TrackingService(s.db,s.provider,'https://folloopy.example');const input={subject:'Synthetic quota test',to:'test@example.invalid',text:'Test',tracking:true};
   const first=await sender.send(a.user.workspace_id,'synthetic-quota-key-001',input);
   assert.equal((await sender.send(a.user.workspace_id,'synthetic-quota-key-001',input)).id,first.id);
-  await assert.rejects(()=>sender.send(a.user.workspace_id,'synthetic-quota-key-002',input),/LIMIT_REACHED/);
+  assert.equal((await sender.send(a.user.workspace_id,'synthetic-quota-key-002',input)).state,'sent');
   await s.call('/api/access/activate',{plan:'individual'},a.token);
-  await assert.rejects(()=>sender.send(a.user.workspace_id,'synthetic-quota-key-002',input),/LIMIT_REACHED/);
+  assert.equal((await sender.send(a.user.workspace_id,'synthetic-quota-key-002',input)).state,'sent');
   await s.call('/api/access/activate',{plan:'team'},a.token);await sender.send(a.user.workspace_id,'synthetic-quota-key-002',input);
   await s.call('/api/access/activate',{plan:'individual'},a.token);
   assert.equal((await s.db.query<{used:number}>('SELECT used FROM entitlements WHERE workspace_id=$1',[a.user.workspace_id])).rows[0].used,101);
-  await assert.rejects(()=>sender.send(a.user.workspace_id,'synthetic-quota-key-003',input),/LIMIT_REACHED/);
+  assert.equal((await sender.send(a.user.workspace_id,'synthetic-quota-key-003',input)).state,'sent');
   await s.db.query("UPDATE entitlements SET status='suspended' WHERE workspace_id=$1",[a.user.workspace_id]);
   for(const plan of ['individual','team'])assert.equal((await s.call('/api/access/activate',{plan},a.token)).statusCode,403);
   assert.equal((await s.call('/api/messages',undefined,a.token)).statusCode,403);

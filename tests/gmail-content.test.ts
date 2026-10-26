@@ -7,7 +7,7 @@ const source=await readFile(new URL('../extensions/gmail/gmail.js',import.meta.u
 async function fixture(options:{attachment?:boolean;sender?:string;recipients?:string[];outcome?:string;network?:boolean;accountControl?:'tr-button'|'en-button'|'missing'}={}){
  const elements:any[]=[],calls:any[]=[];
  const element=()=>({className:'',textContent:'',disabled:false,children:[] as any[],setAttribute(){},append(...children:any[]){this.children.push(...children)},replaceChildren(){this.children=[]}});
- const parent=element(),body={innerText:'Synthetic proposal',querySelector:()=>null,closest:()=>compose};
+ const parent=element(),body={innerHTML:'<b>Synthetic proposal</b>',cloneNode:()=>({innerHTML:'<b>Synthetic proposal</b>',querySelectorAll:()=>[]}),innerText:'Synthetic proposal',querySelector:()=>null,closest:()=>compose};
  const compose={querySelector:(q:string)=>q==='.folloopy-compose'?null:q==='input[name="subjectbox"]'?{value:'Proposal'}:q.startsWith('[name="cc"]')?(options.attachment?{}:null):q.startsWith('[role="button"]')?{parentElement:parent}:null,querySelectorAll:(q:string)=>q==='[email]'?(options.recipients||['recipient@example.invalid']).map(email=>({getAttribute:()=>email})):[]};
  const document={body:{},querySelector:(q:string)=>{
   const mode=options.accountControl;

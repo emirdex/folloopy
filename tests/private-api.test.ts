@@ -36,7 +36,7 @@ test('Same-process private API retains authentication, concurrent requests, bina
   const binary=await request('http://127.0.0.1:4000/binary',{headers});assert.deepEqual([...new Uint8Array(await binary.arrayBuffer())],[0,255,10,200]);
   const head=await request('http://127.0.0.1:4000/binary',{method:'HEAD',headers});assert.equal((await head.arrayBuffer()).byteLength,0);
   await assert.rejects(request('https://example.com/api'),/ORIGIN_INVALID/);
-  await assert.rejects(request('http://127.0.0.1:4000/echo',{method:'POST',body:'x'.repeat(8*1024*1024+1)}),/BODY_TOO_LARGE/);
+  await assert.rejects(request('http://127.0.0.1:4000/echo',{method:'POST',body:'x'.repeat(15*1024*1024+1)}),/BODY_TOO_LARGE/);
   await assert.rejects(request('http://127.0.0.1:4000/slow',{headers,signal:AbortSignal.timeout(10)}));
  }finally{await app.close()}
 });

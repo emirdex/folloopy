@@ -1,7 +1,7 @@
 // Private process-local transport, plus IPC support for standalone runtimes.
 const {randomUUID}=require('node:crypto');
 const clientKey=Symbol.for('folloopy.privateApiFetch');
-const MAX_BODY=8*1024*1024;
+const MAX_BODY=15*1024*1024;
 function installPrivateApi(child,origin){
  let ready=false,closed=false;
  const pending=new Map();

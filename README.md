@@ -1,6 +1,6 @@
 # Folloopy
 
-E-posta takibi için Next.js arayüzü, özel Fastify API'si ve PostgreSQL veri katmanı. Canlı dağıtım hedefi Hostinger Business Node.js ve folloopy.com'dur. Kodun dağıtım desteği ile gerçekten yayına alınmış/sağlayıcılarca doğrulanmış olması farklıdır; henüz canlı hesap/alan adı bağlantısı yapılmamıştır.
+E-posta takibi için Next.js arayüzü, özel Fastify API'si ve PostgreSQL veri katmanı. Canlı dağıtım hedefi Hostinger Business Node.js ve folloopy.com'dur. Kodun dağıtım desteği ile gerçekten sağlayıcılarca doğrulanmış olması farklıdır; dış entegrasyonlar ayrıca kontrol edilmelidir.
 
 ## Geliştirme
 
@@ -22,9 +22,17 @@ Node.js 22.22+ ile `npm ci` ve `npm run dev`. Web http://127.0.0.1:3000, özel A
 - Gmail bağlantısı kullanıcı/oturuma bağlı state ve PKCE ile kurulur. gmail.send izniyle bağlı hesabın kendisinden mail gönderilir. Gönderim belirsiz kalırsa otomatik tekrar yapılmaz.
 - Açılma görseli folloopy.com/t/o/ üzerinden ulaşılır; HEAD sayılmaz. Görsel yükleme kişi kimliğini veya kesin insan okumasını kanıtlamaz. Bot/kendi açışını güvenilir ayırma iddiası yoktur.
 
-## Paketler ve henüz tamamlanmayan işlevler
+## Güncel paketler ve dış servis sınırları
 
-BILLING_MODE=disabled varsayılandır. complimentary, tahsilat yapmadan erişim sağlar ve bunu gerçek satın alma olarak kaydetmez. Ödeme sağlayıcısı/webhook, belge ve link analitiği, yanıt senkronizasyonu, bildirimler, tarayıcı eklentisi ve Outlook gönderimi tamamlanmamıştır. Pazarlama ekranındaki bu işlevlerin gerçek çalıştığı varsayılmamalıdır. Google/Resend gerçek teslimat kontrolleri, harici PostgreSQL testi ve yedekten dönüş provası tamamlanmadan genel kullanıma hazır beyanı yapılmamalıdır.
+Paket yetkileri `packages/domain/plan-policy.ts` üzerinden sunucuda uygulanır. Free günlük 3 yeni mail, 1 taslak ve 7 gün; Essential 10 taslak ve 90 gün; Signature 50 taslak ve 365 gün takip geçmişi sunar. Ücretli tekli gönderimlerde ayrı ürün kotası yoktur; Gmail'in kendi sınırları geçerlidir. Essential bağlantı takibi ayda 100 ayrı mail, 10 hatırlatma; Signature sınırsız ürün bağlantı kotası, 100 hatırlatma ve ayda 5.000/günde 500/kampanya başına 500 toplu alıcı sınırındadır. Free hakkı Türkiye saatiyle 00.00'da yenilenir; aynı bağlı Gmail adresi başka hesapla bu sınırı aşamaz.
+
+Bildirimler, isteğe bağlı haftalık özet, zamanlama, CSV/hesap verisi dışa aktarımı, bağlantı ve güvenli dosya paylaşım analitiği eklenmiştir. Free yalnızca ilk açılmayı kaydeder. Sonucu belirsiz gönderimler tekrar edilmez. Yeni kayıtlar paket saklama süresinin sonunda temizlenir; eski, süre bilgisi bulunmayan kayıtlar otomatik silinmez. Tekrar gönderimi önleyen asgari işlem anahtarları içerik taşımadan korunur.
+
+Gmail eklentisi 1.1.0 tüm üç pakette çalışır; yetki her istekte sunucudan kontrol edilir. Yeni ileti, zengin metin, Folloopy'nin kendi CC/BCC ve normal ek alanları, takipli dosya bağlantıları ve paket kapsamındaki araçları destekler. Gmail'in yerel ek alanı veya doğrulanamayan yanıt zinciri sessizce aktarılmaz: gönderim durdurulur ve açıklama gösterilir. Mevcut manuel kurulumlar yeni ZIP ile güncellenmelidir. Mağaza yayını ve gerçek Gmail uçtan uca denemesi, sentetik testlerden ayrı doğrulanır.
+
+BILLING_MODE=disabled varsayılandır. complimentary tahsilatsız yönetici erişimidir. Microsoft Entra ve ödeme sağlayıcısı hazır olmadığı için Outlook kurulumu ve gerçek tahsilat kapalıdır. Outlook MIME adaptörü ve abonelik fiyat farkı hesaplaması hazırlıktır; sağlayıcı/webhook ve mağaza doğrulaması yerine geçmez. Otomatik yanıt takibi ve yerel mobil eklentiler aktif özellik değildir.
+
+Açılma, bağlantı, indirme ve PDF görüntüleme sinyalleri kesin insan okumasını veya dosyanın cihazda açıldığını kanıtlamaz. Normal e-posta ekleri takip edilmez; takip için Folloopy dosya bağlantısı kullanılır. PDF süreleri yaklaşık etkin sürelerdir.
 
 ## Kontroller
 

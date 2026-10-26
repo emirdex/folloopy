@@ -15,15 +15,15 @@ async function setup(){
  const call=(url:string,token?:string,body?:unknown)=>app.inject({method:body===undefined?'GET':'POST',url,headers:{authorization:'Bearer '+key,...(token?{'x-user-session':token}:{})},...(body===undefined?{}:{payload:body as any})});
  return {db,app,accounts,create,call,close:async()=>{await app.close();await db.close()}};
 }
-test('Essential allows one saved draft; edits, stale versions, deletion and encrypted persistence',async()=>{
+test('Essential allows ten saved drafts; edits, stale versions, deletion and encrypted persistence',async()=>{
  const s=await setup();try{
   const a=await s.create('draft-essential@example.invalid','individual');
   let result=await s.call('/api/drafts',a.token,{...input,subject:'',to:'',text:''});assert.equal(result.statusCode,200,result.body);let draft=result.json();
-  assert.equal((await s.call('/api/drafts',a.token,input)).json().code,'DRAFT_LIMIT_REACHED');
+  for(let i=1;i<10;i++)assert.equal((await s.call('/api/drafts',a.token,{...input,title:'Boundary '+i})).statusCode,200);assert.equal((await s.call('/api/drafts',a.token,input)).json().code,'DRAFT_LIMIT_REACHED');
   result=await s.call('/api/drafts/'+draft.id,a.token,{...input,version:1});assert.equal(result.statusCode,200,result.body);draft=result.json();assert.equal(draft.version,2);
   assert.equal((await s.call('/api/drafts/'+draft.id,a.token,{...input,text:'Overwritten',version:1})).json().code,'STALE_DRAFT');
   assert.equal((await s.call('/api/drafts/'+draft.id,a.token)).json().text,input.text);
-  const list=(await s.call('/api/drafts',a.token)).json();assert.equal(list.used,1);assert.equal(list.limit,1);assert.equal(list.drafts[0].locked,false);
+  const list=(await s.call('/api/drafts',a.token)).json();assert.equal(list.used,10);assert.equal(list.limit,10);assert.equal(list.drafts[0].locked,false);
   const row=(await s.db.query<{payload:string}>('SELECT payload FROM mail_drafts')).rows[0];assert.equal(row.payload.includes(input.text),false);assert.equal(row.payload.includes(input.to),false);
   assert.equal((await s.call('/api/drafts/'+draft.id+'/delete',a.token,{version:1})).json().code,'STALE_DRAFT');
   assert.equal((await s.call('/api/drafts/'+draft.id+'/delete',a.token,{version:2})).statusCode,200);
@@ -33,12 +33,12 @@ test('Essential allows one saved draft; edits, stale versions, deletion and encr
   assert.equal((await s.db.query('SELECT id FROM messages')).rows.length,0);
  }finally{await s.close()}
 });
-test('Signature quota is atomic at ten and draft IDs cannot cross accounts',async()=>{
+test('Signature quota is atomic at fifty and draft IDs cannot cross accounts',async()=>{
  const s=await setup();try{
   const a=await s.create('draft-signature@example.invalid','team'),b=await s.create('draft-other@example.invalid','team');
-  const results=await Promise.all(Array.from({length:11},(_,i)=>s.call('/api/drafts',a.token,{...input,title:'Taslak '+i})));
-  assert.equal(results.filter(r=>r.statusCode===200).length,10);assert.equal(results.filter(r=>r.json().code==='DRAFT_LIMIT_REACHED').length,1);
-  const list=(await s.call('/api/drafts',a.token)).json();assert.equal(list.used,10);assert.equal(list.limit,10);
+  const results=await Promise.all(Array.from({length:51},(_,i)=>s.call('/api/drafts',a.token,{...input,title:'Taslak '+i})));
+  assert.equal(results.filter(r=>r.statusCode===200).length,50);assert.equal(results.filter(r=>r.json().code==='DRAFT_LIMIT_REACHED').length,1);
+  const list=(await s.call('/api/drafts',a.token)).json();assert.equal(list.used,50);assert.equal(list.limit,50);
   const draft=list.drafts[0];assert.equal((await s.call('/api/drafts',b.token)).json().used,0);
   assert.equal((await s.call('/api/drafts/'+draft.id,b.token)).statusCode,404);
   assert.equal((await s.call('/api/drafts/'+draft.id,b.token,{...input,version:1})).statusCode,404);
@@ -50,10 +50,10 @@ test('Signature quota is atomic at ten and draft IDs cannot cross accounts',asyn
 test('Downgrades preserve contents, lock excess drafts, and enforce the current plan on every request',async()=>{
  const s=await setup();try{
   const a=await s.create('draft-downgrade@example.invalid','team');
-  for(let i=0;i<3;i++)assert.equal((await s.call('/api/drafts',a.token,{...input,title:'Taslak '+i})).statusCode,200);
+  for(let i=0;i<12;i++)assert.equal((await s.call('/api/drafts',a.token,{...input,title:'Taslak '+i})).statusCode,200);
   await s.accounts.grant(a.user,'individual');
-  const list=(await s.call('/api/drafts',a.token)).json();assert.equal(list.used,3);assert.equal(list.limit,1);assert.equal(list.drafts.filter((d:any)=>!d.locked).length,1);
-  const locked=list.drafts[1];assert.equal(locked.text,'');assert.equal(locked.to,'');
+  const list=(await s.call('/api/drafts',a.token)).json();assert.equal(list.used,12);assert.equal(list.limit,10);assert.equal(list.drafts.filter((d:any)=>!d.locked).length,10);
+  const locked=list.drafts[10];assert.equal(locked.text,'');assert.equal(locked.to,'');
   assert.equal((await s.call('/api/drafts/'+locked.id,a.token)).json().code,'DRAFT_PLAN_LIMIT');
   assert.equal((await s.call('/api/drafts/'+locked.id,a.token,{...input,version:1})).json().code,'DRAFT_PLAN_LIMIT');
   assert.equal((await s.call('/api/drafts',a.token,input)).json().code,'DRAFT_LIMIT_REACHED');

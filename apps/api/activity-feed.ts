@@ -8,7 +8,7 @@ export async function activityFeed(db:DB,workspace:string,query:ActivityQuery={}
  // Group the same five-minute opening bursts as the mail detail screen before
  // applying time/type filters. No per-message requests or unbounded browser list.
  const result=(await db.query<any>(`WITH matching AS (
-  SELECT id,subject,sent_at FROM messages WHERE workspace_id=$1 AND state='sent' AND subject ILIKE $2
+  SELECT id,subject,sent_at FROM messages WHERE workspace_id=$1 AND state='sent' AND (tracking_expires_at IS NULL OR tracking_expires_at>now()) AND subject ILIKE $2
  ), eligible AS (
   SELECT e.id,e.message_id,e.occurred_at,lag(e.occurred_at) OVER(PARTITION BY e.message_id ORDER BY e.occurred_at,e.id) AS previous_at
   FROM raw_events e JOIN matching m ON m.id=e.message_id

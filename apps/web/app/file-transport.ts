@@ -11,7 +11,7 @@ export async function fileTransport(req:Request,path:string,publicShare=false){
  try{
   let body:Buffer|undefined;
   if(req.method==='POST'){
-   const limit=path.includes('/chunks/')?FILE_CHUNK_SIZE:4096;if(Number(req.headers.get('content-length')||0)>limit)return Response.json({code:'INVALID_FILE'},{status:413,headers:headersOut});
+   const limit=path.includes('/chunks/')?FILE_CHUNK_SIZE:path==='/api/member-tools/schedules'?15*1024*1024:4096;if(Number(req.headers.get('content-length')||0)>limit)return Response.json({code:'INVALID_FILE'},{status:413,headers:headersOut});
    const reader=req.body?.getReader(),chunks:Uint8Array[]=[];let size=0;
    if(reader)for(;;){const r=await reader.read();if(r.done)break;size+=r.value.byteLength;if(size>limit){await reader.cancel();return Response.json({code:'INVALID_FILE'},{status:413,headers:headersOut})}chunks.push(r.value)}
    body=Buffer.concat(chunks);

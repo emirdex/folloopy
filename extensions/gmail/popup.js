@@ -19,7 +19,7 @@ async function run(operation){
     const result=response.result;
     if(operation==='disconnect'){sender='';render('unpaired');}
     else if(result?.pending)render('pending');
-    else if(result?.sender){sender=result.sender;render('connected');}
+    else if(result?.sender){sender=result.sender;render('connected');if(result.policy&&ui.usage)ui.usage.textContent=result.policy.name+' · '+(result.usage?.message_limit?`${result.usage.used} / ${result.usage.message_limit} bugün`:'Tekli takip kotası yok');}
     else render('error','Bağlantı bilgileri alınamadı. Yeniden deneyin.');
   }catch(error){
     if(operation==='disconnect'){sender='';render('unpaired','Bu tarayıcıdaki bağlantı kaldırıldı. Sunucu erişimini panelden kontrol edebilirsiniz.');}
