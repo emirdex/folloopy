@@ -1,3 +1,5 @@
+import {FileSharing} from './file-sharing';
+import {registerFileRoutes} from './file-routes';
 import {activityFeed} from './activity-feed';
 import {MemberMailContent} from './member-mail-content';
 import {AdminMemberInsights} from './admin-member-insights';
@@ -37,6 +39,7 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  const bulk=new BulkMail(db,gmail,options.encryptionKey,origin,production);
  const extension=new GmailExtension(db,gmail,origin,options.encryptionKey);
  const drafts=new MailDrafts(db,options.encryptionKey,production);
+ const files=new FileSharing(db,options.encryptionKey,options.site||origin,production);
  const accountDetails=new AccountDetails(db,options.site||origin,options.encryptionKey);
  if(adminConfig)app.addHook('onReady',async()=>{await admin.init(adminConfig)});
  // Keep an explicit allowlist of successful account actions; never log request bodies or tokens.
@@ -79,9 +82,10 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  });
  app.setErrorHandler((error,req,reply)=>{
   const code=error instanceof Error?error.message:'INTERNAL_ERROR';
-  const status=({INVALID_REQUEST:400,MAIL_CONTENT_NOT_STORED:404,MAIL_CONTENT_UNAVAILABLE:503,MEMBER_CHANGED:409,MEMBER_BUSY:409,BULK_UNAVAILABLE:503,BULK_INVALID_INPUT:400,BULK_INVALID_TEMPLATE:400,BULK_PLAN_REQUIRED:403,BULK_QUOTA_REQUIRED:402,BULK_SENDER_CHANGED:409,BULK_ACTIVE_CAMPAIGN:409,BULK_PREVIEW_EXPIRED:409,BULK_INVALID_STATE:409,DRAFTS_UNAVAILABLE:503,INVALID_DRAFT:400,DRAFT_LIMIT_REACHED:409,DRAFT_PLAN_LIMIT:403,STALE_DRAFT:409,UNAUTHORIZED:401,INVALID_LOGIN:401,ACCOUNT_EXISTS:409,PLAN_REQUIRED:402,INVALID_PLAN:400,INVALID_PASSWORD:400,INVALID_ACCOUNT:400,INVALID_BILLING_PROFILE:400,INVALID_POST:400,SETUP_CLOSED:409,INVALID_SETUP_TOKEN:403,EXISTING_ACCOUNT_PASSWORD_REQUIRED:401,SLUG_EXISTS:409,STALE_POST:409,NOT_FOUND:404,FORBIDDEN:403,EMAIL_NOT_VERIFIED:403,INVALID_ACCOUNT_TOKEN:400,INVALID_VERIFICATION_CODE:400,TOO_MANY_ATTEMPTS:429,VERIFICATION_LOCKED:429,VERIFICATION_COOLDOWN:429,EMAIL_UNAVAILABLE:503,EMAIL_IN_USE:409,EMAIL_UNCHANGED:400,GMAIL_NOT_CONNECTED:409,GMAIL_UNAVAILABLE:503,INVALID_OAUTH_STATE:400,GMAIL_AUTH_FAILED:400,GMAIL_CLIENT_INVALID:400,GMAIL_CODE_INVALID:400,GMAIL_IDENTITY_FAILED:400,GMAIL_REFRESH_REQUIRED:400,GMAIL_SCOPE_REQUIRED:400,LIMIT_REACHED:402,IDEMPOTENCY_CONFLICT:409} as Record<string,number>)[code]|| (typeof error==='object' && error!==null && 'validation' in error?400:500);
+  const status=({INVALID_FILE:400,FILE_PLAN_REQUIRED:403,FILE_PLAN_LIMIT:403,FILE_LIMIT:409,FILE_INCOMPLETE:409,FILE_UNAVAILABLE:503,SHARE_UNAVAILABLE:404,SHARE_PASSWORD:403,INVALID_REQUEST:400,MAIL_CONTENT_NOT_STORED:404,MAIL_CONTENT_UNAVAILABLE:503,MEMBER_CHANGED:409,MEMBER_BUSY:409,BULK_UNAVAILABLE:503,BULK_INVALID_INPUT:400,BULK_INVALID_TEMPLATE:400,BULK_PLAN_REQUIRED:403,BULK_QUOTA_REQUIRED:402,BULK_SENDER_CHANGED:409,BULK_ACTIVE_CAMPAIGN:409,BULK_PREVIEW_EXPIRED:409,BULK_INVALID_STATE:409,DRAFTS_UNAVAILABLE:503,INVALID_DRAFT:400,DRAFT_LIMIT_REACHED:409,DRAFT_PLAN_LIMIT:403,STALE_DRAFT:409,UNAUTHORIZED:401,INVALID_LOGIN:401,ACCOUNT_EXISTS:409,PLAN_REQUIRED:402,INVALID_PLAN:400,INVALID_PASSWORD:400,INVALID_ACCOUNT:400,INVALID_BILLING_PROFILE:400,INVALID_POST:400,SETUP_CLOSED:409,INVALID_SETUP_TOKEN:403,EXISTING_ACCOUNT_PASSWORD_REQUIRED:401,SLUG_EXISTS:409,STALE_POST:409,NOT_FOUND:404,FORBIDDEN:403,EMAIL_NOT_VERIFIED:403,INVALID_ACCOUNT_TOKEN:400,INVALID_VERIFICATION_CODE:400,TOO_MANY_ATTEMPTS:429,VERIFICATION_LOCKED:429,VERIFICATION_COOLDOWN:429,EMAIL_UNAVAILABLE:503,EMAIL_IN_USE:409,EMAIL_UNCHANGED:400,GMAIL_NOT_CONNECTED:409,GMAIL_UNAVAILABLE:503,INVALID_OAUTH_STATE:400,GMAIL_AUTH_FAILED:400,GMAIL_CLIENT_INVALID:400,GMAIL_CODE_INVALID:400,GMAIL_IDENTITY_FAILED:400,GMAIL_REFRESH_REQUIRED:400,GMAIL_SCOPE_REQUIRED:400,LIMIT_REACHED:402,IDEMPOTENCY_CONFLICT:409} as Record<string,number>)[code]|| (typeof error==='object' && error!==null && 'validation' in error?400:500);
   reply.code(status).send({code:status===500?'INTERNAL_ERROR':code,message:status===500?'İşlem tamamlanamadı.':status===400?'Girdi geçersiz.':'İşlem için hak veya geçerli istek gerekli.'});
  });
+ registerFileRoutes(app,db,files,account);
  const newPassword={type:'string',minLength:8,maxLength:128,pattern:PASSWORD_PATTERN};
  const credentials={type:'object',additionalProperties:false,required:['email','password'],properties:{email:{type:'string',minLength:3,maxLength:254,pattern:String.raw`^[^\s@]+@[^\s@]+\.[^\s@]+$`},password:{type:'string',minLength:1,maxLength:128},name:{type:'string',minLength:2,maxLength:80}}};
  const authRate=async(req:any,reply:any)=>{const email=String(req.body?.email||'').trim().toLowerCase();if(production){if(!await allowRequest(db,'auth-email',email,15)||!await allowRequest(db,'auth-global','all',500))return reply.code(429).send({code:'TOO_MANY_ATTEMPTS'});return;}const key=digestRate(email);let entry=attempts.get(key);if(!entry||entry.until<Date.now()){entry={count:0,until:Date.now()+15*60*1000};attempts.set(key,entry)}if(++entry.count>15)return reply.code(429).send({code:'TOO_MANY_ATTEMPTS'});if(attempts.size>10000)for(const[k,v]of attempts)if(v.until<Date.now())attempts.delete(k)};
@@ -220,5 +224,5 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
   }
   return reply.send(gif);
  }});
- return {app,service,metrics,bulk};
+ return {app,service,metrics,bulk,files};
 }

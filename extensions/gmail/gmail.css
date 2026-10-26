@@ -11,3 +11,5 @@
 .folloopy-compose-status:not(:empty){position:absolute;bottom:calc(100% + 12px);left:0;z-index:10;box-sizing:border-box;width:min(340px,65vw);padding:12px 14px;border:1px solid #dbe3f3;border-radius:12px;background:#f8faff;color:#3e5578;box-shadow:0 4px 18px #26385414;white-space:normal;font:12px/1.5 Arial,sans-serif;overflow-wrap:anywhere}
 .folloopy-compose-status a{color:#355eaa;font-weight:600;text-decoration:underline;text-underline-offset:3px}
 @media(prefers-reduced-motion:reduce){.folloopy-compose>button{transition:none}}
+
+.folloopy-file-picker{padding:12px;margin:8px 0;border:1px solid #dbe6f6;border-radius:12px;background:#f8fbff;display:flex;gap:8px;flex-wrap:wrap;max-width:420px;color:#536b8c;font:12px/1.5 Arial,sans-serif}.folloopy-file-picker[hidden]{display:none}.folloopy-file-picker select{max-width:100%;padding:6px;border:1px solid #dbe6f6;border-radius:7px;background:#fff}.folloopy-file-picker small{width:100%}.folloopy-file-picker a{color:#4b72ab}

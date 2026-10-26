@@ -14,6 +14,7 @@ chrome.runtime.onMessage.addListener((message,sender,reply)=>{
  (async()=>{
   await storageReady;
   if(message.operation==='status')return signed('status');
+  if(['files','file-share'].includes(message.operation)&&gmail)return signed(message.operation,message.payload||{});
   if(message.operation==='send'&&gmail)return signed('send',message.payload);
   if(message.operation==='disconnect'&&popup){try{await signed('disconnect')}finally{await chrome.storage.local.remove(['device','pair'])}return {ok:true}}
   if(message.operation==='pair'&&popup){if(pairing)throw Error('PAIR_PENDING');pairing=true;try{

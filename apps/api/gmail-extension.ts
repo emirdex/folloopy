@@ -1,3 +1,4 @@
+import {FileSharing} from './file-sharing';
 import {recordMemberActivity} from './member-activity';
 import {createHash,createPublicKey,randomBytes,randomUUID,verify} from 'node:crypto';
 import type {DB} from '../../packages/database';
@@ -8,7 +9,7 @@ import {allowRequest} from './rate-limit';
 const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const fail=()=>{throw Error('FORBIDDEN')};
-export type ExtensionEnvelope={deviceId:string;token:string;nonce:string;issuedAt:number;operation:'status'|'send'|'disconnect';payload:Record<string,unknown>;signature:string};
+export type ExtensionEnvelope={deviceId:string;token:string;nonce:string;issuedAt:number;operation:'status'|'send'|'disconnect'|'files'|'file-share';payload:Record<string,unknown>;signature:string};
 export function extensionCanonical(e:Omit<ExtensionEnvelope,'signature'>){return JSON.stringify([e.deviceId,e.token,e.nonce,e.issuedAt,e.operation,e.payload])}
 export class GmailExtension{
  private cleanupAt=0;
@@ -58,7 +59,7 @@ export class GmailExtension{
   if(!d)fail();const u=await this.eligible(d.user_id,d.session_hash,db);if(u.sender.toLowerCase()!==d.sender)fail();return d;
  }
  async request(e:ExtensionEnvelope){
-  if(!e||!uuid.test(e.deviceId)||!uuid.test(e.nonce)||!/^[A-Za-z0-9_-]{43}$/.test(e.token)||!Number.isSafeInteger(e.issuedAt)||Math.abs(Date.now()-e.issuedAt)>60000||!['status','send','disconnect'].includes(e.operation)||!e.payload||Array.isArray(e.payload)||typeof e.payload!=='object'||!/^[A-Za-z0-9_-]{86}$/.test(e.signature))throw Error('UNAUTHORIZED');
+  if(!e||!uuid.test(e.deviceId)||!uuid.test(e.nonce)||!/^[A-Za-z0-9_-]{43}$/.test(e.token)||!Number.isSafeInteger(e.issuedAt)||Math.abs(Date.now()-e.issuedAt)>60000||!['status','send','disconnect','files','file-share'].includes(e.operation)||!e.payload||Array.isArray(e.payload)||typeof e.payload!=='object'||!/^[A-Za-z0-9_-]{86}$/.test(e.signature))throw Error('UNAUTHORIZED');
   const d=await this.authorize(e);
   if(Date.now()>this.cleanupAt){this.cleanupAt=Date.now()+60000;await this.db.query("DELETE FROM extension_nonces WHERE created_at<now()-interval '5 minutes'");}
   if(!verify('sha256',Buffer.from(extensionCanonical(e)),{key:createPublicKey({key:d.public_key,format:'jwk'}),dsaEncoding:'ieee-p1363'},Buffer.from(e.signature,'base64url')))throw Error('UNAUTHORIZED');
@@ -67,6 +68,13 @@ export class GmailExtension{
   if(e.operation==='disconnect'){await this.db.query('UPDATE extension_devices SET revoked=true WHERE id=$1',[d.id]);await recordMemberActivity(this.db,d.user_id,'extension_disconnected');return {ok:true}}
   await this.db.query('UPDATE extension_devices SET last_seen_at=now() WHERE id=$1',[d.id]);
   if(e.operation==='status')return {connected:true,sender:d.sender};
+  if(e.operation==='files'||e.operation==='file-share'){
+   const user=(await this.db.query<Account>('SELECT id,workspace_id,email,name,role,email_verified_at FROM users WHERE id=$1',[d.user_id])).rows[0];if(!user)fail();
+   const files=new FileSharing(this.db,this.archiveKey,process.env.APP_URL||process.env.NEXT_PUBLIC_APP_URL||this.origin,true,tx=>this.authorize(e,tx));
+   if(e.operation==='files'){const listing=await files.list(user);return {files:listing.files.filter(f=>!f.locked&&f.state==='ready'),policy:listing.policy}}
+   if(typeof e.payload.fileId!=='string'||!uuid.test(e.payload.fileId)||Object.keys(e.payload).some(k=>!['fileId','label'].includes(k)))throw Error('INVALID_FILE');
+   return files.createShare(user,e.payload.fileId,{label:e.payload.label as string|undefined});
+  }
   const p=e.payload,email=/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
   if(typeof p.from!=='string'||p.from.toLowerCase()!==d.sender||typeof p.to!=='string'||p.to.length>254||!email.test(p.to)||typeof p.subject!=='string'||p.subject.length<1||p.subject.length>200||/[\r\n]/.test(p.subject)||typeof p.text!=='string'||!p.text.trim()||p.text.length>10000||typeof p.tracking!=='boolean'||typeof p.idempotencyKey!=='string'||!/^[A-Za-z0-9_-]{16,128}$/.test(p.idempotencyKey))throw Error('INVALID_ACCOUNT');
   if(!await allowRequest(this.db,'single-mail-send',d.workspace_id,20,60))throw Error('TOO_MANY_ATTEMPTS');

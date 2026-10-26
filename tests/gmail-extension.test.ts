@@ -61,3 +61,21 @@ test('Extension sends recheck approval, session, premium entitlement and sender 
   assert.equal(s.provider.submissions.length,1);
  }finally{release();await s.close()}
 });
+
+test('Signed file sharing operations enforce device authority, owner isolation and current plan',async()=>{
+ const s=await setup();try{
+  const {FileSharing}=await import('../apps/api/file-sharing');const encryption=randomBytes(32).toString('base64');
+  const extension=new GmailExtension(s.db,s.gmail as unknown as GmailConnections,'https://panel.example',encryption);
+  const files=new FileSharing(s.db,encryption,'https://panel.example');
+  const a=await s.user('file-extension@example.invalid'),b=await s.user('file-other@example.invalid'),paired=await s.pair(a);
+  const data=Buffer.from('%PDF-1.4\nSynthetic attachment\n%%EOF');
+  async function upload(user:typeof a.user){const f=await files.begin(user,'proposal.pdf',data.length);await files.upload(user,f.id,0,data);await files.complete(user,f.id);return f.id}
+  const id=await upload(a.user),other=await upload(b.user);
+  const listing=await extension.request(paired.envelope('files')) as any;assert.equal(listing.files.length,1);assert.equal(listing.files[0].id,id);
+  await assert.rejects(extension.request(paired.envelope('file-share',{fileId:other})),/NOT_FOUND/);
+  await assert.rejects(extension.request(paired.envelope('file-share',{fileId:id,plan:'team'})),/INVALID_FILE/);
+  const share=await extension.request(paired.envelope('file-share',{fileId:id,label:'recipient@example.invalid'})) as any;assert.match(share.url,/\/dosya\/[A-Za-z0-9_-]{43}$/);
+  await s.accounts.grant(a.user,'individual');await assert.rejects(extension.request(paired.envelope('files')),/FORBIDDEN/);await assert.rejects(extension.request(paired.envelope('file-share',{fileId:id})),/FORBIDDEN/);
+  await s.accounts.grant(a.user,'team');await s.accounts.logout(a.token);await assert.rejects(extension.request(paired.envelope('files')),/FORBIDDEN/);
+ }finally{await s.close()}
+});

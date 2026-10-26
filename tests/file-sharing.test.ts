@@ -1,0 +1,102 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {randomBytes,randomUUID} from 'node:crypto';
+import {openDatabase,migrate} from '../packages/database';
+import {Accounts} from '../apps/api/accounts';
+import {FileSharing} from '../apps/api/file-sharing';
+import {buildServer} from '../apps/api/server';
+import {UnavailableProvider} from '../packages/provider-adapters';
+import {FILE_CHUNK_SIZE,filePolicy} from '../packages/domain/file-sharing';
+const encryptionKey=randomBytes(32).toString('base64'),key='file-share-test-key-at-least-thirty-two-characters';
+const pdf=Buffer.from('%PDF-1.4\nSynthetic private proposal\n%%EOF');
+const browser='Mozilla/5.0 SyntheticBrowser';
+async function setup(){const db=await openDatabase();await migrate(db);const accounts=new Accounts(db,true),files=new FileSharing(db,encryptionKey,'https://panel.example',true);const {app}=buildServer(db,new UnavailableProvider(),key,'https://tracking.example',undefined,{production:true,site:'https://panel.example',encryptionKey});
+ async function create(name:string,plan?:'individual'|'team',verified=true){const result=await accounts.register(name,name+'@example.invalid','Synthetic-password-2026!');if(verified)await db.query('UPDATE users SET email_verified_at=now() WHERE email=$1',[name+'@example.invalid']);const user=(await accounts.current(result.token))!;if(plan)await accounts.grant(user,plan);return {user:(await accounts.current(result.token))!,token:result.token}}
+ async function upload(user:any,name='proposal.pdf',bytes=pdf){const f=await files.begin(user,name,bytes.length);for(let i=0;i<Math.ceil(bytes.length/FILE_CHUNK_SIZE);i++)await files.upload(user,f.id,i,bytes.subarray(i*FILE_CHUNK_SIZE,(i+1)*FILE_CHUNK_SIZE));await files.complete(user,f.id);return f.id}
+ const call=(url:string,token?:string,body?:unknown,headers:Record<string,string>={})=>app.inject({method:body===undefined?'GET':'POST',url,headers:{authorization:'Bearer '+key,...(token?{'x-user-session':token}:{}),...headers},...(body===undefined?{}:{payload:body as any})});
+ return {db,accounts,files,app,create,upload,call,close:async()=>{await app.close();await db.close()}}}
+const tokenOf=(share:{url:string})=>share.url.split('/').pop()!;
+test('Three plan policy: Free denies file features, Essential PDF quotas, Signature file and advanced access',async()=>{const s=await setup();try{
+ const free=await s.create('free'),essential=await s.create('essential','individual'),signature=await s.create('signature','team');
+ assert.equal((await s.files.list(free.user)).policy.files,0);
+ await assert.rejects(s.files.begin(free.user,'proposal.pdf',pdf.length),/FILE_PLAN_REQUIRED/);
+ assert.equal(filePolicy('free').files,0);assert.equal(filePolicy('individual').files,3);assert.equal(filePolicy('team').files,100);
+ await assert.rejects(s.files.begin(essential.user,'text.txt',5),/FILE_PLAN_LIMIT/);
+ await assert.rejects(s.files.begin(essential.user,'big.pdf',10*1024*1024+1),/FILE_PLAN_LIMIT/);
+ const results=await Promise.all(Array.from({length:4},(_,i)=>s.files.begin(essential.user,'proposal'+i+'.pdf',pdf.length).then(value=>({ok:true,value}),e=>({ok:false,error:e.message}))));
+ assert.equal(results.filter(r=>r.ok).length,3);assert.equal(results.filter(r=>!r.ok).length,1);
+ const f=(await s.files.list(essential.user)).files[0];await s.files.upload(essential.user,f.id,0,pdf);await s.files.complete(essential.user,f.id);
+ await assert.rejects(s.files.createShare(essential.user,f.id,{password:'password123'}),/FILE_PLAN_LIMIT/);
+ await assert.rejects(s.files.createShare(essential.user,f.id,{allowDownload:false}),/FILE_PLAN_LIMIT/);
+ const eShare=await s.files.createShare(essential.user,f.id,{}),eOpen=await s.files.open(tokenOf(eShare),'',browser);
+ await assert.rejects(s.files.observe(tokenOf(eShare),eOpen.session,{kind:'page_view',page:1,key:randomUUID()}),/FILE_PLAN_LIMIT/);
+ await s.files.observe(tokenOf(eShare),eOpen.session,{kind:'preview',key:randomUUID()});
+ const sigFile=await s.upload(signature.user,'notes.txt',Buffer.from('Private notes'));
+ assert.ok((await s.files.createShare(signature.user,sigFile,{password:'Secure-password1',allowDownload:false})).url.startsWith('https://panel.example/dosya/'));
+ assert.equal((await s.db.query<{used:number}>('SELECT used FROM entitlements WHERE workspace_id=$1',[essential.user.workspace_id])).rows[0].used,0);
+ assert.equal((await s.db.query('SELECT id FROM messages')).rows.length,0);
+ }finally{await s.close()}});
+test('Encrypted chunk persistence, retry safety, incomplete upload, magic bytes, storage and size ceilings',async()=>{const s=await setup();try{
+ const a=await s.create('chunks','team');const bytes=Buffer.alloc(FILE_CHUNK_SIZE+17,65);pdf.copy(bytes);const f=await s.files.begin(a.user,'large.pdf',bytes.length);
+ await assert.rejects(s.files.complete(a.user,f.id),/FILE_INCOMPLETE/);
+ await assert.rejects(s.files.upload(a.user,f.id,0,Buffer.from('<html>bad</html>')),/INVALID_FILE/);
+ await s.files.upload(a.user,f.id,0,bytes.subarray(0,FILE_CHUNK_SIZE));await s.files.upload(a.user,f.id,0,bytes.subarray(0,FILE_CHUNK_SIZE));
+ const changed=Buffer.from(bytes.subarray(0,FILE_CHUNK_SIZE));changed[30]=42;await assert.rejects(s.files.upload(a.user,f.id,0,changed),/FILE_INCOMPLETE/);
+ await s.files.upload(a.user,f.id,1,bytes.subarray(FILE_CHUNK_SIZE));await s.files.complete(a.user,f.id);
+ const encrypted=(await s.db.query<{payload:Buffer}>('SELECT payload FROM shared_file_chunks WHERE file_id=$1 AND part=0',[f.id])).rows[0].payload;assert.equal(Buffer.from(encrypted).includes(Buffer.from('Synthetic private proposal')),false);
+ const share=await s.files.createShare(a.user,f.id,{}),token=tokenOf(share),open=await s.files.open(token,'',browser);
+ const restored=Buffer.concat([await s.files.chunk(token,open.session,0),await s.files.chunk(token,open.session,1)]);assert.deepEqual(restored,bytes);
+ await assert.rejects(s.files.chunk(token,open.session,2),/NOT_FOUND/);
+ await assert.rejects(s.files.begin(a.user,'bad.exe',20),/INVALID_FILE/);await assert.rejects(s.files.begin(a.user,'../bad.pdf',20),/INVALID_FILE/);
+ await assert.rejects(s.files.begin(a.user,'too-big.pdf',25*1024*1024+1),/FILE_PLAN_LIMIT/);
+ // Storage accounting reserves declared bytes even before upload, so simultaneous uploads cannot overcommit.
+ await s.db.query('UPDATE shared_files SET size=26214400 WHERE workspace_id=$1',[a.user.workspace_id]);
+ for(let i=0;i<80;i++)await s.files.begin(a.user,'reserved'+i+'.pdf',25*1024*1024);
+ await assert.rejects(s.files.begin(a.user,'quota.pdf',25*1024*1024),/FILE_LIMIT/);
+ }finally{await s.close()}});
+test('Shares reject foreign owners, invalid sessions, revoked access, password/expiry and downgraded plans on every chunk',async()=>{const s=await setup();try{
+ const a=await s.create('shareowner','team'),b=await s.create('foreign','team'),unverified=await s.create('unverified','team',false).catch(()=>null);assert.equal(unverified,null);
+ const f=await s.upload(a.user);await assert.rejects(s.files.detail(b.user,f),/NOT_FOUND/);await assert.rejects(s.files.remove(b.user,f),/NOT_FOUND/);await assert.rejects(s.files.createShare(b.user,f,{}),/NOT_FOUND/);
+ const share=await s.files.createShare(a.user,f,{label:'Intended recipient',password:'Secret-phrase1',expiresAt:new Date(Date.now()+60000).toISOString(),allowDownload:false});const t=tokenOf(share);
+ assert.equal((await s.files.landing(t,browser)).name,undefined);await assert.rejects(s.files.open(t,'wrong',browser),/SHARE_PASSWORD/);
+ const opened=await s.files.open(t,'Secret-phrase1',browser);await assert.rejects(s.files.chunk(t,randomBytes(32).toString('base64url'),0),/SHARE_UNAVAILABLE/);
+ assert.deepEqual(await s.files.chunk(t,opened.session,0),pdf);await assert.rejects(s.files.startDownload(t,opened.session),/FORBIDDEN/);
+ await s.accounts.grant(a.user,'individual');await assert.rejects(s.files.chunk(t,opened.session,0),/SHARE_UNAVAILABLE/);
+ await s.accounts.grant(a.user,'team');await s.files.revoke(a.user,f,share.id);await assert.rejects(s.files.chunk(t,opened.session,0),/SHARE_UNAVAILABLE/);
+ const share2=await s.files.createShare(a.user,f,{}),t2=tokenOf(share2),o2=await s.files.open(t2,'',browser);
+ await s.db.query('UPDATE file_shares SET expires_at=now()-interval \'1 second\' WHERE id=$1',[share2.id]);await assert.rejects(s.files.chunk(t2,o2.session,0),/SHARE_UNAVAILABLE/);
+ const f2=await s.upload(a.user,'notes.txt',Buffer.from('Notes'));const sh3=await s.files.createShare(a.user,f2,{}),t3=tokenOf(sh3),o3=await s.files.open(t3,'',browser);await s.accounts.grant(a.user,'individual');await assert.rejects(s.files.chunk(t3,o3.session,0),/SHARE_UNAVAILABLE/);await assert.rejects(s.files.detail(a.user,f2),/FILE_PLAN_LIMIT/);await s.files.remove(a.user,f2);
+ await s.db.query("UPDATE entitlements SET status='suspended' WHERE workspace_id=$1",[a.user.workspace_id]);await assert.rejects(s.files.begin(a.user,'denied.pdf',pdf.length),/FORBIDDEN/);
+ }finally{await s.close()}});
+test('Preview/page/active-time telemetry is bounded and deduplicated; downloads require every chunk and separate browser receipt',async()=>{const s=await setup();try{
+ const a=await s.create('events','team'),f=await s.upload(a.user),sh=await s.files.createShare(a.user,f,{}),t=tokenOf(sh),o=await s.files.open(t,'',browser);
+ await s.files.landing(t,'SafeLinks scanner');const event={kind:'page_view',page:2,key:randomUUID()};await s.files.observe(t,o.session,event);await s.files.observe(t,o.session,{...event,key:randomUUID()});
+ await s.files.observe(t,o.session,{kind:'preview',key:randomUUID()});await s.files.observe(t,o.session,{kind:'preview',key:randomUUID()});
+ await assert.rejects(s.files.observe(t,o.session,{kind:'active_time',seconds:9999,key:randomUUID()}),/INVALID_FILE/);
+ await s.db.query("UPDATE file_view_sessions SET last_active_at=now()-interval '12 seconds' WHERE token_hash=encode(sha256($1::bytea),'hex')",[Buffer.from(o.session)]);
+ await s.files.observe(t,o.session,{kind:'active_time',seconds:15,key:randomUUID()});
+ const d=await s.files.startDownload(t,o.session);await s.files.observe(t,o.session,{kind:'download_received',key:randomUUID(),downloadId:d.id});
+ let detail=await s.files.detail(a.user,f);assert.equal(detail.events.filter((e:any)=>e.kind==='download_received').length,0);
+ await s.files.chunk(t,o.session,0,d.id);await s.files.observe(t,o.session,{kind:'download_received',key:randomUUID(),downloadId:d.id});await s.files.observe(t,o.session,{kind:'download_received',key:randomUUID(),downloadId:d.id});
+ detail=await s.files.detail(a.user,f);assert.equal(detail.events.filter((e:any)=>e.kind==='preview').length,1);assert.equal(detail.events.filter((e:any)=>e.kind==='page_view').length,1);assert.equal(detail.events.filter((e:any)=>e.kind==='download_received').length,1);assert.ok(detail.events.some((e:any)=>e.source==='suspected_automated'));assert.ok(detail.events.filter((e:any)=>e.kind==='active_time').every((e:any)=>e.seconds<=12));
+ for(let i=0;i<30;i++)await s.files.landing(t,browser);assert.equal((await s.files.detail(a.user,f)).events.length,25);assert.ok((await s.files.detail(a.user,f,25)).events.length>0);
+ await s.files.remove(a.user,f);assert.equal((await s.db.query('SELECT id FROM file_events')).rows.length,0);await assert.rejects(s.files.chunk(t,o.session,0),/SHARE_UNAVAILABLE/);
+ }finally{await s.close()}});
+test('Direct API enforces all three packages, login, verification, strict schemas and binary transport; HEAD does not create events',async()=>{const s=await setup();try{
+ const free=await s.create('apifree'),e=await s.create('apiessential','individual'),sig=await s.create('apisignature','team'),unverified=await s.create('apiunverified',undefined,false);
+ assert.equal((await s.app.inject({url:'/api/files'})).statusCode,401);assert.equal((await s.call('/api/files')).statusCode,401);
+ assert.equal((await s.call('/api/files',unverified.token)).statusCode,403);
+ assert.equal((await s.call('/api/files',free.token,{name:'a.pdf',size:pdf.length})).statusCode,403);
+ assert.equal((await s.call('/api/files',e.token,{name:'a.zip',size:pdf.length})).statusCode,403);
+ assert.equal((await s.call('/api/files',sig.token,{name:'a.pdf',size:pdf.length,plan:'team'})).statusCode,400);
+ const begin=await s.call('/api/files',sig.token,{name:'a.pdf',size:pdf.length});assert.equal(begin.statusCode,200,begin.body);const id=begin.json().id;
+ assert.equal((await s.call('/api/files/'+id+'/chunks/0',e.token,pdf,{'content-type':'application/octet-stream'})).statusCode,404);
+ assert.equal((await s.call('/api/files/'+id+'/chunks/0',sig.token,pdf,{'content-type':'application/octet-stream'})).statusCode,200);
+ assert.equal((await s.call('/api/files/'+id+'/complete',sig.token,{})).statusCode,200);
+ const share=await s.call('/api/files/'+id+'/shares',sig.token,{});assert.equal(share.statusCode,200,share.body);const token=tokenOf(share.json());
+ const head=await s.app.inject({method:'HEAD',url:'/public/files/'+token});assert.equal(head.statusCode,200);assert.equal((await s.db.query('SELECT id FROM file_events')).rows.length,0);
+ const opened=await s.call('/public/files/'+token+'/open',undefined,{});assert.equal(opened.statusCode,200,opened.body);const session=opened.json().session;
+ const chunk=await s.call('/public/files/'+token+'/chunks/0',undefined,undefined,{'x-file-session':session});assert.deepEqual(chunk.rawPayload,pdf);assert.match(String(chunk.headers['cache-control']),/no-store/);
+ assert.equal((await s.call('/public/files/'+token+'/events',undefined,{kind:'page_view',page:1,key:randomUUID(),plan:'team'},{'x-file-session':session})).statusCode,400);
+ await s.db.query('DELETE FROM access_grants WHERE workspace_id=$1',[sig.user.workspace_id]);assert.equal((await s.call('/public/files/'+token+'/chunks/0',undefined,undefined,{'x-file-session':session})).statusCode,404);
+ }finally{await s.close()}});

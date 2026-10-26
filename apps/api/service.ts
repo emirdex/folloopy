@@ -1,7 +1,8 @@
+import {fileMailHtml} from '../../packages/domain/file-mail';
 import {captureMailContent} from './member-mail-content';
 import { randomUUID } from 'node:crypto';
 import type { DB } from '../../packages/database/index';
-import { token,tokenHash,escapeHtml } from '../../packages/domain/tracking';
+import { token,tokenHash } from '../../packages/domain/tracking';
 import type { MailProvider } from '../../packages/provider-adapters/index';
 const activityJoin=`LEFT JOIN LATERAL (
  SELECT count(*)::int AS activity_count,min(e.occurred_at) AS first_activity_at,max(e.occurred_at) AS last_activity_at
@@ -44,7 +45,7 @@ export class TrackingService {
   const pixel=`${this.origin}/t/o/${prepared.secret}.gif`;
   // Kontrollü prototip yalnızca düz metin girdisinden MIME üretir; mevcut imzalı maili değiştirmez.
   const boundary=`mt-${randomUUID()}`;
-  const html=`<div>${escapeHtml(input.text).replace(/\n/g,'<br>')}</div>${input.tracking?`<img src="${pixel}" width="1" height="1" alt="" />`:''}`;
+  const html=`<div>${fileMailHtml(input.text)}</div>${input.tracking?`<img src="${pixel}" width="1" height="1" alt="" />`:''}`;
   const raw=[`From: ${this.from}`,`To: ${input.to}`,`Subject: =?UTF-8?B?${Buffer.from(input.subject).toString('base64')}?=`,`Message-ID: ${prepared.rfc}`,
    'MIME-Version: 1.0',`Content-Type: multipart/alternative; boundary="${boundary}"`,'',`--${boundary}`,'Content-Type: text/plain; charset=UTF-8','Content-Transfer-Encoding: base64','',Buffer.from(input.text).toString('base64').match(/.{1,76}/g)?.join('\r\n')||'',`--${boundary}`,'Content-Type: text/html; charset=UTF-8','Content-Transfer-Encoding: base64','',Buffer.from(html).toString('base64').match(/.{1,76}/g)?.join('\r\n')||'',`--${boundary}--`].join('\r\n');
   try{

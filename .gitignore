@@ -19,3 +19,6 @@ work/
 
 apps/web/extension-release/
 apps/web/.deployment-id
+
+# Copied from the locked PDF.js dependency at build time.
+apps/web/public/file-viewer/

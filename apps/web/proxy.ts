@@ -20,7 +20,7 @@ export function proxy(request:NextRequest){
   if(onPanel){const response=NextResponse.next();response.headers.set('X-Robots-Tag','noindex, nofollow');return response}
  }
  if(!isMarketingMode())return NextResponse.next();
- const privatePaths=['/admin','/api','/panel','/baglantilar','/t','/hesap'];
+ const privatePaths=['/admin','/api','/panel','/baglantilar','/t','/hesap','/dosya'];
  if(privatePaths.some(p=>path===p||path.startsWith(p+'/')))return new NextResponse('Sayfa bulunamadı.',{status:404,headers:{'Cache-Control':'no-store'}});
  if(isAccountPath(path))return NextResponse.redirect(new URL('/iletisim',request.url),307);
  return NextResponse.next();

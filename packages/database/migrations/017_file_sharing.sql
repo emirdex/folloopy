@@ -1,0 +1,18 @@
+CREATE TABLE shared_files(id uuid PRIMARY KEY,workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,name text NOT NULL,extension text NOT NULL,mime text NOT NULL,size integer NOT NULL CHECK(size>0 AND size<=26214400),state text NOT NULL DEFAULT 'uploading' CHECK(state IN ('uploading','ready')),created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX shared_files_owner ON shared_files(workspace_id,created_at,id);
+CREATE TABLE shared_file_chunks(file_id uuid NOT NULL REFERENCES shared_files(id) ON DELETE CASCADE,part integer NOT NULL CHECK(part>=0 AND part<9),payload bytea NOT NULL,digest text NOT NULL,PRIMARY KEY(file_id,part));
+CREATE TABLE file_shares(id uuid PRIMARY KEY,file_id uuid NOT NULL REFERENCES shared_files(id) ON DELETE CASCADE,token_hash text NOT NULL UNIQUE,token_sealed text NOT NULL,label text NOT NULL DEFAULT '',password_hash text,expires_at timestamptz NOT NULL,allow_download boolean NOT NULL DEFAULT true,revoked_at timestamptz,created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX file_shares_file ON file_shares(file_id);
+CREATE TABLE file_view_sessions(id uuid PRIMARY KEY,share_id uuid NOT NULL REFERENCES file_shares(id) ON DELETE CASCADE,token_hash text NOT NULL UNIQUE,source text NOT NULL,expires_at timestamptz NOT NULL,last_active_at timestamptz NOT NULL DEFAULT now(),created_at timestamptz NOT NULL DEFAULT now());
+CREATE TABLE file_events(id uuid PRIMARY KEY,share_id uuid NOT NULL REFERENCES file_shares(id) ON DELETE CASCADE,session_id uuid REFERENCES file_view_sessions(id) ON DELETE SET NULL,kind text NOT NULL CHECK(kind IN ('link_visit','preview','page_view','active_time','download_requested','download_received')),source text NOT NULL,page integer NOT NULL DEFAULT 0 CHECK(page>=0 AND page<=5000),seconds integer NOT NULL DEFAULT 0 CHECK(seconds>=0 AND seconds<=15),event_key text NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),UNIQUE(share_id,event_key));
+CREATE INDEX file_events_share ON file_events(share_id,created_at DESC);
+CREATE TABLE file_downloads(id uuid PRIMARY KEY,session_id uuid NOT NULL REFERENCES file_view_sessions(id) ON DELETE CASCADE,parts integer[] NOT NULL DEFAULT '{}',completed boolean NOT NULL DEFAULT false,created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX shared_files_pending_expiry ON shared_files(created_at) WHERE state='uploading';
+CREATE INDEX file_events_expiry ON file_events(created_at);
+CREATE INDEX file_events_session ON file_events(session_id);
+CREATE INDEX file_view_sessions_expiry ON file_view_sessions(expires_at);
+CREATE INDEX file_view_sessions_share ON file_view_sessions(share_id);
+CREATE INDEX file_downloads_session ON file_downloads(session_id);
+CREATE INDEX extension_pairs_expiry ON extension_pairs(expires_at);
+CREATE INDEX extension_devices_expiry ON extension_devices(expires_at);
+CREATE INDEX extension_devices_revoked ON extension_devices(id) WHERE revoked=true;
