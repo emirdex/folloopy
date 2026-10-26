@@ -18,7 +18,7 @@ const tiers=[
 export function PricingPlans({hasAccount,marketing=false}:{hasAccount:boolean;marketing?:boolean}){
  const[period,setPeriod]=useState<BillingPeriod>('monthly');
  const[showDetails,setShowDetails]=useState(false);
- return <div className={'pricing-section-content pricing-redesign'+(showDetails?' show-feature-details':'')} data-reveal><BillingToggle period={period} onChange={setPeriod}/><div className="pricing-choice-grid">{tiers.map(tier=>{
+ return <div className="pricing-section-content pricing-redesign" data-reveal><BillingToggle period={period} onChange={setPeriod}/><div className="pricing-choice-grid">{tiers.map(tier=>{
   const free=tier.id==='free',premium=tier.id==='team',plan=free?undefined:commercialPlans.find(p=>p.id===tier.id),price=plan?planPricing(plan,period):{monthly:0,total:0,annualSavings:0};
   const href=free?(hasAccount?'/paketler?plan=free':'/kayit?plan=free'):(marketing?'/iletisim':hasAccount?'/paketler':'/kayit')+'?plan='+tier.id+'&billing='+period;
   return <article className={'pricing-choice pricing-choice-'+tier.id} key={tier.id} aria-labelledby={'pricing-plan-'+tier.id}>
