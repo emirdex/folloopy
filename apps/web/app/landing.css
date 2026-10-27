@@ -103,3 +103,6 @@ html:has(.landing-page){scroll-behavior:smooth;scroll-padding-top:105px}.landing
 .honesty-section>.discovery-light-button:hover{color:#326f55;border-color:#77b797a6;background:linear-gradient(135deg,#f5fffbe6,#ceecddad);box-shadow:inset 0 1px 0 #fff,0 5px 22px #559b7821}
 .honesty-section>.discovery-light-button::before{background:conic-gradient(from var(--hero-border-angle),transparent 0deg 250deg,#a9dfc440 285deg,#85c6a6e0 320deg,#fff 345deg,transparent 360deg);filter:drop-shadow(0 0 3px #85c6a690)}
 .honesty-section>.discovery-light-button:focus-visible{outline-color:#6aab89}
+
+/* Keep decorative animations idle outside the viewport or in a hidden tab. */
+.landing-page main>section[data-motion-paused],.landing-page main>section[data-motion-paused]::before,.landing-page main>section[data-motion-paused]::after,.landing-page main>section[data-motion-paused] *,.landing-page main>section[data-motion-paused] *::before,.landing-page main>section[data-motion-paused] *::after{animation-play-state:paused!important}

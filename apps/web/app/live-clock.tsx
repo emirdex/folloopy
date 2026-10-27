@@ -5,10 +5,16 @@ const formatter=new Intl.DateTimeFormat('tr-TR',{timeZone:'Europe/Istanbul',hour
 export function LiveClock({initialAt}:{initialAt:string}){
  const [time,setTime]=useState(()=>formatter.format(new Date(initialAt)));
  useEffect(()=>{
-  const update=()=>setTime(formatter.format(new Date()));
-  update();const timer=window.setInterval(update,1000);
-  document.addEventListener('visibilitychange',update);
-  return ()=>{window.clearInterval(timer);document.removeEventListener('visibilitychange',update)};
+  let timer:ReturnType<typeof setTimeout>|undefined;
+  const update=()=>{
+   clearTimeout(timer);
+   if(document.hidden)return;
+   setTime(formatter.format(new Date()));
+   // The display has minute precision; wake at its next visible change only.
+   timer=setTimeout(update,60000-Date.now()%60000);
+  };
+  update();document.addEventListener('visibilitychange',update);
+  return ()=>{clearTimeout(timer);document.removeEventListener('visibilitychange',update)};
  },[]);
  return <time className="turkey-live-clock" dateTime={time} aria-label={'Türkiye saatine göre güncel saat: '+time}>{time}</time>;
 }

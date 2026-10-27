@@ -10,13 +10,22 @@ const stages=[
  {label:'Sonraki adımı planlayın',title:'Tekrar açılmayı da gözden kaçırmayın.',copy:'Yeni hareketi zaman çizelgesinde görün; takip görüşmenizi buna göre planlayın.'}
 ];
 export function FlowDemo(){
- const root=useRef<HTMLDivElement>(null),elapsed=useRef(0);
- const[step,setStep]=useState(0),[playing,setPlaying]=useState(true),[visible,setVisible]=useState(false),[foreground,setForeground]=useState(true),[reduced,setReduced]=useState(false);
+ const root=useRef<HTMLDivElement>(null),elapsed=useRef(0),generation=useRef(0);
+ const[step,setStep]=useState(0),[playing,setPlaying]=useState(true),[visible,setVisible]=useState(false),[foreground,setForeground]=useState(true),[reduced,setReduced]=useState(false),[revision,setRevision]=useState(0);
  useEffect(()=>{const media=window.matchMedia('(prefers-reduced-motion: reduce)');const preference=()=>{setReduced(media.matches);if(media.matches){setPlaying(false);elapsed.current=18000;setStep(3)}};preference();media.addEventListener('change',preference);const observer=new IntersectionObserver(entries=>setVisible(entries[0].isIntersecting),{threshold:.15});if(root.current)observer.observe(root.current);const visibility=()=>setForeground(!document.hidden);visibility();document.addEventListener('visibilitychange',visibility);return()=>{media.removeEventListener('change',preference);observer.disconnect();document.removeEventListener('visibilitychange',visibility)}},[]);
  const running=playing&&visible&&foreground&&!reduced;
- useEffect(()=>{if(!running)return;let previous=performance.now();const timer=setInterval(()=>{const now=performance.now();elapsed.current=(elapsed.current+now-previous)%24000;previous=now;root.current?.style.setProperty('--flow-progress',String((elapsed.current%6000)/6000));setStep(Math.floor(elapsed.current/6000))},80);return()=>clearInterval(timer)},[running]);
- function seek(index:number){elapsed.current=index*6000;root.current?.style.setProperty('--flow-progress','0');setStep(index);setPlaying(false)}
- function replay(){elapsed.current=0;root.current?.style.setProperty('--flow-progress','0');setStep(0);setPlaying(!reduced)}
+ useEffect(()=>{
+  if(!running)return;
+  const start=performance.now(),id=generation.current,offset=elapsed.current%6000,remaining=6000-offset;
+  // Animate only the small progress track; avoid invalidating the whole demo's
+  // inherited styles and dispatching React updates every 80 milliseconds.
+  const track=root.current?.querySelector<HTMLElement>('.flow-navigation>.active .flow-stage-track i');
+  const progress=track?.animate([{transform:`scaleX(${offset/6000})`},{transform:'scaleX(1)'}],{duration:remaining,easing:'linear',fill:'forwards'});
+  const timer=setTimeout(()=>{generation.current++;elapsed.current=((step+1)%4)*6000;root.current?.style.setProperty('--flow-progress','0');setStep((step+1)%4)},remaining);
+  return()=>{clearTimeout(timer);if(id===generation.current){elapsed.current=(elapsed.current+performance.now()-start)%24000;root.current?.style.setProperty('--flow-progress',String((elapsed.current%6000)/6000))}progress?.cancel()};
+ },[running,step,revision]);
+ function seek(index:number){generation.current++;setRevision(value=>value+1);elapsed.current=index*6000;root.current?.style.setProperty('--flow-progress','0');setStep(index);setPlaying(false)}
+ function replay(){generation.current++;setRevision(value=>value+1);elapsed.current=0;root.current?.style.setProperty('--flow-progress','0');setStep(0);setPlaying(!reduced)}
  const sent=step>=1,opened=step>=2,reopened=step>=3;
  const events=[{title:'Mail gönderildi',time:'10:24',icon:Send,shown:sent},{title:'İlk açılma algılandı',time:'10:27',icon:Eye,shown:opened},{title:'Tekrar açılma algılandı',time:'10:42',icon:Activity,shown:reopened}];
  return <div ref={root} className={'flow-demo '+(running?'flow-running':'flow-paused')} aria-label="Folloopy ile mail takibinin işleyişi"><div className="flow-topline"><span><Activity size={15}/>Folloopy ile takip</span><button onClick={replay} aria-label="Akışı baştan oynat" title="Baştan oynat"><RotateCcw size={14}/></button><button onClick={()=>setPlaying(p=>!p)} disabled={reduced} aria-label={playing?'Akışı durdur':'Akışı oynat'} title={reduced?'Azaltılmış hareket tercihi açık':playing?'Duraklat':'Oynat'}>{playing?<Pause size={14}/>:<Play size={14}/>}</button></div>
