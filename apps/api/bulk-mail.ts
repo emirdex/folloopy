@@ -28,7 +28,7 @@ export class BulkMail{
  private requireMember(context:Eligibility,premium=false){if(this.production&&!context.email_verified_at)throw Error('EMAIL_NOT_VERIFIED');if(context.status!=='active')throw Error('FORBIDDEN');if(!context.plan)throw Error('PLAN_REQUIRED');if(premium&&!bulkAllowed(context.plan))throw Error('BULK_PLAN_REQUIRED')}
  private async owned(db:DB,user:Account,id:string,locked=false){const row=(await db.query<CampaignRow>('SELECT * FROM bulk_campaigns WHERE id=$1 AND workspace_id=$2 AND user_id=$3'+(locked?' FOR UPDATE':''),[id,user.workspace_id,user.id])).rows[0];if(!row)throw Error('NOT_FOUND');return row}
  private async counts(db:DB,id:string){const counts=blankCounts();for(const row of (await db.query<{state:keyof BulkCounts;count:number}>('SELECT state,count(*)::int AS count FROM bulk_recipients WHERE campaign_id=$1 GROUP BY state',[id])).rows)counts[row.state]=Number(row.count);return counts}
- private async summary(db:DB,row:CampaignRow):Promise<BulkCampaign>{const content=this.content(row);return {id:row.id,name:content.name,subject:content.subject,status:row.status,reason:row.reason,sender:row.sender_email,total:row.total,created_at:row.created_at,counts:await this.counts(db,row.id)}}
+ private async summary(db:DB,row:CampaignRow,counts?:BulkCounts):Promise<BulkCampaign>{const content=this.content(row);return {id:row.id,name:content.name,subject:content.subject,status:row.status,reason:row.reason,sender:row.sender_email,total:row.total,created_at:row.created_at,counts:counts??await this.counts(db,row.id)}}
  async preview(user:Account,input:BulkInput):Promise<BulkPreview>{
   this.ensureKey();const report=validateBulkInput(input);
   return this.db.transaction(async tx=>{
@@ -60,7 +60,15 @@ export class BulkMail{
   await tx.query('UPDATE bulk_recipients SET reserved=true WHERE campaign_id=$1',[id]);
   await tx.query("UPDATE bulk_campaigns SET status='queued',reason=NULL,updated_at=now(),scheduled_at=$2,quota_period=$3 WHERE id=$1",[id,scheduledAt?new Date(scheduledAt):null,period]);return {id,status:'queued',replay:false};
  })}
- async list(user:Account){const rows=(await this.db.query<CampaignRow>("SELECT * FROM bulk_campaigns WHERE workspace_id=$1 AND user_id=$2 AND status<>'draft' ORDER BY created_at DESC,id DESC LIMIT 20",[user.workspace_id,user.id])).rows;return {campaigns:await Promise.all(rows.map(row=>this.summary(this.db,row)))}}
+ async list(user:Account){
+  const rows=(await this.db.query<CampaignRow>("SELECT * FROM bulk_campaigns WHERE workspace_id=$1 AND user_id=$2 AND status<>'draft' ORDER BY created_at DESC,id DESC LIMIT 20",[user.workspace_id,user.id])).rows;
+  if(!rows.length)return {campaigns:[]};
+  // Aggregate only this page's recipients in one round trip instead of one
+  // query per campaign competing for the shared connection pool.
+  const counts=new Map(rows.map(row=>[row.id,blankCounts()]));
+  for(const row of (await this.db.query<{campaign_id:string;state:keyof BulkCounts;count:number}>('SELECT campaign_id,state,count(*)::int AS count FROM bulk_recipients WHERE workspace_id=$1 AND campaign_id=ANY($2::uuid[]) GROUP BY campaign_id,state',[user.workspace_id,rows.map(row=>row.id)])).rows)counts.get(row.campaign_id)![row.state]=Number(row.count);
+  return {campaigns:await Promise.all(rows.map(row=>this.summary(this.db,row,counts.get(row.id))))};
+ }
  async detail(user:Account,id:string,offset=0):Promise<BulkDetail>{const row=await this.owned(this.db,user,id);if(row.status==='draft')throw Error('NOT_FOUND');const recipients=(await this.db.query<RecipientRow>('SELECT * FROM bulk_recipients WHERE campaign_id=$1 ORDER BY position LIMIT 50 OFFSET $2',[id,offset])).rows;const content=this.content(row);return {...await this.summary(this.db,row),text:content.text,tracking:content.tracking,recipients:recipients.map(recipient=>({id:recipient.id,...this.recipient(recipient),state:recipient.state,message_id:recipient.message_id,error:recipient.error,sent_at:recipient.sent_at})),offset,hasMore:offset+recipients.length<row.total}}
  async control(user:Account,id:string,action:'pause'|'resume'|'cancel'){return this.db.transaction(async tx=>{
   const context=await this.lock(tx,user.workspace_id,user.id);this.requireMember(context,action==='resume');const campaign=await this.owned(tx,user,id,true);
