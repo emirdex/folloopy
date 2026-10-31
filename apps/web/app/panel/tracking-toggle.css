@@ -1,15 +1,18 @@
-.compose-tracking .toggle{transition:background-color .35s ease,box-shadow .35s ease}
-.compose-tracking .toggle>span{transition:transform .42s cubic-bezier(.22,1,.36,1);will-change:transform}
-.compose-tracking .feature-icon{transition:background-color .35s ease,color .35s ease,opacity .35s ease}
-.compose-tracking[data-tracking=off] .feature-icon{background-color:#edf0f5;color:#8994a6;opacity:.7}
-.compose-tracking.has-toggled[data-tracking=on] .toggle>span{animation:compose-tracking-on .42s ease both}
-.compose-tracking.has-toggled[data-tracking=off] .toggle>span{animation:compose-tracking-off .42s ease both}
-.compose-tracking.has-toggled[data-tracking=on]>p{animation:compose-tracking-text-on .3s ease both}
-.compose-tracking.has-toggled[data-tracking=off]>p{animation:compose-tracking-text-off .3s ease both}
-.compose-tracking.has-toggled[data-tracking=on] .feature-icon>svg{animation:compose-tracking-pulse .5s ease both}
+.compose-options .compose-tracking{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;min-height:64px;border-radius:18px;align-self:start}
+.compose-options .compose-tracking h2{margin:0;font-size:16px;line-height:1.4;letter-spacing:-.2px;color:#49668e}
+.compose-tracking .toggle{position:relative;width:44px;height:26px;min-height:26px;padding:3px;border:1px solid #d9e3f1;background:#e4ecf6;cursor:pointer;transition:background-color .25s ease,border-color .25s ease}
+.compose-tracking .toggle:before{content:'';position:absolute;inset:-9px -3px;border-radius:16px}
+.compose-tracking .toggle>span{position:relative;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 2px 5px #58729525;color:#6c9c82;transition:transform .28s cubic-bezier(.22,1,.36,1)}
+.compose-tracking .toggle>span>svg{opacity:0;transition:opacity .2s ease}
+.compose-tracking .toggle.on{background:#bfdfce;border-color:#add2bd}
+.compose-tracking .toggle.on>span{transform:translateX(18px)}
+.compose-tracking .toggle.on>span>svg{opacity:1}
+.compose-tracking .toggle.on>span:after{content:'';position:absolute;inset:-2px;border:1px solid #7cad9170;border-radius:50%;pointer-events:none;animation:compose-tracking-active 2.6s ease-out infinite}
+.compose-tracking .toggle:focus-visible{outline:2px solid #89a8d6;outline-offset:4px}
+.compose-tracking .toggle:disabled{opacity:.5;cursor:default}
+.compose-tracking.has-toggled[data-tracking=on] .toggle>span{animation:compose-tracking-on .35s ease both}
+.compose-tracking.has-toggled[data-tracking=off] .toggle>span{animation:compose-tracking-off .35s ease both}
 @keyframes compose-tracking-on{0%,100%{scale:1}40%{scale:1.12 .84}}
 @keyframes compose-tracking-off{0%,100%{scale:1}40%{scale:1.12 .84}}
-@keyframes compose-tracking-text-on{from{opacity:.4;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
-@keyframes compose-tracking-text-off{from{opacity:.4;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
-@keyframes compose-tracking-pulse{0%,100%{transform:scale(1)}45%{transform:scale(1.14)}}
-@media(prefers-reduced-motion:reduce){.compose-tracking .toggle,.compose-tracking .toggle>span,.compose-tracking .feature-icon{transition:none}.compose-tracking.has-toggled .toggle>span,.compose-tracking.has-toggled>p,.compose-tracking.has-toggled .feature-icon>svg{animation:none}}
+@keyframes compose-tracking-active{0%{transform:scale(1);opacity:0}20%{opacity:.7}75%,100%{transform:scale(1.65);opacity:0}}
+@media(prefers-reduced-motion:reduce){.compose-tracking .toggle,.compose-tracking .toggle>span,.compose-tracking .toggle>span>svg{transition:none}.compose-tracking.has-toggled .toggle>span,.compose-tracking .toggle.on>span:after{animation:none}.compose-tracking .toggle.on>span:after{display:none}}
