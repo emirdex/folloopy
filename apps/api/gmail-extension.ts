@@ -1,3 +1,4 @@
+import {mailRecipients} from '../../packages/domain/recipients';
 import {MemberTools} from './member-tools';
 import {MailDrafts} from './mail-drafts';
 import {membershipPolicy} from './package-usage';
@@ -83,7 +84,7 @@ export class GmailExtension{
    if(typeof e.payload.fileId!=='string'||!uuid.test(e.payload.fileId)||Object.keys(e.payload).some(k=>!['fileId','label'].includes(k)))throw Error('INVALID_FILE');
    return files.createShare(user,e.payload.fileId,{label:e.payload.label as string|undefined});
   }
-  const p=e.payload;try{validateRichMessage(p as any)}catch{throw Error('INVALID_ACCOUNT')}
+  const p=e.payload;try{validateRichMessage(p as any);if(mailRecipients(p as any).to.length!==1)throw Error('INVALID_ACCOUNT')}catch{throw Error('INVALID_ACCOUNT')}
   if(typeof p.from!=='string'||p.from.toLowerCase()!==d.sender||typeof p.tracking!=='boolean'||typeof p.idempotencyKey!=='string'||!/^[A-Za-z0-9_-]{16,128}$/.test(p.idempotencyKey)||Object.keys(p).some(k=>!['from','to','subject','text','tracking','idempotencyKey','html','cc','bcc','attachments','threadId','inReplyTo','references','linkTracking'].includes(k)))throw Error('INVALID_ACCOUNT');
   if(!await allowRequest(this.db,'single-mail-send',d.workspace_id,20,60))throw Error('TOO_MANY_ATTEMPTS');
   const connected=await this.gmail.provider(d.workspace_id);if(connected.from.toLowerCase()!==d.sender)fail();
