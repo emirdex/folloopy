@@ -52,8 +52,8 @@ try{
  member.token=(await accounts.login('web-member@example.invalid','Synthetic-web-password-2026!')).token;
  await db.query('UPDATE users SET email_verified_at=now()');
  await expectRedirect('/panel','/paketler',member.token);await expectRedirect('/admin','/admin/erisim',member.token);await expectRedirect('/hesap/dogrula','/admin',owner.token);
- const account=(await accounts.current(member.token))!;for(const plan of ['individual','team'] as const){await accounts.grant(account,plan);const response=await fetch(origin+'/panel',{redirect:'manual',headers:{cookie:'mt_session='+member.token}});assert.equal(response.status,200,plan);const html=await response.text();assert.ok(html.includes('Genel Bakış'));checks++;
-  const download=await fetch(origin+'/eklentiler/indir',{redirect:'manual',headers:{cookie:'mt_session='+member.token}});assert.equal(download.status,200);if(['individual','team'].includes(plan)){assert.equal(download.headers.get('content-type'),'application/zip');assert.ok(download.headers.get('cache-control')?.includes('no-store'));assert.equal(Buffer.from(await download.arrayBuffer()).readUInt32LE(0),0x04034b50)}checks++;
+ const account=(await accounts.current(member.token))!;for(const plan of ['free','individual','team'] as const){await accounts.grant(account,plan);const response=await fetch(origin+'/panel',{redirect:'manual',headers:{cookie:'mt_session='+member.token}});assert.equal(response.status,200,plan);const html=await response.text();assert.ok(html.includes('Genel Bakış'));checks++;
+  const download=await fetch(origin+'/eklentiler/indir',{redirect:'manual',headers:{cookie:'mt_session='+member.token}});assert.equal(download.status,plan==='team'?200:403);if(plan==='team'){assert.equal(download.headers.get('content-type'),'application/zip');assert.ok(download.headers.get('cache-control')?.includes('no-store'));assert.equal(Buffer.from(await download.arrayBuffer()).readUInt32LE(0),0x04034b50)}checks++;
  }
  // Each server render must deduplicate session reads, and independent screens
  // must not wait for a mail list they never display.
