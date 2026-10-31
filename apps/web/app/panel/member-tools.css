@@ -2,3 +2,5 @@
 
 .compose-normal-attachments{display:grid;gap:9px;padding:18px 24px;font-size:13px;color:#627c9f;border-top:1px solid #e5ecf6}.compose-normal-attachments small{font-size:11px;line-height:1.8;color:#889bb5}.compose-normal-attachments input{max-width:100%;font:inherit}
 .compose-options>.tools-card{margin-block:20px}
+
+.reminder-card{margin-bottom:18px}
