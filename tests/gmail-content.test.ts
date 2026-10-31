@@ -28,4 +28,4 @@ test('Turkish and English account buttons identify the sender; missing account c
  const f=await fixture({accountControl:'missing'});await f.button.onclick();assert.equal(f.calls.length,0);assert.match(f.note.textContent,/Gmail hesabı doğrulanamadı/);
 });
 
-test('Gmail multiple To recipients are preserved in one transport call',async()=>{const f=await fixture({recipients:['a@example.invalid','b@example.invalid']});await f.button.onclick();assert.equal(f.calls.length,1);assert.equal(f.calls[0].payload.to,'a@example.invalid, b@example.invalid')});
+test('Ambiguous native Gmail recipient groups cannot expose hidden recipients as To addresses',async()=>{const f=await fixture({recipients:['a@example.invalid','hidden@example.invalid']});await f.button.onclick();assert.equal(f.calls.length,0);assert.equal(f.button.disabled,false);assert.match(f.note.textContent,/alıcı grupları/)});
