@@ -1,3 +1,4 @@
+import {mailRecipients} from '../../packages/domain/recipients';
 import {ProviderRejected} from '../../packages/provider-adapters';
 import {releaseBucket,usagePeriod} from './package-usage';
 import {unseal} from '../../packages/runtime/vault';
@@ -29,6 +30,7 @@ export class TrackingService {
  constructor(readonly db:DB,private provider:MailProvider,private origin:string,private from='local-test@example.invalid',private archiveKey?:string){}
  async send(workspace:string,key:string,input:SendInput,reservation?:{recipientId:string;lease:string},authorize?:(tx:DB)=>Promise<void>,channel:'panel'|'extension'|'bulk'|'legacy'='legacy'){
   validateRichMessage(input);
+  const recipientCount=mailRecipients(input).count;
   if(/[\r\n]/.test(this.from)||/[\r\n]/.test(input.to)||/[\r\n]/.test(input.subject))throw new Error('INVALID_MESSAGE');
   const hash=tokenHash(JSON.stringify({...input,unsubscribe:undefined}));
   const prepared=await this.db.transaction(async tx=>{
@@ -42,10 +44,10 @@ export class TrackingService {
    const {plan,policy}=await membershipPolicy(tx,workspace);const free=plan==='free';
    if(!['active','local_test'].includes(entitlement.status)||(!policy&&!reservation&&entitlement.used>=entitlement.message_limit)) throw new Error('LIMIT_REACHED');
    if(reservation){const reserved=(await tx.query(`SELECT r.id FROM bulk_recipients r JOIN bulk_campaigns c ON c.id=r.campaign_id JOIN users u ON u.id=c.user_id JOIN access_grants g ON g.workspace_id=c.workspace_id JOIN mail_connections mc ON mc.workspace_id=c.workspace_id WHERE r.id=$1 AND r.workspace_id=$2 AND r.claim_token=$3 AND r.state='sending' AND r.reserved=true AND r.message_id IS NULL AND c.status IN ('queued','running') AND g.plan IN ('team','business') AND u.email_verified_at IS NOT NULL AND lower(mc.email)=lower($4)`,[reservation.recipientId,workspace,reservation.lease,this.from])).rows.length;if(!reserved)throw Error('BULK_RESERVATION_INVALID')}
-   if(free){if(reservation)throw Error('BULK_PLAN_REQUIRED');await consumeFreeSend(tx,workspace,this.provider.name==='gmail'?this.from:undefined)}
+   if(free){if(reservation)throw Error('BULK_PLAN_REQUIRED');await consumeFreeSend(tx,workspace,this.provider.name==='gmail'?this.from:undefined,recipientCount)}
    const id=randomUUID(),submission=randomUUID(),secret=token(),rfc=`<${submission}@${new URL(this.origin).hostname}>`;
    await tx.query(`INSERT INTO messages(id,workspace_id,submission_id,idempotency_key,payload_hash,subject,recipient_count,state,provider,rfc_message_id,tracking_enabled,send_channel,package_plan,tracking_expires_at,first_open_only)
-    VALUES($1,$2,$3,$4,$5,$6,$11,'sending',$7,$8,$9,$10,$12,CASE WHEN $13::int IS NOT NULL THEN now()+($13::text||' days')::interval ELSE NULL END,$14)`,[id,workspace,submission,key,hash,input.subject,this.provider.name,rfc,input.tracking,channel,1+(input.cc?.length||0)+(input.bcc?.length||0),plan,policy?.retentionDays??null,free]);
+    VALUES($1,$2,$3,$4,$5,$6,$11,'sending',$7,$8,$9,$10,$12,CASE WHEN $13::int IS NOT NULL THEN now()+($13::text||' days')::interval ELSE NULL END,$14)`,[id,workspace,submission,key,hash,input.subject,this.provider.name,rfc,input.tracking,channel,recipientCount,plan,policy?.retentionDays??null,free]);
    const html=await prepareLinks(tx,workspace,id,input,policy?.linkMailsMonthly,policy?.retentionDays||90,this.origin,this.archiveKey);
    await captureMailContent(tx,workspace,id,this.from,input,this.archiveKey);
    if(input.tracking) await tx.query('INSERT INTO tracking_tokens(hash,workspace_id,message_id) VALUES($1,$2,$3)',[tokenHash(secret),workspace,id]);
@@ -61,7 +63,7 @@ export class TrackingService {
    await this.db.query("UPDATE messages SET state='sent',sent_at=now(),provider_message_id=$3,provider_thread_id=$4 WHERE workspace_id=$1 AND id=$2 AND state='sending'",[workspace,prepared.id,receipt.providerMessageId,receipt.threadId]);
    return {id:prepared.id,state:'sent',replay:false,...(this.provider.name==='fake'&&input.tracking?{testPixel:pixel}:{})};
   }catch(error){
-   if(error instanceof ProviderRejected){await this.db.transaction(async tx=>{await tx.query('SELECT workspace_id FROM entitlements WHERE workspace_id=$1 FOR UPDATE',[workspace]);const changed=(await tx.query("UPDATE messages SET state='failed' WHERE workspace_id=$1 AND id=$2 AND state='sending' RETURNING id",[workspace,prepared.id])).rows.length;if(!changed)return;if(prepared.linkPeriod&&(await tx.query('SELECT id FROM tracked_links WHERE message_id=$1 LIMIT 1',[prepared.id])).rows.length)await releaseBucket(tx,workspace,'link_month',prepared.linkPeriod,1);if(!reservation)await tx.query('UPDATE entitlements SET used=greatest(0,used-1) WHERE workspace_id=$1',[workspace]);if(prepared.free&&prepared.usageDay){await tx.query('UPDATE free_daily_usage SET used=greatest(0,used-1) WHERE workspace_id=$1 AND usage_date=$2',[workspace,prepared.usageDay]);if(this.provider.name==='gmail')await tx.query('UPDATE free_sender_usage SET used=greatest(0,used-1) WHERE sender_hash=$1 AND usage_date=$2',[tokenHash(this.from.trim().toLowerCase()),prepared.usageDay])}});return {id:prepared.id,state:'failed',replay:false}}
+   if(error instanceof ProviderRejected){await this.db.transaction(async tx=>{await tx.query('SELECT workspace_id FROM entitlements WHERE workspace_id=$1 FOR UPDATE',[workspace]);const changed=(await tx.query("UPDATE messages SET state='failed' WHERE workspace_id=$1 AND id=$2 AND state='sending' RETURNING id",[workspace,prepared.id])).rows.length;if(!changed)return;if(prepared.linkPeriod&&(await tx.query('SELECT id FROM tracked_links WHERE message_id=$1 LIMIT 1',[prepared.id])).rows.length)await releaseBucket(tx,workspace,'link_month',prepared.linkPeriod,1);if(!reservation)await tx.query('UPDATE entitlements SET used=greatest(0,used-1) WHERE workspace_id=$1',[workspace]);if(prepared.free&&prepared.usageDay){await tx.query('UPDATE free_daily_usage SET used=greatest(0,used-$3) WHERE workspace_id=$1 AND usage_date=$2',[workspace,prepared.usageDay,recipientCount]);if(this.provider.name==='gmail')await tx.query('UPDATE free_sender_usage SET used=greatest(0,used-$3) WHERE sender_hash=$1 AND usage_date=$2',[tokenHash(this.from.trim().toLowerCase()),prepared.usageDay,recipientCount])}});return {id:prepared.id,state:'failed',replay:false}}
    await this.db.query("UPDATE messages SET state='unknown' WHERE workspace_id=$1 AND id=$2 AND state='sending'",[workspace,prepared.id]);
    return {id:prepared.id,state:'unknown',replay:false};
   }

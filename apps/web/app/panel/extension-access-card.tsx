@@ -10,7 +10,7 @@ const protections=[
  {icon:LogOut,title:'Oturumla birlikte kapanır',copy:'Hesabınızdan çıkış yaptığınızda eklenti erişimi sona erer.'},
  {icon:KeyRound,title:'Hesabınıza özel yetki',copy:'Kurulum dosyası, hesabınıza ait erişim anahtarlarını içermez.'},
 ];
-export function ExtensionAccessCard({devices}:{devices:Device[]}){
+export function ExtensionAccessCard({devices,allowed=true}:{devices:Device[];allowed?:boolean}){
  return <section className="extension-access-card" aria-labelledby="extension-access-title">
   <header className="extension-access-heading">
    <span className="extension-access-emblem"><ShieldCheck size={22} aria-hidden="true"/></span>
@@ -32,7 +32,7 @@ export function ExtensionAccessCard({devices}:{devices:Device[]}){
      <Link className="extension-account-manage" href="/panel?view=setup">Gmail hesabını yönet<ArrowUpRight size={16} aria-hidden="true"/></Link>
      <form action={revokeExtension}><button className="extension-account-disconnect"><LogOut size={15} aria-hidden="true"/>Tarayıcı bağlantısını kaldır</button></form>
     </div>
-   </article>):<div className="extension-connection-empty"><span className="extension-connection-mail"><Monitor size={23} aria-hidden="true"/></span><div><h3>Henüz bir tarayıcı eşleştirilmedi</h3><p>Gmail hesabınızı bağladıktan sonra eklentideki “Hesabımı bağla” seçeneğiyle eşleştirmeyi tamamlayın.</p><Link className="extension-account-manage" href="/panel?view=setup">Gmail hesabını yönet<ArrowUpRight size={16} aria-hidden="true"/></Link></div></div>}
+   </article>):<div className="extension-connection-empty"><span className="extension-connection-mail"><Monitor size={23} aria-hidden="true"/></span><div><h3>Henüz bir tarayıcı eşleştirilmedi</h3><p>{allowed?'Gmail hesabınızı bağladıktan sonra eklentideki “Hesabımı bağla” seçeneğiyle eşleştirmeyi tamamlayın.':'Chrome eklentisini kullanmak için Signature paketine geçin.'}</p><Link className="extension-account-manage" href="/panel?view=setup">Gmail hesabını yönet<ArrowUpRight size={16} aria-hidden="true"/></Link></div></div>}
   </div>
   <div className="extension-access-protections" aria-label="Eklenti erişim koşulları">{protections.map(({icon:Icon,title,copy})=><div key={title}><Icon size={16} aria-hidden="true"/><span><strong>{title}</strong><small>{copy}</small></span></div>)}</div>
  </section>;

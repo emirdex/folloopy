@@ -1,3 +1,4 @@
+import {validateRichMessage,type MailAttachment} from './mail-format';
 import {recipientHash,unsubscribeLink} from './unsubscribe';
 import {bucketUsed,consumeBucket,releaseBucket,usagePeriod,dateKey} from './package-usage';
 import {packagePolicy} from '../../packages/domain/plan-policy';
@@ -11,7 +12,7 @@ import {bulkAllowed,validateBulkInput,renderBulkText,csvCell,type BulkInput,type
 export interface BulkGateway{status(workspace:string,db?:DB):Promise<{configured:boolean;connected:boolean;email:string|null}>;provider(workspace:string):Promise<{provider:MailProvider;from:string}>}
 type CampaignRow={quota_period:string|null;scheduled_at:string|null;id:string;workspace_id:string;user_id:string;payload:string;sender_email:string;total:number;status:string;reason:string|null;expires_at:string;created_at:string;content_hash:string};
 type RecipientRow={daily_period:string|null;id:string;payload:string;state:string;reserved:boolean;claim_token:string|null;message_id:string|null;error:string|null;sent_at:string|null;started_at:string|null};
-type Content={name:string;subject:string;text:string;tracking:boolean;duplicates:number};
+type Content={name:string;subject:string;text:string;tracking:boolean;duplicates:number;hasAttachments?:boolean};
 type Eligibility={plan:string|null;email_verified_at:string|null;status:string;used:number;message_limit:number;bulk_next_at:string|null};
 const blankCounts=():BulkCounts=>({queued:0,sending:0,sent:0,unknown:0,failed:0,cancelled:0});
 export class BulkMail{
@@ -30,23 +31,24 @@ export class BulkMail{
  private async counts(db:DB,id:string){const counts=blankCounts();for(const row of (await db.query<{state:keyof BulkCounts;count:number}>('SELECT state,count(*)::int AS count FROM bulk_recipients WHERE campaign_id=$1 GROUP BY state',[id])).rows)counts[row.state]=Number(row.count);return counts}
  private async summary(db:DB,row:CampaignRow,counts?:BulkCounts):Promise<BulkCampaign>{const content=this.content(row);return {id:row.id,name:content.name,subject:content.subject,status:row.status,reason:row.reason,sender:row.sender_email,total:row.total,created_at:row.created_at,counts:counts??await this.counts(db,row.id)}}
  async preview(user:Account,input:BulkInput):Promise<BulkPreview>{
-  this.ensureKey();const report=validateBulkInput(input);
+  this.ensureKey();const report=validateBulkInput(input);validateRichMessage({to:'recipient@example.invalid',subject:'Attachments',text:'Attachments',attachments:input.attachments});
   return this.db.transaction(async tx=>{
    const context=await this.lock(tx,user.workspace_id,user.id);this.requireMember(context,true);
    if(report.issues.length||!report.recipients.length)return {report};
    const excluded=new Set((await tx.query<{email_hash:string}>('SELECT email_hash FROM mail_suppressions WHERE workspace_id=$1',[user.workspace_id])).rows.map(r=>r.email_hash));report.recipients=report.recipients.filter(r=>!excluded.has(recipientHash(user.workspace_id,r.email)));if(!report.recipients.length){report.issues.push({row:1,message:'Alıcıların tamamı bu göndericiden kampanya e-postası almayı durdurmuş.'});return {report}}
    const connection=await this.gateway.status(user.workspace_id,tx);if(!connection.configured||!connection.connected||!connection.email)throw Error('GMAIL_NOT_CONNECTED');
    const monthly=packagePolicy(context.plan)!.bulkMonthly,period=await usagePeriod(tx,true),remaining=monthly-await bucketUsed(tx,user.workspace_id,'bulk_month',period);if(remaining<report.recipients.length)throw Error('BULK_QUOTA_REQUIRED');
-   const content:Content={name:input.name.trim(),subject:input.subject,text:input.text,tracking:input.tracking,duplicates:report.duplicates};
-   const hash=createHash('sha256').update(JSON.stringify({content,recipients:report.recipients,sender:connection.email.toLowerCase()})).digest('hex');
+   const content:Content={name:input.name.trim(),subject:input.subject,text:input.text,tracking:input.tracking,duplicates:report.duplicates,...(input.attachments?.length?{hasAttachments:true}:{})};
+   const hash=createHash('sha256').update(JSON.stringify({content,...(input.attachments?.length?{attachments:input.attachments}:{}),recipients:report.recipients,sender:connection.email.toLowerCase()})).digest('hex');
    const existing=(await tx.query<CampaignRow>('SELECT * FROM bulk_campaigns WHERE workspace_id=$1 AND request_id=$2',[user.workspace_id,input.requestId])).rows[0];
    if(existing&&existing.content_hash!==hash)throw Error('IDEMPOTENCY_CONFLICT');
    const id=existing?.id||randomUUID();
    if(!existing){await tx.query('INSERT INTO bulk_campaigns(id,workspace_id,user_id,request_id,content_hash,payload,sender_email,total) VALUES($1,$2,$3,$4,$5,$6,$7,$8)',[id,user.workspace_id,user.id,input.requestId,hash,seal(JSON.stringify(content),this.key!),connection.email.toLowerCase(),report.recipients.length]);
+    if(input.attachments?.length)await tx.query('INSERT INTO bulk_attachments(campaign_id,payload) VALUES($1,$2)',[id,seal(JSON.stringify(input.attachments),this.key!)]);
     const recipients=report.recipients.map((recipient,index)=>({id:randomUUID(),position:index,payload:seal(JSON.stringify(recipient),this.key!),suppression_hash:recipientHash(user.workspace_id,recipient.email)}));
     await tx.query(`INSERT INTO bulk_recipients(id,campaign_id,workspace_id,position,payload,suppression_hash) SELECT (item->>'id')::uuid,$1,$2,(item->>'position')::int,item->>'payload',item->>'suppression_hash' FROM jsonb_array_elements($3::jsonb) AS item`,[id,user.workspace_id,JSON.stringify(recipients)]);
    }
-   return {report,id,sender:connection.email,remaining,samples:report.recipients.slice(0,3).map(recipient=>({email:recipient.email,subject:renderBulkText(input.subject,recipient),text:renderBulkText(input.text,recipient)}))};
+   return {report,id,sender:connection.email,remaining,attachments:input.attachments?.map(a=>({name:a.name,bytes:Buffer.from(a.data,'base64').length})),samples:report.recipients.slice(0,3).map(recipient=>({email:recipient.email,subject:renderBulkText(input.subject,recipient),text:renderBulkText(input.text,recipient)}))};
   });
  }
  async confirm(user:Account,id:string,scheduledAt?:string){if(scheduledAt&&(!Number.isFinite(Date.parse(scheduledAt))||Date.parse(scheduledAt)<Date.now()+60000||Date.parse(scheduledAt)>Date.now()+365*86400000))throw Error('INVALID_SCHEDULE');return this.db.transaction(async tx=>{
@@ -111,9 +113,9 @@ export class BulkMail{
   });if(!claimed)return false;
   const{campaign,recipient}=claimed;let connection:Awaited<ReturnType<BulkGateway['provider']>>;
   try{connection=await this.gateway.provider(campaign.workspace_id);if(connection.from.toLowerCase()!==campaign.sender_email)throw Error('BULK_SENDER_CHANGED')}catch{await this.pauseClaim(campaign,recipient,'CONNECTION_REQUIRED');return true}
-  try{const content=this.content(campaign),contact=this.recipient(recipient),service=new TrackingService(this.db,connection.provider,this.origin,connection.from,this.key);const result=await service.send(campaign.workspace_id,'bulk_'+recipient.id,{to:contact.email,subject:renderBulkText(content.subject,contact),text:renderBulkText(content.text,contact),tracking:content.tracking,unsubscribe:await unsubscribeLink(this.db,campaign.workspace_id,contact.email,this.origin)},{recipientId:recipient.id,lease:recipient.claim_token!},undefined,'bulk');await this.finish(campaign,recipient,result.state==='sent'?'sent':result.state==='failed'?'failed':'unknown',result.id)}catch{
+  try{const content=this.content(campaign),attachmentRow=content.hasAttachments?(await this.db.query<{payload:string}>('SELECT payload FROM bulk_attachments WHERE campaign_id=$1',[campaign.id])).rows[0]:undefined,attachments:MailAttachment[]|undefined=attachmentRow?JSON.parse(unseal(attachmentRow.payload,this.key!)):undefined;if(content.hasAttachments&&!attachments?.length)throw Error('BULK_ATTACHMENT_MISSING');const contact=this.recipient(recipient),service=new TrackingService(this.db,connection.provider,this.origin,connection.from,this.key);const result=await service.send(campaign.workspace_id,'bulk_'+recipient.id,{to:contact.email,subject:renderBulkText(content.subject,contact),text:renderBulkText(content.text,contact),tracking:content.tracking,...(attachments?{attachments}:{}),unsubscribe:await unsubscribeLink(this.db,campaign.workspace_id,contact.email,this.origin)},{recipientId:recipient.id,lease:recipient.claim_token!},undefined,'bulk');await this.finish(campaign,recipient,result.state==='sent'?'sent':result.state==='failed'?'failed':'unknown',result.id)}catch{
    const row=(await this.db.query<{message_id:string|null;state:string}>('SELECT message_id,state FROM bulk_recipients WHERE id=$1',[recipient.id])).rows[0];if(row?.message_id){const message=(await this.db.query<{state:string}>('SELECT state FROM messages WHERE id=$1',[row.message_id])).rows[0];await this.finish(campaign,recipient,message?.state==='sent'?'sent':'unknown',row.message_id)}else await this.pauseClaim(campaign,recipient,'PREPARATION_FAILED');
   }return true;
  }
- async cleanup(){await this.db.query("DELETE FROM bulk_campaigns WHERE status='draft' AND expires_at<now()")}
+ async cleanup(){await this.db.query("DELETE FROM bulk_campaigns WHERE status='draft' AND expires_at<now()");await this.db.query("DELETE FROM bulk_attachments a USING bulk_campaigns c WHERE c.id=a.campaign_id AND c.status IN ('completed','cancelled') AND NOT EXISTS(SELECT 1 FROM bulk_recipients r WHERE r.campaign_id=c.id AND r.state IN ('queued','sending'))")}
 }

@@ -1,3 +1,4 @@
+import {mailRecipients} from '../../packages/domain/recipients';
 import {escapeHtml} from '../../packages/domain/tracking';
 import sanitizeHtml from 'sanitize-html';
 import {randomUUID} from 'node:crypto';
@@ -6,8 +7,8 @@ export type MailAttachment={name:string;mime:string;data:string;cid?:string};
 export type RichMessage={to:string;subject:string;text:string;html?:string;cc?:string[];bcc?:string[];attachments?:MailAttachment[];threadId?:string;inReplyTo?:string;references?:string;linkTracking?:boolean};
 const email=/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 export function validateRichMessage(p:RichMessage){
- if(!p||typeof p.to!=='string'||!email.test(p.to)||p.to.length>254||typeof p.subject!=='string'||!p.subject.trim()||p.subject.length>200||/[\r\n]/.test(p.subject)||typeof p.text!=='string'||!p.text.trim()||p.text.length>10000)throw Error('INVALID_MESSAGE');
- for(const field of ['cc','bcc'] as const)if(p[field]!==undefined&&(!Array.isArray(p[field])||p[field]!.length>20||p[field]!.some(v=>typeof v!=='string'||v.length>254||!email.test(v))))throw Error('INVALID_MESSAGE');
+ if(!p||typeof p.to!=='string'||typeof p.subject!=='string'||!p.subject.trim()||p.subject.length>200||/[\r\n]/.test(p.subject)||typeof p.text!=='string'||!p.text.trim()||p.text.length>10000)throw Error('INVALID_MESSAGE');
+ mailRecipients(p);
  if(p.linkTracking!==undefined&&typeof p.linkTracking!=='boolean')throw Error('INVALID_MESSAGE');
  if(p.html!==undefined&&(typeof p.html!=='string'||p.html.length>200000))throw Error('INVALID_MESSAGE');
  if(p.threadId!==undefined&&(typeof p.threadId!=='string'||!/^[a-fA-F0-9]{8,64}$/.test(p.threadId)||!p.inReplyTo))throw Error('INVALID_MESSAGE');
@@ -22,7 +23,7 @@ const b64=(s:string|Buffer)=>Buffer.from(s).toString('base64').match(/.{1,76}/g)
 export function buildMailMime(input:RichMessage,options:{from:string;rfc:string;pixel?:string;branding?:boolean;html?:string;unsubscribe?:string}){
  const alt='alt-'+randomUUID(),mixed='mixed-'+randomUUID(),html=(options.html??(input.html?cleanMailHtml(input.html):textMailHtml(input.text)))+(options.branding?'<p style="font-size:11px;color:#778399">Folloopy ile gönderildi · <a href="https://folloopy.com/">E-posta takibi</a></p>':'')+(options.unsubscribe?`<p><a href="${options.unsubscribe}">Bu göndericiden kampanya e-postası almayı durdur</a></p>`:'')+(options.pixel?`<img src="${options.pixel}" width="1" height="1" alt="" />`:'');
  const plain=input.text+(options.branding?'\n\nFolloopy ile gönderildi · https://folloopy.com/':'')+(options.unsubscribe?'\n\nKampanya e-postalarını durdur: '+options.unsubscribe:'');
- const headers=[`From: ${options.from}`,`To: ${input.to}`,...(input.cc?.length?[`Cc: ${input.cc.join(', ')}`]:[]),...(input.bcc?.length?[`Bcc: ${input.bcc.join(', ')}`]:[]),`Subject: =?UTF-8?B?${Buffer.from(input.subject).toString('base64')}?=`,`Message-ID: ${options.rfc}`,...(input.inReplyTo?[`In-Reply-To: ${input.inReplyTo}`]:[]),...(input.references?[`References: ${input.references}`]:[]),'MIME-Version: 1.0',...(options.unsubscribe?[`List-Unsubscribe: <${options.unsubscribe}>`]:[])];
+ const headers=[`From: ${options.from}`,`To: ${mailRecipients(input).to.join(', ')}`,...(input.cc?.length?[`Cc: ${input.cc.join(', ')}`]:[]),...(input.bcc?.length?[`Bcc: ${input.bcc.join(', ')}`]:[]),`Subject: =?UTF-8?B?${Buffer.from(input.subject).toString('base64')}?=`,`Message-ID: ${options.rfc}`,...(input.inReplyTo?[`In-Reply-To: ${input.inReplyTo}`]:[]),...(input.references?[`References: ${input.references}`]:[]),'MIME-Version: 1.0',...(options.unsubscribe?[`List-Unsubscribe: <${options.unsubscribe}>`]:[])];
  const content=[`Content-Type: multipart/alternative; boundary="${alt}"`,'',`--${alt}`,'Content-Type: text/plain; charset=UTF-8','Content-Transfer-Encoding: base64','',b64(plain),`--${alt}`,'Content-Type: text/html; charset=UTF-8','Content-Transfer-Encoding: base64','',b64(html),`--${alt}--`];
  if(!input.attachments?.length)return [...headers,...content].join('\r\n');
  const parts=[...headers,`Content-Type: multipart/mixed; boundary="${mixed}"`,'',`--${mixed}`,...content];

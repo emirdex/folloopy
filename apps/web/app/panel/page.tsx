@@ -1,3 +1,5 @@
+import {readMailAttachments} from '../mail-attachments';
+import {splitRecipients} from '../../../../packages/domain/recipients';
 import {MemberTools,ReminderButton} from './member-tools';
 import {FileManager} from './file-manager';
 import {MobileNavigation} from '../mobile-navigation';
@@ -37,7 +39,7 @@ async function api(path:string,init?:RequestInit){
  await requirePanel();
  const session=(await cookies()).get('mt_session')?.value;
  const res=await internalApiFetch(`${internalApiUrl()}${path}`,{...init,headers:{Authorization:`Bearer ${internalApiKey()}`,...(session?{'x-user-session':session}:{}),...(init?.body?{'Content-Type':'application/json'}:{}),...init?.headers},cache:'no-store',signal:AbortSignal.timeout(25000)});
- if(!res.ok){const error=await res.json().catch(()=>({}));if(error.code==='FREE_DAILY_LIMIT')throw Error('Bugünkü 3 mail hakkınızı kullandınız. Hakkınız Türkiye saatiyle 00.00’da yenilenir; daha fazla gönderim için paketinizi yükseltebilirsiniz.');throw new Error(res.status===429?'Çok sık gönderim denemesi yaptınız. Bir dakika bekleyip yeniden deneyin.':res.status===402?'Kullanım limitinize ulaştınız.':res.status===400?'Konu ve mesaj alanlarını kontrol edin.':'Servise ulaşılamadı. Yeniden deneyin.');}
+ if(!res.ok){const error=await res.json().catch(()=>({}));if(error.code==='FREE_DAILY_LIMIT')throw Error('Bugünkü 3 mail hakkınızı kullandınız. Hakkınız Türkiye saatiyle 00.00’da yenilenir; daha fazla gönderim için paketinizi yükseltebilirsiniz.');throw new Error(res.status===429?'Çok sık gönderim denemesi yaptınız. Bir dakika bekleyip yeniden deneyin.':res.status===402?'Kullanım limitinize ulaştınız.':res.status===400?'Alıcı, konu, mesaj ve ek bilgilerini kontrol edin.':'Servise ulaşılamadı. Yeniden deneyin.');}
  return res.json();
 }
 async function submit(_previous:{error:string}|null,form:FormData):Promise<{error:string}|null>{
@@ -46,11 +48,11 @@ async function submit(_previous:{error:string}|null,form:FormData):Promise<{erro
  if(/\{\{|\}\}/.test(String(form.get('subject'))+String(form.get('text'))))return {error:'Göndermeden önce değişkenleri alıcınızın bilgileriyle doldurun veya taslağı Toplu Gönderim ekranında kullanın.'};
  let id:string;let scheduled=false;
  try{
-  const attachments=await Promise.all(form.getAll('attachments').filter((v):v is File=>v instanceof File&&v.size>0).map(async file=>({name:file.name,mime:file.type||'application/octet-stream',data:Buffer.from(await file.arrayBuffer()).toString('base64')})));if(attachments.length>20||attachments.reduce((n,a)=>n+Buffer.from(a.data,'base64').length,0)>10*1024*1024)return {error:'Eklerin toplam boyutu en fazla 10 MB olabilir.'};
-  const message={subject:String(form.get('subject')),to:process.env.NODE_ENV==='production'?String(form.get('to')||''):'recipient@example.invalid',text:String(form.get('text')),tracking:form.get('tracking')==='on',linkTracking:form.get('linkTracking')==='on',...(attachments.length?{attachments}:{})};
+  const attachments=await readMailAttachments(form);
+  const message={subject:String(form.get('subject')),to:process.env.NODE_ENV==='production'?String(form.get('to')||''):'recipient@example.invalid',cc:splitRecipients(String(form.get('cc')||'')),bcc:splitRecipients(String(form.get('bcc')||'')),text:String(form.get('text')),tracking:form.get('tracking')==='on',linkTracking:form.get('linkTracking')==='on',...(attachments.length?{attachments}:{})};
   const dueAt=String(form.get('scheduleAt')||'');const result=dueAt?await accountApi('/api/member-tools/schedules',{message,dueAt,requestId:String(form.get('key'))}):await api(process.env.NODE_ENV==='production'?'/api/messages/send':'/api/test-submissions',{method:'POST',headers:{'idempotency-key':String(form.get('key'))},body:JSON.stringify(message)});scheduled=!!dueAt;
   id=result.id;
- }catch(e){return {error:e instanceof Error?e.message:'Kayıt oluşturulamadı.'}}
+ }catch(e){const code=e instanceof Error?e.message:'';return {error:({ATTACHMENTS_TOO_LARGE:'En fazla 20 ek ve toplam 10 MB dosya ekleyebilirsiniz.',FEATURE_PLAN_REQUIRED:'İleri tarihli gönderim için aktif Signature paketi gerekir.',INVALID_SCHEDULE:'Gönderim zamanı en az bir dakika sonrası olmalı.',INVALID_MESSAGE:'Alıcı, konu, mesaj ve ek bilgilerini kontrol edin.'} as Record<string,string>)[code]||code||'Kayıt oluşturulamadı.'}}
  if(scheduled){revalidatePath('/panel');redirect('/panel?view=tools')}
  revalidatePath('/panel');redirect(`/panel?id=${encodeURIComponent(id)}`);
 }
@@ -103,11 +105,11 @@ export default async function Page({searchParams}:{searchParams:Promise<Params>}
  const active=view==='detail'?'messages':view;
  const memberPlan=(await currentAccount())?.plan;const advancedFilter=(memberPlan==='team'||memberPlan==='business')&&view==='messages'?<form className="surface tools-card" action="/panel" style={{marginBottom:20}}><input type="hidden" name="view" value="messages"/><h2>Gelişmiş mail filtreleri</h2><div className="tools-date-range"><label>Başlangıç<input type="date" name="from" defaultValue={p.from}/></label><label>Bitiş<input type="date" name="to" defaultValue={p.to}/></label><label>Kanal<select name="channel" defaultValue={p.channel||''}><option value="">Tüm kanallar</option><option value="panel">Panel</option><option value="extension">Gmail eklentisi</option><option value="bulk">Kampanya</option></select></label></div><button className="button button-outline">Filtrele</button></form>:null;
  if(view==='compose'){
-  let draft:MailDraft|undefined,quota:{used:number;limit:number}|undefined;
+  let draft:MailDraft|undefined,drafts:MailDraft[]=[];
   if(p.draft){try{if(!/^[a-f0-9-]{36}$/.test(p.draft))throw Error('NOT_FOUND');draft=await accountApi('/api/drafts/'+p.draft)}catch{return <Shell active="drafts"><PageHeading title="Taslak Açılamadı" description="Taslak silinmiş veya mevcut paketinizin sınırı dışında olabilir."/><Link className="button button-outline" href="/panel?view=drafts">Taslaklara Dön</Link></Shell>}}
-  try{const data=await accountApi('/api/drafts') as MailDraftList;quota={used:data.used,limit:data.limit}}catch{}
+  try{const data=await accountApi('/api/drafts') as MailDraftList;drafts=data.drafts.filter(item=>!item.locked)}catch{}
   const user=await currentAccount();const usage=user?.plan==='free'?await accountApi('/api/usage') as {used:number;message_limit:number}:null;
-  return <Shell active={active} online={online}>{usage?<section className="surface" style={{padding:'18px 24px',marginBottom:20}} aria-label="Free günlük gönderim hakkı"><strong>Free · Bugün {usage.used} / {usage.message_limit} mail</strong><p>Gönderim hakkınız Türkiye saatiyle 00.00’da yenilenir. <Link href="/paketler">Paketi yükselt →</Link></p></section>:null}<PageHeading title={draft?'Mail Taslağı':'Yeni Mail'} description="Mailinizi gönderin veya daha sonra kullanmak için taslak olarak kaydedin." action={<Link className="button button-outline" href={p.draft?'/panel?view=drafts':'/panel?view=messages'}>Vazgeç</Link>}/><MailForm key={p.draft||'new'} action={submit} idempotencyKey={randomUUID()} draft={draft} quota={quota} plan={user?.plan}/></Shell>;
+  return <Shell active={active} online={online}>{usage?<section className="surface" style={{padding:'18px 24px',marginBottom:20}} aria-label="Free günlük gönderim hakkı"><strong>Free · Bugün {usage.used} / {usage.message_limit} mail</strong><p>Gönderim hakkınız Türkiye saatiyle 00.00’da yenilenir. <Link href="/paketler">Paketi yükselt →</Link></p></section>:null}<PageHeading title={draft?'Mail Taslağı':'Yeni Mail'} description="Alıcılarınızı ekleyin, mesajınızı hazırlayın ve gönderin." action={<Link className="button button-outline" href={p.draft?'/panel?view=drafts':'/panel?view=messages'}>Vazgeç</Link>}/><MailForm key={p.draft||'new'} action={submit} idempotencyKey={randomUUID()} draft={draft} drafts={drafts} plan={user?.plan}/></Shell>;
  }
  if(view==='detail'){
   let detail:Detail|null=null;try{if(p.id&&/^[a-f0-9-]{36}$/.test(p.id))detail=await api(`/api/messages/${p.id}`)}catch{}

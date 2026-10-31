@@ -1,5 +1,5 @@
 const ui=Object.fromEntries(['popup','heading','description','connection-text','account','avatar','sender','notice','pair','check','retry','panel','disconnect','refresh','usage','requirement'].map(id=>[id,document.getElementById(id)]));
-const messages={FORBIDDEN:'Üyelik veya hesap bilgileri değişmiş. Panelden bağlantınızı kontrol edin.',UNAUTHORIZED:'Bağlantınızın yenilenmesi gerekiyor.',PAIR_EXPIRED:'Onay süresi doldu. Hesabınızı yeniden bağlayın.',GMAIL_REFRESH_REQUIRED:'Panelden Gmail bağlantınızı yenileyin.',TOO_MANY_ATTEMPTS:'Çok fazla deneme yapıldı. Biraz bekleyip yeniden deneyin.'};
+const messages={FORBIDDEN:'Aktif Signature üyeliği ve bağlı Gmail hesabı gerekli. Panelden paket ve bağlantı durumunuzu kontrol edin.',UNAUTHORIZED:'Bağlantınızın yenilenmesi gerekiyor.',PAIR_EXPIRED:'Onay süresi doldu. Hesabınızı yeniden bağlayın.',GMAIL_REFRESH_REQUIRED:'Panelden Gmail bağlantınızı yenileyin.',TOO_MANY_ATTEMPTS:'Çok fazla deneme yapıldı. Biraz bekleyip yeniden deneyin.'};
 let state='loading',sender='',busy=false;
 function render(next,notice=''){
   state=next;ui.popup.dataset.state=state;

@@ -3,11 +3,11 @@ export const BULK_CSV_LIMIT=512*1024;
 export type BulkRecipient={email:string;ad:string;soyad:string;sirket:string;hitap?:string};
 export type CsvIssue={row:number;message:string};
 export type CsvReport={recipients:BulkRecipient[];issues:CsvIssue[];duplicates:number;rows:number};
-export type BulkInput={name:string;subject:string;text:string;tracking:boolean;csv:string;requestId:string};
+export type BulkInput={name:string;subject:string;text:string;tracking:boolean;csv:string;requestId:string;attachments?:{name:string;mime:string;data:string}[];recipientMode?:'csv'|'addresses'};
 export type BulkCounts={queued:number;sending:number;sent:number;unknown:number;failed:number;cancelled:number};
 export type BulkCampaign={id:string;name:string;subject:string;status:string;reason:string|null;sender:string;total:number;created_at:string;counts:BulkCounts};
 export type BulkDetail=BulkCampaign&{text:string;tracking:boolean;recipients:{id:string;email:string;ad:string;soyad:string;sirket:string;hitap?:string;state:string;message_id:string|null;error:string|null;sent_at:string|null}[];offset:number;hasMore:boolean};
-export type BulkPreview={report:CsvReport;id?:string;sender?:string;remaining?:number;samples?:{email:string;subject:string;text:string}[]};
+export type BulkPreview={attachments?:{name:string;bytes:number}[];report:CsvReport;id?:string;sender?:string;remaining?:number;samples?:{email:string;subject:string;text:string}[]};
 export function bulkAllowed(plan:string|null|undefined){return plan==='team'||plan==='business'}
 export function validBulkEmail(email:string){const parts=email.split('@');if(parts.length!==2||email.length>254||parts[0].length>64||!parts[0]||parts[0].startsWith('.')||parts[0].endsWith('.')||parts[0].includes('..')||!/^[a-zA-Z0-9._%+-]+$/.test(parts[0]))return false;const labels=parts[1].split('.');return labels.length>=2&&/^[a-zA-Z]{2,63}$/.test(labels.at(-1)!)&&labels.every(label=>/^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/.test(label))}
 const normalizeHeader=(value:string)=>value.trim().toLowerCase().replace(/ı/g,'i').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[\s_-]/g,'');
@@ -40,10 +40,17 @@ export function parseBulkCsv(input:string):CsvReport{
  }
  return {recipients,issues,duplicates,rows:lines.length-1};
 }
+export function parseBulkAddresses(input:string):CsvReport{
+ if(typeof input!=='string'||new TextEncoder().encode(input).length>BULK_CSV_LIMIT)return {recipients:[],issues:[{row:1,message:'Alıcı listesi çok uzun.'}],duplicates:0,rows:0};
+ const values=input.trim().split(/[\s,;]+/).filter(Boolean),recipients:BulkRecipient[]=[],issues:CsvIssue[]=[],seen=new Set<string>();let duplicates=0;
+ if(!values.length||values.length>BULK_MAX_RECIPIENTS)return {recipients:[],issues:[{row:1,message:`1–${BULK_MAX_RECIPIENTS} alıcı girin.`}],duplicates:0,rows:values.length};
+ values.forEach((value,index)=>{const email=value.toLowerCase();if(!validBulkEmail(email)){issues.push({row:index+1,message:'Geçersiz e-posta adresi: '+value.slice(0,80)});return}if(seen.has(email)){duplicates++;return}seen.add(email);recipients.push({email,ad:'',soyad:'',sirket:'',hitap:''})});return {recipients,issues,duplicates,rows:values.length};
+}
 export function renderBulkText(template:string,recipient:BulkRecipient){const values:Record<string,string>={ad:recipient.ad,soyad:recipient.soyad,sirket:recipient.sirket,eposta:recipient.email,hitap:recipient.hitap||''};const result=template.replace(/\{\{\s*([^{}]+?)\s*\}\}/g,(_match,key:string)=>{if(!Object.hasOwn(values,key))throw Error('BULK_INVALID_TEMPLATE');if(key==='hitap'&&!values[key].trim())throw Error('BULK_INVALID_TEMPLATE');return values[key]});if(result.includes('{{')||result.includes('}}'))throw Error('BULK_INVALID_TEMPLATE');return result}
 export function validateBulkInput(input:BulkInput){
  if(!input||typeof input.name!=='string'||!input.name.trim()||input.name.length>80||/[\r\n]/.test(input.name)||typeof input.subject!=='string'||!input.subject.trim()||input.subject.length>200||/[\r\n]/.test(input.subject)||typeof input.text!=='string'||!input.text.trim()||input.text.length>10000||typeof input.tracking!=='boolean'||typeof input.csv!=='string'||!/^[a-f0-9-]{36}$/.test(input.requestId))throw Error('BULK_INVALID_INPUT');
- const report=parseBulkCsv(input.csv);if(report.issues.length||!report.recipients.length)return report;
+ if(input.recipientMode!==undefined&&!['csv','addresses'].includes(input.recipientMode))throw Error('BULK_INVALID_INPUT');
+ const report=input.recipientMode==='addresses'?parseBulkAddresses(input.csv):parseBulkCsv(input.csv);if(report.issues.length||!report.recipients.length)return report;
  for(let i=0;i<report.recipients.length;i++){const recipient=report.recipients[i],subject=renderBulkText(input.subject,recipient),text=renderBulkText(input.text,recipient);if(subject.length>200||text.length>10000||!subject.trim()||!text.trim()||/[\r\n]/.test(subject))throw Error('BULK_INVALID_TEMPLATE')}
  return report;
 }

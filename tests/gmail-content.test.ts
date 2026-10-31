@@ -20,10 +20,12 @@ async function fixture(options:{attachment?:boolean;sender?:string;recipients?:s
 test('Gmail button sends current compose only once; unknown outcomes and network loss stay locked',async()=>{
  for(const options of [{},{outcome:'unknown'},{network:true}]){const f=await fixture(options);await f.button.onclick();await f.button.onclick();assert.equal(f.calls.length,1);assert.equal(f.calls[0].payload.from,'sender@example.invalid');assert.equal(f.calls[0].payload.text,'Synthetic proposal');assert.equal(f.calls[0].payload.tracking,true);assert.equal(f.button.disabled,true)}
 });
-test('Attachments and multiple recipients are blocked before any transport call',async()=>{
- for(const options of [{attachment:true},{recipients:['a@example.invalid','b@example.invalid']}]){const f=await fixture(options);await f.button.onclick();assert.equal(f.calls.length,0);assert.equal(f.button.disabled,false);assert.ok(f.note.textContent.length>30)}
+test('Unverified native attachments and too many recipients are blocked before transport',async()=>{
+ for(const options of [{attachment:true},{recipients:Array.from({length:21},(_,i)=>`a${i}@example.invalid`)}]){const f=await fixture(options);await f.button.onclick();assert.equal(f.calls.length,0);assert.equal(f.button.disabled,false);assert.ok(f.note.textContent.length>30)}
 });
 test('Turkish and English account buttons identify the sender; missing account controls fail closed',async()=>{
  for(const accountControl of ['tr-button','en-button'] as const){const f=await fixture({accountControl,sender:'cicek@example.invalid'});await f.button.onclick();assert.equal(f.calls.length,1);assert.equal(f.calls[0].payload.from,'cicek@example.invalid')}
  const f=await fixture({accountControl:'missing'});await f.button.onclick();assert.equal(f.calls.length,0);assert.match(f.note.textContent,/Gmail hesabı doğrulanamadı/);
 });
+
+test('Gmail multiple To recipients are preserved in one transport call',async()=>{const f=await fixture({recipients:['a@example.invalid','b@example.invalid']});await f.button.onclick();assert.equal(f.calls.length,1);assert.equal(f.calls[0].payload.to,'a@example.invalid, b@example.invalid')});
