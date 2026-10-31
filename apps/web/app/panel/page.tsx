@@ -3,13 +3,10 @@ import {readMailAttachments} from '../mail-attachments';
 import {splitRecipients} from '../../../../packages/domain/recipients';
 import {MemberTools,ReminderButton} from './member-tools';
 import {FileManager} from './file-manager';
-import {MobileNavigation} from '../mobile-navigation';
 import {LiveClock} from '../live-clock';
-import {ServiceConnection} from './service-connection';
 import {AccountDetails} from './account-details';
 import {GmailConnection} from './gmail-connection';
 import {Drafts} from './drafts';
-import {NewMailButton} from './new-mail-button';
 import {DraftEditor} from './draft-editor';
 import {BulkPage} from './bulk';
 import type {MailDraft,MailDraftList} from '../../../../packages/domain/mail-drafts';
@@ -18,7 +15,6 @@ import {ExtensionHub} from './extension-hub';
 import {ActivityStream} from './activity-stream';
 import {RecentMessages} from './recent-messages';
 import {internalApiFetch,internalApiUrl,internalApiKey} from '../internal-api';
-import {FolloopyLogo,FolloopyMark} from '../folloopy-brand';
 import {randomUUID} from 'node:crypto';
 import {cookies} from 'next/headers';
 import {MemberGuide} from './guide';
@@ -26,7 +22,7 @@ import {currentAccount,requireAccount,requirePanel} from '../account-api';
 import {revalidatePath} from 'next/cache';
 import {redirect} from 'next/navigation';
 import {Icon} from '../icons';
-import {Refresh,Search,MailForm,StopButton,Counter} from '../controls';
+import {Refresh,MailForm,StopButton,Counter} from '../controls';
 import Link from '../destination-link';
 import type {ReactNode} from 'react';
 
@@ -69,10 +65,8 @@ async function stop(_previous:{error:string}|null,form:FormData):Promise<{error:
 }
 function date(value:string,long=false){return new Intl.DateTimeFormat('tr-TR',{...(long?{day:'numeric' as const,month:'long' as const}:{}),hour:'2-digit',minute:'2-digit',timeZone:'Europe/Istanbul'}).format(new Date(value))}
 function url(values:Params){const p=new URLSearchParams();Object.entries(values).forEach(([k,v])=>{if(v)p.set(k,v)});return '/panel'+(p.size?'?'+p.toString():'')}
-const nav=[{id:'overview',label:'Genel Bakış',icon:'overview'},{id:'compose',label:'Yeni Mail',icon:'plus'},{id:'messages',label:'Takip Edilen Mailler',icon:'mail'},{id:'drafts',label:'Taslaklar',icon:'drafts'},{id:'bulk',label:'Toplu Gönderim',icon:'send'},{id:'files',label:'Dosya Paylaşımları',icon:'drafts'},{id:'activity',label:'Etkinlik Akışı',icon:'pulse'},{id:'setup',label:'Bağlı Hesaplar',icon:'link'},{id:'extensions',label:'Eklentiler',icon:'sparkles'},{id:'tools',label:'Bildirimler ve Araçlar',icon:'pulse'},{id:'guide',label:'Kullanım Kılavuzu',icon:'book'},{id:'account',label:'Hesap Detayları',icon:'user'}] as const;
-async function Shell({active,children,online=true}:{active:string;children:ReactNode;online?:boolean}){
- const user=await currentAccount();
- return <div className="product-shell"><header className="product-header"><Link className="brand" href="/panel"><FolloopyLogo/></Link><span className="header-separator"/><span className="workspace-name">E-posta takibi</span><div className="header-actions"><Search/><ServiceConnection/><NewMailButton/></div></header><div className="app-layout"><aside className="sidebar"><div className="sidebar-label">ÇALIŞMA ALANI</div><MobileNavigation active={active} label="Ana gezinme">{nav.map(item=><Link key={item.id} href={item.id==='overview'?'/panel':`/panel?view=${item.id}`} className={`nav-item ${active===item.id?'active':''}`} aria-current={active===item.id?'page':undefined} title={item.label}><Icon name={item.icon} size={19}/><span>{item.label}</span>{active===item.id?<span className="nav-current-dot"/>:null}</Link>)}</MobileNavigation><div className="sidebar-bottom"><div className="workspace-badge"><span><FolloopyMark size={28}/></span><div><strong title={user?.name}>{user?.name||'Hesabım'}</strong><small title={user?.email}>{user?.email||'Çalışma alanınız'}</small></div></div></div></aside><main className="workspace-content" key={active}><div className="workspace-body">{!online?<div className="alert error" role="alert"><Icon name="info" size={18}/>Servis bağlantısı kurulamadı. Kayıtlar şu anda yüklenemiyor.<Refresh/></div>:null}{children}</div><footer className="workspace-footer"><span><Icon name="shield" size={13}/>E-posta etkileşimleriniz, tek çalışma alanında.</span><span>Folloopy / 0.1</span></footer></main></div></div>
+function Shell({children,online=true}:{active:string;children:ReactNode;online?:boolean}){
+ return <>{!online?<div className="alert error" role="alert"><Icon name="info" size={18}/>Servis bağlantısı kurulamadı. Kayıtlar şu anda yüklenemiyor.<Refresh/></div>:null}{children}</>;
 }
 function PageHeading({title,description,crumb,action}:{title:string;description:string;crumb?:string;action?:ReactNode}){return <><div className="breadcrumb">Çalışma alanı<Icon name="chevron" size={12}/><span>{crumb||title}</span></div><div className="page-heading"><div><h1>{title}</h1><p>{description}</p></div>{action}</div></>}
 function Chip({children,color='neutral'}:{children:ReactNode;color?:string}){return <span className={`chip chip-${color}`}><i/>{children}</span>}

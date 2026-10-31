@@ -1,12 +1,14 @@
 'use client';
 import {useActionState,useEffect,useRef,useState,useTransition} from 'react';
-import {useRouter} from 'next/navigation';
+import {useRouter,useSearchParams} from 'next/navigation';
 import {Icon} from './icons';
 type Action=(previous:{error:string}|null,data:FormData)=>Promise<{error:string}|null>;
 export function Refresh(){const router=useRouter();const[pending,start]=useTransition();return <button type="button" className={`icon-button ${pending?'refreshing':''}`} aria-label="Kayıtları yenile" disabled={pending} title="Kayıtları yenile" onClick={()=>start(()=>router.refresh())}><Icon name="refresh" size={17}/></button>}
 export function Counter({value}:{value:number}){const[display,setDisplay]=useState(value);useEffect(()=>{if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;let id=0;let start:number|undefined;const run=(time:number)=>{start??=time;const fraction=Math.min((time-start)/650,1);setDisplay(Math.round(value*(1-Math.pow(1-fraction,3))));if(fraction<1)id=requestAnimationFrame(run)};id=requestAnimationFrame(run);return()=>cancelAnimationFrame(id)},[value]);return <span aria-label={String(value)}>{display}</span>}
 export function Search(){
+ const query=useSearchParams().toString();
  const dialog=useRef<HTMLDialogElement>(null),backdropPress=useRef(false);
+ useEffect(()=>{dialog.current?.close();backdropPress.current=false},[query]);
  const close=()=>{backdropPress.current=false;dialog.current?.close()};
  useEffect(()=>{
   const element=dialog.current;
