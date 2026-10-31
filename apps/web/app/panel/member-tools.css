@@ -11,3 +11,41 @@
 .tools-card .mail-channel-select select:hover{border-color:#b9cce8}
 .tools-card .mail-channel-select select:focus-visible{outline:2px solid #8eaddb;outline-offset:3px;border-color:#adc5e9;box-shadow:inset 0 1px 0 #fff,0 0 0 3px #dce8fb80}
 @media(prefers-reduced-motion:reduce){.tools-card .mail-channel-select select{transition:none}}
+
+.tools-preferences{grid-column:1/-1;background:linear-gradient(125deg,#fffffff2,#f4f8ffdf 65%,#f3f0ffb0);border:1px solid #fff;box-shadow:inset 0 1px 0 #fff,0 10px 35px #6d8bb30b}
+.preferences-heading{display:flex;align-items:center;gap:14px;margin-bottom:25px}
+.preferences-heading-icon{display:grid;place-items:center;width:46px;height:46px;border-radius:15px;background:linear-gradient(135deg,#edf3ff,#e9edfb);border:1px solid #dfe8f8;color:#7a92bd;flex-shrink:0}
+.preferences-eyebrow{display:block;font-size:9px;letter-spacing:1.7px;color:#91a3c0;margin-bottom:7px}
+.tools-preferences .preferences-heading h2{margin:0;font-size:21px;color:#425e83;letter-spacing:-.4px}
+.preferences-save-state{display:flex;align-items:center;gap:6px;margin-left:auto;font-size:10px;color:#8a9ebc;line-height:1.6}
+.preferences-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
+.tools-preferences .preference-option{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:0;margin:0;padding:20px;border:1px solid #e1e8f6;border-radius:18px;background:#ffffffa3;box-shadow:inset 0 1px 0 #fff;cursor:pointer;transition:border-color .24s ease,background .24s ease,box-shadow .24s ease,transform .24s ease;min-width:0}
+.tools-preferences .preference-option:hover{transform:translateY(-2px);border-color:#c5d5ed;box-shadow:0 7px 18px #6a8bb00a,inset 0 1px 0 #fff}
+.tools-preferences .preference-option.is-on{border-color:#ccdfd9;background:linear-gradient(140deg,#ffffffd9,#edf8f2a1)}
+.preference-option-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:19px}
+.preference-option-icon{display:grid;place-items:center;width:37px;height:37px;border-radius:12px;color:#8a9fbf;background:#edf2fb;border:1px solid #e4ebf7;transition:background .24s ease,color .24s ease}
+.is-on .preference-option-icon{color:#78a28d;background:#eaf5ef;border-color:#dbece2}
+.preference-option strong{font-size:13px;font-weight:550;color:#5b759b;line-height:1.6}
+.preference-description{display:block;font-size:11px;line-height:1.9;color:#8a9bb4;margin-top:9px;flex:1}
+.preference-state{display:flex;align-items:center;gap:6px;font-size:9px;color:#9ba9bd;margin-top:18px}
+.preference-state:before{content:'';width:5px;height:5px;border-radius:50%;background:#bac5d5;transition:background .24s ease}
+.is-on .preference-state{color:#7a9d8b}.is-on .preference-state:before{background:#88b59e}
+.preference-switch{position:relative;display:block;width:44px;height:26px;flex-shrink:0}
+.tools-preferences .preference-switch input{position:absolute;inset:0;opacity:0;width:100%;height:100%;margin:0;z-index:1;cursor:pointer}
+.preference-switch-rail{display:block;width:100%;height:100%;border:1px solid #d6e0ee;border-radius:99px;padding:3px;background:linear-gradient(135deg,#edf2f8,#e1e9f4);box-shadow:inset 0 1px 3px #6c84a018;transition:background .24s ease,border-color .24s ease}
+.preference-switch-rail>span{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:linear-gradient(145deg,#fff,#f8fbff);box-shadow:0 2px 5px #58729525;color:#74a08b;transition:transform .24s cubic-bezier(.22,.75,.3,1)}
+.preference-switch-rail svg{opacity:0;transform:scale(.6);transition:opacity .18s ease,transform .24s ease}
+.preference-switch input:checked+.preference-switch-rail{background:linear-gradient(120deg,#d0edde,#b7dfcbd9);border-color:#add4bf}
+.preference-switch input:checked+.preference-switch-rail>span{transform:translateX(18px)}
+.preference-switch input:checked+.preference-switch-rail svg{opacity:1;transform:scale(1)}
+.preference-switch input:focus-visible+.preference-switch-rail{outline:2px solid #83a5d5;outline-offset:4px}
+.preference-switch input:disabled{cursor:default}.is-locked .preference-switch{opacity:.5}.tools-preferences .preference-option.is-locked{cursor:default}.tools-preferences .preference-option.is-locked:hover{transform:none;box-shadow:inset 0 1px 0 #fff}
+.preferences-footer{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-top:24px;padding-top:21px;border-top:1px solid #e2eaf5}
+.preferences-mute{min-width:0}.preferences-mute small{display:block;font-size:10px;line-height:1.8;color:#92a3bb;margin-top:11px}
+.tools-preferences .preferences-footer .button{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-size:11px;padding:11px 15px;min-height:42px;line-height:1.6;border-radius:13px;border-color:#dce6f5;background:#ffffffa6;color:#7892b7;transition:border-color .2s ease,background .2s ease,transform .2s ease}
+.tools-preferences .preferences-footer .button:hover:not(:disabled){background:#fff;border-color:#bcd0eb;transform:translateY(-1px)}
+.tools-preferences .preferences-footer .preferences-mute-button.is-muted{background:#fff6e8b0;border-color:#eadfc8;color:#ac9772}
+.preferences-export{flex-shrink:0}.preferences-saving{animation:preferences-spin 1s linear infinite}@keyframes preferences-spin{to{transform:rotate(360deg)}}
+@media(max-width:1100px){.preferences-options{gap:11px}.tools-preferences .preference-option{padding:16px}.preferences-save-state{max-width:160px}.preferences-footer{align-items:flex-start;gap:14px}}
+@media(max-width:650px){.preferences-heading{flex-wrap:wrap;gap:12px;margin-bottom:20px}.preferences-save-state{width:100%;max-width:none;margin-left:58px}.preferences-options{grid-template-columns:1fr}.tools-preferences .preference-option{padding:18px}.preference-option-top{margin-bottom:12px}.preference-state{margin-top:12px}.preferences-footer{flex-direction:column;align-items:stretch;gap:17px}.preferences-footer .button{width:100%}.tools-preferences .preferences-heading h2{font-size:20px}}
+@media(prefers-reduced-motion:reduce){.tools-preferences .preference-option,.preference-option-icon,.preference-switch-rail,.preference-switch-rail>span,.preference-switch-rail svg,.preference-state:before,.tools-preferences .preferences-footer .button{transition:none}.preferences-saving{animation:none}}
