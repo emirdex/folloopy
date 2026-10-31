@@ -232,6 +232,7 @@ export function buildServer(db:DB,provider:MailProvider,key:string,origin:string
  app.get('/api/messages/:id',{schema:{params:{type:'object',properties:{id:uuid},required:['id']}}},async(req,reply)=>{
   const result=await service.detail(await workspace(req),(req.params as {id:string}).id);return result||reply.code(404).send({code:'NOT_FOUND'});
  });
+ app.get('/api/messages/:id/inspection',{schema:{params:{type:'object',additionalProperties:false,properties:{id:uuid},required:['id']}}},async(req,reply)=>{const result=await service.inspection(await workspace(req),(req.params as {id:string}).id);return result||reply.code(404).send({code:'NOT_FOUND'})});
  app.post('/api/messages/:id/stop',{schema:{params:{type:'object',properties:{id:uuid},required:['id']}}},async(req,reply)=>{
   if(!await service.stop(await workspace(req),(req.params as {id:string}).id)) return reply.code(404).send({code:'NOT_FOUND'});
   return {stopped:true};

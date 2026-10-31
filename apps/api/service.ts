@@ -1,3 +1,4 @@
+import {captureMessageInspection,inspectMessageMetadata} from './message-inspection';
 import {mailRecipients} from '../../packages/domain/recipients';
 import {ProviderRejected} from '../../packages/provider-adapters';
 import {releaseBucket,usagePeriod} from './package-usage';
@@ -50,6 +51,7 @@ export class TrackingService {
     VALUES($1,$2,$3,$4,$5,$6,$11,'sending',$7,$8,$9,$10,$12,CASE WHEN $13::int IS NOT NULL THEN now()+($13::text||' days')::interval ELSE NULL END,$14)`,[id,workspace,submission,key,hash,input.subject,this.provider.name,rfc,input.tracking,channel,recipientCount,plan,policy?.retentionDays??null,free]);
    const html=await prepareLinks(tx,workspace,id,input,policy?.linkMailsMonthly,policy?.retentionDays||90,this.origin,this.archiveKey);
    await captureMailContent(tx,workspace,id,this.from,input,this.archiveKey);
+   await captureMessageInspection(tx,workspace,id,input,this.archiveKey);
    if(input.tracking) await tx.query('INSERT INTO tracking_tokens(hash,workspace_id,message_id) VALUES($1,$2,$3)',[tokenHash(secret),workspace,id]);
    if(reservation)await tx.query('UPDATE bulk_recipients SET message_id=$3,reserved=false WHERE id=$1 AND workspace_id=$2',[reservation.recipientId,workspace,id]);
    else await tx.query('UPDATE entitlements SET used=used+1 WHERE workspace_id=$1',[workspace]);
@@ -97,10 +99,10 @@ export class TrackingService {
    (SELECT count(*)::int FROM event_assessments a JOIN raw_events e ON e.id=a.event_id AND e.workspace_id=a.workspace_id WHERE e.workspace_id=m.workspace_id AND e.message_id=m.id AND a.source='unknown') AS unknown_count
    FROM messages m ${activityJoin} WHERE m.workspace_id=$1 AND (m.tracking_expires_at IS NULL OR m.tracking_expires_at>now()) AND m.subject ILIKE $2 AND ($4::timestamptz IS NULL OR m.created_at>=$4) AND ($5::timestamptz IS NULL OR m.created_at<=$5) AND ($6::text IS NULL OR m.send_channel=$6) AND ($7::uuid IS NULL OR EXISTS(SELECT 1 FROM bulk_recipients r WHERE r.message_id=m.id AND r.workspace_id=m.workspace_id AND r.campaign_id=$7)) ORDER BY m.created_at DESC,m.id LIMIT 50 OFFSET $3`,[workspace,`%${search}%`,offset,from,to,filters.channel||null,filters.campaign||null])).rows;
  }
- async detail(workspace:string,id:string){
-  const message=(await this.db.query(`SELECT m.id,m.subject,m.state,m.provider,m.sent_at,m.tracking_enabled,activity.activity_count,activity.first_activity_at,activity.last_activity_at FROM messages m ${activityJoin} WHERE m.workspace_id=$1 AND m.id=$2 AND (m.tracking_expires_at IS NULL OR m.tracking_expires_at>now())`,[workspace,id])).rows[0];
+ async detail(workspace:string,id:string,compact=false){
+  const message=(await this.db.query(`SELECT m.id,m.subject,m.state,m.provider,m.send_channel,m.created_at,m.sent_at,m.tracking_enabled,m.recipient_count,activity.activity_count,activity.first_activity_at,activity.last_activity_at FROM messages m ${activityJoin} WHERE m.workspace_id=$1 AND m.id=$2 AND (m.tracking_expires_at IS NULL OR m.tracking_expires_at>now())`,[workspace,id])).rows[0];
   if(!message) return null;
-  const events=(await this.db.query(`SELECT e.id,e.occurred_at,e.kind,a.source,a.identity_relation,a.reason_codes,a.classifier_version FROM raw_events e LEFT JOIN event_assessments a ON a.event_id=e.id AND a.workspace_id=e.workspace_id WHERE e.workspace_id=$1 AND e.message_id=$2 ORDER BY e.occurred_at DESC LIMIT 100`,[workspace,id])).rows;
+  const events=compact?[]:(await this.db.query(`SELECT e.id,e.occurred_at,e.kind,a.source,a.identity_relation,a.reason_codes,a.classifier_version FROM raw_events e LEFT JOIN event_assessments a ON a.event_id=e.id AND a.workspace_id=e.workspace_id WHERE e.workspace_id=$1 AND e.message_id=$2 ORDER BY e.occurred_at DESC LIMIT 100`,[workspace,id])).rows;
   // Group a burst of fetches into one detected opening. A five-minute quiet
   // interval starts a new opening; retain the complete raw history unchanged.
   const openings=(await this.db.query(`WITH eligible AS (
@@ -113,8 +115,10 @@ export class TrackingService {
    SELECT occurred_at,sum(CASE WHEN previous_at IS NULL OR occurred_at-previous_at>=interval '5 minutes' THEN 1 ELSE 0 END)
     OVER (ORDER BY occurred_at,id ROWS UNBOUNDED PRECEDING) AS opening_group FROM eligible
   ) SELECT min(occurred_at) AS first_at,max(occurred_at) AS last_at
-   FROM grouped GROUP BY opening_group ORDER BY min(occurred_at)`,[workspace,id])).rows;
-  const {policy}=await membershipPolicy(this.db,workspace);const links=policy?.csv?(await this.db.query<any>(`SELECT l.id,l.url_sealed,count(e.id) FILTER(WHERE e.source='unverified_browser')::int AS clicks,count(e.id) FILTER(WHERE e.source='suspected_automated')::int AS automated FROM tracked_links l LEFT JOIN link_events e ON e.link_id=l.id WHERE l.workspace_id=$1 AND l.message_id=$2 GROUP BY l.id`,[workspace,id])).rows.map(l=>({id:l.id,url:this.archiveKey?unseal(l.url_sealed,this.archiveKey):'',clicks:l.clicks,automated:l.automated})):[];
+   FROM grouped GROUP BY opening_group ORDER BY min(occurred_at)${compact?' DESC LIMIT 10':''}`,[workspace,id])).rows;
+  const policy=compact?null:(await membershipPolicy(this.db,workspace)).policy;const links=policy?.csv?(await this.db.query<any>(`SELECT l.id,l.url_sealed,count(e.id) FILTER(WHERE e.source='unverified_browser')::int AS clicks,count(e.id) FILTER(WHERE e.source='suspected_automated')::int AS automated FROM tracked_links l LEFT JOIN link_events e ON e.link_id=l.id WHERE l.workspace_id=$1 AND l.message_id=$2 GROUP BY l.id`,[workspace,id])).rows.map(l=>({id:l.id,url:this.archiveKey?unseal(l.url_sealed,this.archiveKey):'',clicks:l.clicks,automated:l.automated})):[];
   return {message,events,openings,links};
  }
+ async inspection(workspace:string,id:string){const detail=await this.detail(workspace,id,true);if(!detail)return null;const metadata=await inspectMessageMetadata(this.db,workspace,id,Number(detail.message.recipient_count),this.archiveKey);return {message:detail.message,openings:detail.openings,...metadata}}
+
 }
